@@ -3,7 +3,7 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { FileManagerSidebar } from '@/components/FileManagerSidebar';
 import { SearchBar } from '@/components/SearchBar';
 import { FileCard } from '@/components/FileCard';
-import { useFiles } from '@/contexts/FileContext';
+import { useFiles } from '@/hooks/use-files';
 import { ViewMode, SortBy } from '@/types';
 import { Heart, FileText } from 'lucide-react';
 

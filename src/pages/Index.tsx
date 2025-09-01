@@ -4,8 +4,8 @@ import { FileManagerSidebar } from '@/components/FileManagerSidebar';
 import { SearchBar } from '@/components/SearchBar';
 import { FileCard } from '@/components/FileCard';
 import { FileDetailsModal } from '@/components/FileDetailsModal';
-import { useFiles } from '@/contexts/FileContext';
-import { ViewMode, SortBy, FileItem } from '@/types';
+import { useFiles } from '@/hooks/use-files';
+import { ViewMode, SortBy } from '@/types';
 import { Folder, FileText } from 'lucide-react';
 
 const Index = () => {
@@ -51,7 +51,7 @@ const Index = () => {
     });
 
     return filtered;
-  }, [searchQuery, selectedTags, sortBy]);
+  }, [searchQuery, selectedTags, sortBy, files]);
 
   const handleClearFilters = () => {
     setSelectedTags([]);

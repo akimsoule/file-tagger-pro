@@ -1,16 +1,7 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { useState, ReactNode } from 'react';
 import { FileItem } from '@/types';
 import { mockFiles } from '@/data/mockData';
-
-interface FileContextType {
-  files: FileItem[];
-  updateFile: (fileId: string, updates: Partial<FileItem>) => void;
-  toggleFavorite: (fileId: string) => void;
-  getFileById: (fileId: string) => FileItem | undefined;
-  getFavoriteFiles: () => FileItem[];
-}
-
-const FileContext = createContext<FileContextType | undefined>(undefined);
+import { FileContext } from './file-context-def';
 
 export function FileProvider({ children }: { children: ReactNode }) {
   const [files, setFiles] = useState<FileItem[]>(mockFiles);
@@ -48,10 +39,3 @@ export function FileProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useFiles() {
-  const context = useContext(FileContext);
-  if (!context) {
-    throw new Error('useFiles must be used within a FileProvider');
-  }
-  return context;
-}
