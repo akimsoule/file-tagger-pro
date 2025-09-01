@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
@@ -13,28 +13,57 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { TagBadge } from './TagBadge';
-import { mockTags } from '@/data/mockData';
-import { Files, Heart, Hash, Plus, Settings } from 'lucide-react';
+import { useFiles } from '@/hooks/use-files';
+import { Files, Heart, Hash, Settings } from 'lucide-react';
+
+// Fonction pour générer une couleur stable pour un tag
+const getTagColor = (tag: string): string => {
+  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#EF4444'];
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
+
+interface FileManagerSidebarProps {
+  onNavigateToFolder?: (folderId: string) => void;
+  currentFolderId?: string | null;
+}
 
 const navigationItems = [
-  { title: 'Tous les fichiers', url: '/', icon: Files },
+  { title: 'Tous les documents', url: '/', icon: Files },
   { title: 'Favoris', url: '/favorites', icon: Heart },
 ];
 
-export function FileManagerSidebar() {
+export function FileManagerSidebar({ onNavigateToFolder, currentFolderId }: FileManagerSidebarProps) {
   const { open } = useSidebar();
   const location = useLocation();
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const { documents, toggleTag, selectedTags } = useFiles();
 
   const isActive = (path: string) => location.pathname === path;
 
-  const toggleTag = (tagId: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tagId) 
-        ? prev.filter(id => id !== tagId)
-        : [...prev, tagId]
-    );
-  };
+  // Extraire tous les tags uniques des documents
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    documents.forEach(doc => {
+      doc.tags.split(',').forEach(tag => {
+        const trimmedTag = tag.trim();
+        if (trimmedTag) tagSet.add(trimmedTag);
+      });
+    });
+    return Array.from(tagSet);
+  }, [documents]);
+
+  // Calculer le nombre de documents par tag
+  const tagCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    allTags.forEach(tag => {
+      const count = documents.filter(doc => doc.tags.includes(tag)).length;
+      counts.set(tag, count);
+    });
+    return counts;
+  }, [allTags, documents]);
 
   return (
     <Sidebar collapsible="icon">
@@ -76,37 +105,28 @@ export function FileManagerSidebar() {
               <Hash className="h-3 w-3" />
               {open && 'Tags'}
             </span>
-            {open && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 w-5 p-0 hover:bg-accent"
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
-            )}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <div className="space-y-1">
-              {mockTags.map((tag) => (
+              {allTags.map((tag) => (
                 <div
-                  key={tag.id}
+                  key={tag}
                   className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
-                    selectedTags.includes(tag.id)
+                    selectedTags.includes(tag)
                       ? 'bg-accent'
                       : 'hover:bg-accent/50'
                   }`}
-                  onClick={() => toggleTag(tag.id)}
+                  onClick={() => toggleTag(tag)}
                 >
                   {open ? (
                     <>
-                      <TagBadge tag={tag} />
+                      <TagBadge name={tag} />
                       <span className="text-xs text-muted-foreground ml-auto">
-                        {tag.count}
+                        {tagCounts.get(tag)}
                       </span>
                     </>
                   ) : (
-                    <div className={`w-3 h-3 rounded-full bg-tag-${tag.color}`} />
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getTagColor(tag) + '40' }} />
                   )}
                 </div>
               ))}

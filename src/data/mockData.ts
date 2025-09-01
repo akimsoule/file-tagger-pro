@@ -1,87 +1,96 @@
-import { FileItem, Tag } from '@/types';
+import { User, Document, Folder } from '@/contexts/file-context-def';
 
-export const mockTags: Tag[] = [
-  { id: '1', name: 'Important', color: 'blue', count: 12 },
-  { id: '2', name: 'Design', color: 'purple', count: 8 },
-  { id: '3', name: 'Documents', color: 'green', count: 15 },
-  { id: '4', name: 'Photos', color: 'pink', count: 24 },
-  { id: '5', name: 'Archive', color: 'orange', count: 6 },
-  { id: '6', name: 'Work', color: 'yellow', count: 18 },
-];
+export const mockUser: User = {
+  id: '1',
+  email: 'user@example.com',
+  name: 'John Doe',
+  documents: [],
+  folders: []
+};
 
-export const mockFiles: FileItem[] = [
+export const mockFolders: Folder[] = [
   {
     id: '1',
-    name: 'Presentation Q4',
-    type: 'file',
-    extension: 'pptx',
-    size: 2048576,
-    tags: [mockTags[0], mockTags[5]],
-    dateModified: new Date('2024-01-15'),
-    isFavorite: true,
+    name: 'Documents Importants',
+    description: 'Dossier pour les documents importants',
+    color: '#3B82F6',
+    ownerId: mockUser.id,
+    children: [],
+    documents: [],
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01')
   },
   {
     id: '2',
-    name: 'Design Assets',
-    type: 'folder',
-    tags: [mockTags[1], mockTags[3]],
-    dateModified: new Date('2024-01-12'),
-    isFavorite: false,
+    name: 'Photos',
+    description: 'Album photos',
+    color: '#EC4899',
+    ownerId: mockUser.id,
+    children: [],
+    documents: [],
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01')
+  }
+];
+
+export const mockDocuments: Document[] = [
+  {
+    id: '1',
+    name: 'Presentation Q4.pptx',
+    type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    size: 2048576,
+    description: 'Présentation du Q4 2024',
+    tags: 'important,work',
+    fileId: 'mega-file-id-1',
+    hash: 'hash1',
+    ownerId: mockUser.id,
+    folderId: mockFolders[0].id,
+    isFavorite: true,
+    createdAt: new Date('2024-01-15'),
+    modifiedAt: new Date('2024-01-15')
+  },
+  {
+    id: '2',
+    name: 'Rapport Financier 2024.pdf',
+    type: 'application/pdf',
+    size: 1536000,
+    description: 'Rapport financier annuel',
+    tags: 'important,finance',
+    fileId: 'mega-file-id-2',
+    hash: 'hash2',
+    ownerId: mockUser.id,
+    folderId: mockFolders[0].id,
+    isFavorite: true,
+    createdAt: new Date('2024-01-10'),
+    modifiedAt: new Date('2024-01-10')
   },
   {
     id: '3',
-    name: 'Financial Report 2024',
-    type: 'file',
-    extension: 'pdf',
-    size: 1536000,
-    tags: [mockTags[0], mockTags[2]],
-    dateModified: new Date('2024-01-10'),
-    isFavorite: true,
+    name: 'Photo Vacances.jpg',
+    type: 'image/jpeg',
+    size: 512000,
+    description: 'Photos des vacances d\'été',
+    tags: 'photos,vacances',
+    fileId: 'mega-file-id-3',
+    hash: 'hash3',
+    ownerId: mockUser.id,
+    folderId: mockFolders[1].id,
+    isFavorite: false,
+    createdAt: new Date('2024-01-08'),
+    modifiedAt: new Date('2024-01-08')
   },
   {
     id: '4',
-    name: 'Meeting Notes',
-    type: 'file',
-    extension: 'docx',
+    name: 'Notes de réunion.docx',
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     size: 512000,
-    tags: [mockTags[2], mockTags[5]],
-    dateModified: new Date('2024-01-08'),
+    description: 'Notes de la réunion mensuelle',
+    tags: 'work,notes',
+    fileId: 'mega-file-id-4',
+    hash: 'hash4',
+    ownerId: mockUser.id,
     isFavorite: false,
-  },
-  {
-    id: '5',
-    name: 'Portfolio Images',
-    type: 'folder',
-    tags: [mockTags[1], mockTags[3]],
-    dateModified: new Date('2024-01-05'),
-    isFavorite: true,
-  },
-  {
-    id: '6',
-    name: 'Project Backup',
-    type: 'folder',
-    tags: [mockTags[4]],
-    dateModified: new Date('2024-01-03'),
-    isFavorite: false,
-  },
-  {
-    id: '7',
-    name: 'Client Contract',
-    type: 'file',
-    extension: 'pdf',
-    size: 768000,
-    tags: [mockTags[0], mockTags[2], mockTags[5]],
-    dateModified: new Date('2024-01-01'),
-    isFavorite: false,
-  },
-  {
-    id: '8',
-    name: 'Logo Concepts',
-    type: 'file',
-    extension: 'ai',
-    size: 3072000,
-    tags: [mockTags[1]],
-    dateModified: new Date('2023-12-28'),
-    isFavorite: true,
-  },
+    createdAt: new Date('2024-01-08'),
+    modifiedAt: new Date('2024-01-08')
+  }
 ];

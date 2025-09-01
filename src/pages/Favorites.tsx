@@ -1,62 +1,27 @@
-import { useState, useMemo } from 'react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { FileManagerSidebar } from '@/components/FileManagerSidebar';
 import { SearchBar } from '@/components/SearchBar';
 import { FileCard } from '@/components/FileCard';
 import { useFiles } from '@/hooks/use-files';
-import { ViewMode, SortBy } from '@/types';
-import { Heart, FileText } from 'lucide-react';
+import { Heart } from 'lucide-react';
 
 const Favorites = () => {
-  const { getFavoriteFiles, toggleFavorite } = useFiles();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [sortBy, setSortBy] = useState<SortBy>('date');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const {
+    getFilteredAndSortedFavorites,
+    toggleFavorite,
+    searchQuery,
+    setSearchQuery,
+    viewMode,
+    setViewMode,
+    sortBy,
+    setSortBy,
+    selectedTags,
+    clearFilters
+  } = useFiles();
 
-  const favoriteFiles = getFavoriteFiles();
+  const filteredAndSortedDocuments = getFilteredAndSortedFavorites();
 
-  // Filtrage et tri des fichiers favoris
-  const filteredAndSortedFiles = useMemo(() => {
-    let filtered = favoriteFiles;
-
-    // Filtrage par recherche
-    if (searchQuery) {
-      filtered = filtered.filter(file =>
-        file.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Filtrage par tags
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter(file =>
-        file.tags.some(tag => selectedTags.includes(tag.id))
-      );
-    }
-
-    // Tri
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'date':
-          return b.dateModified.getTime() - a.dateModified.getTime();
-        case 'size':
-          return (b.size || 0) - (a.size || 0);
-        case 'type':
-          return a.type.localeCompare(b.type);
-        default:
-          return 0;
-      }
-    });
-
-    return filtered;
-  }, [favoriteFiles, searchQuery, selectedTags, sortBy]);
-
-  const handleClearFilters = () => {
-    setSelectedTags([]);
-    setSearchQuery('');
-  };
+  // Plus besoin de handleClearFilters car on utilise clearFilters du contexte
 
   return (
     <SidebarProvider>
@@ -73,10 +38,10 @@ const Favorites = () => {
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-foreground">
-                  Fichiers Favoris
+                  Documents Favoris
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Vos fichiers et dossiers favoris
+                  Vos documents favoris
                 </p>
               </div>
             </div>
@@ -91,37 +56,31 @@ const Favorites = () => {
             sortBy={sortBy}
             onSortChange={setSortBy}
             selectedTags={selectedTags}
-            onClearFilters={handleClearFilters}
+            onClearFilters={clearFilters}
           />
 
           {/* Zone de contenu principal */}
           <div className="flex-1 p-6">
             {/* Statistiques */}
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span>{filteredAndSortedFiles.length} favoris</span>
-                <span>•</span>
-                <span>
-                  {filteredAndSortedFiles.filter(f => f.type === 'folder').length} dossiers
-                </span>
-                <span>•</span>
-                <span>
-                  {filteredAndSortedFiles.filter(f => f.type === 'file').length} fichiers
-                </span>
-              </div>
+            <div className="mb-6 flex items-center gap-4 text-sm text-muted-foreground">
+              <span>{filteredAndSortedDocuments.length} documents favoris</span>
+              <span>•</span>
+              <span>
+                {filteredAndSortedDocuments.reduce((acc, doc) => acc + doc.size, 0) / (1024 * 1024)} Mo
+              </span>
             </div>
 
-            {/* Grille de fichiers */}
-            {filteredAndSortedFiles.length === 0 ? (
+            {/* Grille de documents */}
+            {filteredAndSortedDocuments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <Heart className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <h3 className="text-lg font-medium text-foreground mb-2">
-                  Aucun favori trouvé
+                  Aucun document favori
                 </h3>
                 <p className="text-muted-foreground max-w-sm">
-                  Ajoutez des fichiers à vos favoris en cliquant sur l'icône cœur.
+                  Ajoutez des documents à vos favoris en cliquant sur l'icône cœur.
                 </p>
               </div>
             ) : (
@@ -130,12 +89,12 @@ const Favorites = () => {
                   ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
                   : 'space-y-2'
               }>
-                {filteredAndSortedFiles.map((file) => (
+                {filteredAndSortedDocuments.map((doc) => (
                   <FileCard
-                    key={file.id}
-                    file={file}
-                    onClick={() => console.log('Open file:', file.name)}
-                    onToggleFavorite={() => toggleFavorite(file.id)}
+                    key={doc.id}
+                    document={doc}
+                    onClick={() => console.log('Open document:', doc.name)}
+                    onToggleFavorite={() => toggleFavorite(doc.id)}
                   />
                 ))}
               </div>

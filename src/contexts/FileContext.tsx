@@ -1,38 +1,251 @@
-import { useState, ReactNode } from 'react';
-import { FileItem } from '@/types';
-import { mockFiles } from '@/data/mockData';
-import { FileContext } from './file-context-def';
+import { useState, ReactNode, useCallback } from 'react';
+import { FileContext, Document, Folder, User, UserMegaConfig, Log, ViewMode, SortBy } from './file-context-def';
+import { mockDocuments, mockFolders, mockUser } from '@/data/mockData';
 
 export function FileProvider({ children }: { children: ReactNode }) {
-  const [files, setFiles] = useState<FileItem[]>(mockFiles);
+  const [currentUser, setCurrentUser] = useState<User | undefined>(mockUser);
+  const [userConfig, setUserConfig] = useState<UserMegaConfig | undefined>();
+  const [documents, setDocuments] = useState<Document[]>(mockDocuments);
+  const [folders, setFolders] = useState<Folder[]>(mockFolders);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [sortBy, setSortBy] = useState<SortBy>('date');
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
-  const updateFile = (fileId: string, updates: Partial<FileItem>) => {
-    setFiles(prev => prev.map(file => 
-      file.id === fileId ? { ...file, ...updates } : file
+  // Document operations
+  const getDocumentById = useCallback((id: string) => {
+    return documents.find(doc => doc.id === id);
+  }, [documents]);
+
+  const getFavoriteDocuments = useCallback(() => {
+    return documents.filter(doc => doc.isFavorite);
+  }, [documents]);
+
+  const getFilteredAndSortedFavorites = useCallback(() => {
+    let filtered = getFavoriteDocuments();
+
+    // Filtrage par recherche
+    if (searchQuery) {
+      filtered = filtered.filter(doc =>
+        doc.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Filtrage par tags
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(doc =>
+        selectedTags.some(tag => doc.tags.includes(tag))
+      );
+    }
+
+    // Tri
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'date':
+          return b.modifiedAt.getTime() - a.modifiedAt.getTime();
+        case 'size':
+          return b.size - a.size;
+        case 'type':
+          return a.type.localeCompare(b.type);
+        default:
+          return 0;
+      }
+    });
+  }, [getFavoriteDocuments, searchQuery, selectedTags, sortBy]);
+
+  const updateDocument = useCallback((id: string, updates: Partial<Document>) => {
+    setDocuments(prev => prev.map(doc => 
+      doc.id === id ? { ...doc, ...updates, modifiedAt: new Date() } : doc
     ));
-  };
+  }, []);
 
-  const toggleFavorite = (fileId: string) => {
-    setFiles(prev => prev.map(file => 
-      file.id === fileId ? { ...file, isFavorite: !file.isFavorite } : file
+  const toggleFavorite = useCallback((id: string) => {
+    setDocuments(prev => prev.map(doc => 
+      doc.id === id ? { ...doc, isFavorite: !doc.isFavorite, modifiedAt: new Date() } : doc
     ));
-  };
+  }, []);
 
-  const getFileById = (fileId: string) => {
-    return files.find(file => file.id === fileId);
-  };
+  // Folder operations
+  const getFolderById = useCallback((id: string) => {
+    return folders.find(folder => folder.id === id);
+  }, [folders]);
 
-  const getFavoriteFiles = () => {
-    return files.filter(file => file.isFavorite);
-  };
+  const getFolderContent = useCallback((folderId?: string) => {
+    const docs = documents.filter(doc => doc.folderId === folderId);
+    const subFolders = folders.filter(folder => folder.parentId === folderId);
+    return { documents: docs, subFolders };
+  }, [documents, folders]);
+
+  const getFolderStats = useCallback((folderId: string) => {
+    const { documents: docs, subFolders } = getFolderContent(folderId);
+    
+    let totalSize = docs.reduce((acc, doc) => acc + doc.size, 0);
+    let totalItems = docs.length + subFolders.length;
+
+    // Calcul récursif pour les sous-dossiers
+    const calculateSubFolderStats = (folders: Folder[]) => {
+      folders.forEach(folder => {
+        const subStats = getFolderContent(folder.id);
+        totalItems += subStats.documents.length + subStats.subFolders.length;
+        totalSize += subStats.documents.reduce((acc, doc) => acc + doc.size, 0);
+        calculateSubFolderStats(subStats.subFolders);
+      });
+    };
+
+    calculateSubFolderStats(subFolders);
+
+    return { totalItems, totalSize };
+  }, [getFolderContent]);
+
+  const updateFolder = useCallback((id: string, updates: Partial<Folder>) => {
+    setFolders(prev => prev.map(folder => 
+      folder.id === id ? { ...folder, ...updates, updatedAt: new Date() } : folder
+    ));
+  }, []);
+
+  // Filtering operations
+  const toggleTag = useCallback((tag: string) => {
+    console.log("Toggling tag:", tag);
+    setSelectedTags(current => 
+      current.includes(tag) 
+        ? current.filter(t => t !== tag)
+        : [...current, tag]
+    );
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setSelectedTags([]);
+    setSearchQuery('');
+  }, []);
+
+  const getFilteredContent = useCallback((folderId?: string) => {
+    const { documents: docs, subFolders } = getFolderContent(folderId);
+    
+    let filteredDocs = docs;
+    let filteredFolders = subFolders;
+
+    // Filtrage par recherche
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filteredDocs = filteredDocs.filter(doc =>
+        doc.name.toLowerCase().includes(query)
+      );
+      filteredFolders = filteredFolders.filter(folder =>
+        folder.name.toLowerCase().includes(query)
+      );
+    }
+
+    // Filtrage par tags (seulement pour les documents)
+    if (selectedTags.length > 0) {
+      filteredDocs = filteredDocs.filter(doc =>
+        selectedTags.every(tag => doc.tags.split(',').map(t => t.trim()).includes(tag))
+      );
+    }
+
+    return { documents: filteredDocs, subFolders: filteredFolders };
+  }, [getFolderContent, searchQuery, selectedTags]);
+
+  // Sorting operations
+  const getSortedContent = useCallback((folderId?: string) => {
+    const { documents: docs, subFolders } = getFilteredContent(folderId);
+    
+    const sortItems = (items: Array<Document | Folder>) => {
+      return [...items].sort((a, b) => {
+        switch (sortBy) {
+          case 'name': {
+            return a.name.localeCompare(b.name);
+          }
+          case 'date': {
+            const aDate = 'modifiedAt' in a ? a.modifiedAt : a.createdAt;
+            const bDate = 'modifiedAt' in b ? b.modifiedAt : b.createdAt;
+            return bDate.getTime() - aDate.getTime();
+          }
+          case 'size': {
+            if ('size' in a && 'size' in b) {
+              return b.size - a.size;
+            }
+            return 0;
+          }
+          default: {
+            return 0;
+          }
+        }
+      });
+    };
+
+    return {
+      folders: sortItems(subFolders) as Folder[],
+      documents: sortItems(docs) as Document[]
+    };
+  }, [getFilteredContent, sortBy]);
+
+  // Navigation operations
+  const selectDocument = useCallback((id: string | null) => {
+    setSelectedDocumentId(id);
+  }, []);
+
+  const navigateToFolder = useCallback((id: string | null) => {
+    setCurrentFolderId(id);
+  }, []);
+
+  // Log operations
+  const addLog = useCallback((logData: Omit<Log, 'id' | 'createdAt'>) => {
+    // Dans une application réelle, ceci serait géré par une API
+    console.log('New log:', {
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+      ...logData
+    });
+  }, []);
 
   return (
     <FileContext.Provider value={{
-      files,
-      updateFile,
+      // State
+      currentUser,
+      userConfig,
+      documents,
+      folders,
+      selectedTags,
+      searchQuery,
+      viewMode,
+      sortBy,
+      selectedDocumentId,
+      currentFolderId,
+
+      // Document operations
+      getDocumentById,
+      getFavoriteDocuments,
+      getFilteredAndSortedFavorites,
+      updateDocument,
       toggleFavorite,
-      getFileById,
-      getFavoriteFiles,
+
+      // Folder operations
+      getFolderById,
+      getFolderContent,
+      getFolderStats,
+      updateFolder,
+
+      // Filtering operations
+      getFilteredContent,
+      setSearchQuery,
+      toggleTag,
+      clearFilters,
+
+      // View & Sort operations
+      setViewMode,
+      setSortBy,
+      getSortedContent,
+
+      // Navigation operations
+      selectDocument,
+      navigateToFolder,
+
+      // Logging
+      addLog
     }}>
       {children}
     </FileContext.Provider>

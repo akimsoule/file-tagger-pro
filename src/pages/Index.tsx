@@ -1,98 +1,71 @@
-import { useState, useMemo } from 'react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { FileManagerSidebar } from '@/components/FileManagerSidebar';
 import { SearchBar } from '@/components/SearchBar';
 import { FileCard } from '@/components/FileCard';
+import { FolderStats } from '@/components/FolderStats';
 import { FileDetailsModal } from '@/components/FileDetailsModal';
 import { useFiles } from '@/hooks/use-files';
-import { ViewMode, SortBy } from '@/types';
-import { Folder, FileText } from 'lucide-react';
+import { Folder as FolderIcon, FileText } from 'lucide-react';
 
 const Index = () => {
-  const { files, toggleFavorite, getFileById } = useFiles();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [sortBy, setSortBy] = useState<SortBy>('date');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const { 
+    toggleFavorite,
+    getDocumentById,
+    getFolderById,
+    getSortedContent,
+    searchQuery,
+    setSearchQuery,
+    selectedTags,
+    toggleTag,
+    clearFilters,
+    viewMode,
+    setViewMode,
+    sortBy,
+    setSortBy,
+    selectedDocumentId,
+    selectDocument,
+    currentFolderId,
+    navigateToFolder
+  } = useFiles();
 
-  // Filtrage et tri des fichiers
-  const filteredAndSortedFiles = useMemo(() => {
-    let filtered = files;
+  const content = getSortedContent(currentFolderId || undefined);
 
-    // Filtrage par recherche
-    if (searchQuery) {
-      filtered = filtered.filter(file =>
-        file.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+  const handleNavigateBack = () => {
+    if (currentFolderId) {
+      const currentFolder = getFolderById(currentFolderId);
+      navigateToFolder(currentFolder?.parentId || null);
     }
-
-    // Filtrage par tags
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter(file =>
-        file.tags.some(tag => selectedTags.includes(tag.id))
-      );
-    }
-
-    // Tri
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'date':
-          return b.dateModified.getTime() - a.dateModified.getTime();
-        case 'size':
-          return (b.size || 0) - (a.size || 0);
-        case 'type':
-          return a.type.localeCompare(b.type);
-        default:
-          return 0;
-      }
-    });
-
-    return filtered;
-  }, [searchQuery, selectedTags, sortBy, files]);
-
-  const handleClearFilters = () => {
-    setSelectedTags([]);
-    setSearchQuery('');
   };
 
-  const handleFileClick = (fileId: string) => {
-    setSelectedFileId(fileId);
-  };
-
-  const handleCloseModal = () => {
-    setSelectedFileId(null);
-  };
-
-  const selectedFile = selectedFileId ? getFileById(selectedFileId) : null;
+  const selectedDocument = selectedDocumentId ? getDocumentById(selectedDocumentId) : null;
+  const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
-        <FileManagerSidebar />
+        <FileManagerSidebar 
+          onNavigateToFolder={navigateToFolder}
+          currentFolderId={currentFolderId}
+        />
         
         <main className="flex-1 flex flex-col">
-          {/* Header avec trigger de sidebar et titre */}
           <header className="flex items-center gap-4 p-4 border-b border-border bg-card/50">
             <SidebarTrigger className="shrink-0" />
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary-gradient">
-                <Folder className="h-5 w-5 text-white" />
+                <FolderIcon className="h-5 w-5 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-foreground">
-                  Gestionnaire de Fichiers
+                  {currentFolder ? currentFolder.name : 'Mes Documents'}
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Organisez vos fichiers avec des tags intelligents
+                  {currentFolder?.description || 'Organisez vos documents avec des tags intelligents'}
                 </p>
               </div>
             </div>
           </header>
 
-          {/* Barre de recherche et filtres */}
           <SearchBar
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -101,37 +74,35 @@ const Index = () => {
             sortBy={sortBy}
             onSortChange={setSortBy}
             selectedTags={selectedTags}
-            onClearFilters={handleClearFilters}
+            onClearFilters={clearFilters}
+            onNavigateBack={currentFolderId ? handleNavigateBack : undefined}
           />
 
-          {/* Zone de contenu principal */}
           <div className="flex-1 p-6">
-            {/* Statistiques */}
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span>{filteredAndSortedFiles.length} éléments</span>
-                <span>•</span>
-                <span>
-                  {filteredAndSortedFiles.filter(f => f.type === 'folder').length} dossiers
-                </span>
-                <span>•</span>
-                <span>
-                  {filteredAndSortedFiles.filter(f => f.type === 'file').length} fichiers
-                </span>
-              </div>
+            <div className="mb-6 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span className="whitespace-nowrap">
+                {content.folders.length} dossiers
+              </span>
+              <span className="hidden sm:inline">•</span>
+              <span className="whitespace-nowrap">
+                {content.documents.length} documents
+              </span>
+              <span className="hidden sm:inline">•</span>
+              <span className="whitespace-nowrap">
+                {(content.documents.reduce((acc, doc) => acc + doc.size, 0) / (1024 * 1024)).toFixed(2)} Mo
+              </span>
             </div>
 
-            {/* Grille de fichiers */}
-            {filteredAndSortedFiles.length === 0 ? (
+            {content.folders.length === 0 && content.documents.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
                   <FileText className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <h3 className="text-lg font-medium text-foreground mb-2">
-                  Aucun fichier trouvé
+                  Dossier vide
                 </h3>
                 <p className="text-muted-foreground max-w-sm">
-                  Essayez de modifier vos critères de recherche ou effacez les filtres actifs.
+                  Ce dossier est vide ou aucun élément ne correspond à vos critères de recherche.
                 </p>
               </div>
             ) : (
@@ -140,12 +111,35 @@ const Index = () => {
                   ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
                   : 'space-y-2'
               }>
-                {filteredAndSortedFiles.map((file) => (
+                {content.folders.map((folder) => (
+                  <div
+                    key={folder.id}
+                    className="p-4 rounded-lg border border-border hover:border-primary/20 cursor-pointer transition-all"
+                    onClick={() => navigateToFolder(folder.id)}
+                  >
+                    <div className="flex flex-col gap-3 min-w-0">
+                      <div className="flex items-center gap-3">
+                        <div className="shrink-0 p-2 rounded-lg" style={{ backgroundColor: folder.color + '20' }}>
+                          <FolderIcon className="h-5 w-5" style={{ color: folder.color }} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-medium truncate">{folder.name}</h3>
+                          {folder.description && (
+                            <p className="text-sm text-muted-foreground truncate">{folder.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      <FolderStats folderId={folder.id} />
+                    </div>
+                  </div>
+                ))}
+
+                {content.documents.map((doc) => (
                   <FileCard
-                    key={file.id}
-                    file={file}
-                    onClick={() => handleFileClick(file.id)}
-                    onToggleFavorite={() => toggleFavorite(file.id)}
+                    key={doc.id}
+                    document={doc}
+                    onClick={() => selectDocument(doc.id)}
+                    onToggleFavorite={() => toggleFavorite(doc.id)}
                   />
                 ))}
               </div>
@@ -153,16 +147,17 @@ const Index = () => {
           </div>
         </main>
 
-        {/* Modal de détails du fichier */}
         <FileDetailsModal
-          file={selectedFile}
-          isOpen={!!selectedFileId}
-          onClose={handleCloseModal}
+          document={selectedDocument}
+          isOpen={!!selectedDocumentId}
+          onClose={() => selectDocument(null)}
           onToggleFavorite={() => {
-            if (selectedFileId) {
-              toggleFavorite(selectedFileId);
+            if (selectedDocumentId) {
+              toggleFavorite(selectedDocumentId);
             }
           }}
+          onTagClick={toggleTag}
+          selectedTags={selectedTags}
         />
       </div>
     </SidebarProvider>

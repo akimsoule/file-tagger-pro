@@ -1,12 +1,12 @@
-import { FileItem } from '@/types';
+import { Document } from '@/contexts/file-context-def';
 import { TagBadge } from './TagBadge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Folder, Heart, MoreHorizontal } from 'lucide-react';
+import { FileText, Heart, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FileCardProps {
-  file: FileItem;
+  document: Document;
   onClick?: () => void;
   onToggleFavorite?: () => void;
 }
@@ -32,14 +32,14 @@ const formatDate = (date: Date): string => {
   });
 };
 
-const getFileIcon = (file: FileItem) => {
-  if (file.type === 'folder') {
-    return <Folder className="h-8 w-8 text-primary" />;
-  }
+const getFileIcon = (type: string) => {
   return <FileText className="h-8 w-8 text-muted-foreground" />;
 };
 
-export function FileCard({ file, onClick, onToggleFavorite }: FileCardProps) {
+export function FileCard({ document, onClick, onToggleFavorite }: FileCardProps) {
+  const fileExtension = document.name.split('.').pop()?.toUpperCase();
+  const tags = document.tags.split(',').filter(tag => tag.trim() !== '');
+
   return (
     <Card 
       className={cn(
@@ -50,21 +50,23 @@ export function FileCard({ file, onClick, onToggleFavorite }: FileCardProps) {
     >
       {/* Header avec icône et actions */}
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          {getFileIcon(file)}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="shrink-0">
+            {getFileIcon(document.type)}
+          </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-medium text-foreground truncate">
-              {file.name}
+              {document.name}
             </h3>
-            {file.extension && (
-              <p className="text-xs text-muted-foreground uppercase">
-                {file.extension}
+            {fileExtension && (
+              <p className="text-xs text-muted-foreground uppercase truncate">
+                {fileExtension}
               </p>
             )}
           </div>
         </div>
         
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0 ml-2">
           <Button
             variant="ghost"
             size="sm"
@@ -76,7 +78,7 @@ export function FileCard({ file, onClick, onToggleFavorite }: FileCardProps) {
           >
             <Heart className={cn(
               "h-4 w-4",
-              file.isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"
+              document.isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"
             )} />
           </Button>
           <Button
@@ -91,14 +93,14 @@ export function FileCard({ file, onClick, onToggleFavorite }: FileCardProps) {
       </div>
 
       {/* Tags */}
-      {file.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {file.tags.slice(0, 3).map((tag) => (
-            <TagBadge key={tag.id} tag={tag} />
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-3 max-w-full">
+          {tags.slice(0, 3).map((tag) => (
+            <TagBadge key={tag} name={tag.trim()} className="max-w-[150px]" />
           ))}
-          {file.tags.length > 3 && (
-            <span className="text-xs text-muted-foreground px-2 py-1">
-              +{file.tags.length - 3}
+          {tags.length > 3 && (
+            <span className="text-xs text-muted-foreground px-2 py-1 whitespace-nowrap">
+              +{tags.length - 3}
             </span>
           )}
         </div>
@@ -106,10 +108,8 @@ export function FileCard({ file, onClick, onToggleFavorite }: FileCardProps) {
 
       {/* Métadonnées */}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{formatDate(file.dateModified)}</span>
-        {file.size && (
-          <span>{formatFileSize(file.size)}</span>
-        )}
+        <span>{formatDate(document.modifiedAt)}</span>
+        <span>{formatFileSize(document.size)}</span>
       </div>
     </Card>
   );

@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Filter, Grid3X3, List, SortAsc } from 'lucide-react';
+import { Search, Grid3X3, List, SortAsc, ChevronLeft } from 'lucide-react';
 import { ViewMode, SortBy } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -18,6 +18,7 @@ interface SearchBarProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   sortBy: SortBy;
+  onNavigateBack?: () => void;
   onSortChange: (sort: SortBy) => void;
   selectedTags: string[];
   onClearFilters: () => void;
@@ -32,6 +33,7 @@ export function SearchBar({
   onSortChange,
   selectedTags,
   onClearFilters,
+  onNavigateBack,
 }: SearchBarProps) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -44,6 +46,19 @@ export function SearchBar({
 
   return (
     <div className="flex items-center gap-4 p-4 bg-background border-b border-border">
+      {/* Bouton de retour */}
+      {onNavigateBack && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onNavigateBack}
+          className="shrink-0"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span className="sr-only">Retour</span>
+        </Button>
+      )}
+
       {/* Barre de recherche */}
       <div className="relative flex-1 max-w-md">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
