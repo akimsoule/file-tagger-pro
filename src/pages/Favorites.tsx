@@ -3,22 +3,22 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { FileManagerSidebar } from '@/components/FileManagerSidebar';
 import { SearchBar } from '@/components/SearchBar';
 import { FileCard } from '@/components/FileCard';
-import { FileDetailsModal } from '@/components/FileDetailsModal';
 import { useFiles } from '@/contexts/FileContext';
-import { ViewMode, SortBy, FileItem } from '@/types';
-import { Folder, FileText } from 'lucide-react';
+import { ViewMode, SortBy } from '@/types';
+import { Heart, FileText } from 'lucide-react';
 
-const Index = () => {
-  const { files, toggleFavorite, getFileById } = useFiles();
+const Favorites = () => {
+  const { getFavoriteFiles, toggleFavorite } = useFiles();
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sortBy, setSortBy] = useState<SortBy>('date');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
 
-  // Filtrage et tri des fichiers
+  const favoriteFiles = getFavoriteFiles();
+
+  // Filtrage et tri des fichiers favoris
   const filteredAndSortedFiles = useMemo(() => {
-    let filtered = files;
+    let filtered = favoriteFiles;
 
     // Filtrage par recherche
     if (searchQuery) {
@@ -51,22 +51,12 @@ const Index = () => {
     });
 
     return filtered;
-  }, [searchQuery, selectedTags, sortBy]);
+  }, [favoriteFiles, searchQuery, selectedTags, sortBy]);
 
   const handleClearFilters = () => {
     setSelectedTags([]);
     setSearchQuery('');
   };
-
-  const handleFileClick = (fileId: string) => {
-    setSelectedFileId(fileId);
-  };
-
-  const handleCloseModal = () => {
-    setSelectedFileId(null);
-  };
-
-  const selectedFile = selectedFileId ? getFileById(selectedFileId) : null;
 
   return (
     <SidebarProvider>
@@ -78,15 +68,15 @@ const Index = () => {
           <header className="flex items-center gap-4 p-4 border-b border-border bg-card/50">
             <SidebarTrigger className="shrink-0" />
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary-gradient">
-                <Folder className="h-5 w-5 text-white" />
+              <div className="p-2 rounded-lg bg-gradient-to-br from-red-500 to-pink-600">
+                <Heart className="h-5 w-5 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-foreground">
-                  Gestionnaire de Fichiers
+                  Fichiers Favoris
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Organisez vos fichiers avec des tags intelligents
+                  Vos fichiers et dossiers favoris
                 </p>
               </div>
             </div>
@@ -109,7 +99,7 @@ const Index = () => {
             {/* Statistiques */}
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span>{filteredAndSortedFiles.length} éléments</span>
+                <span>{filteredAndSortedFiles.length} favoris</span>
                 <span>•</span>
                 <span>
                   {filteredAndSortedFiles.filter(f => f.type === 'folder').length} dossiers
@@ -125,13 +115,13 @@ const Index = () => {
             {filteredAndSortedFiles.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="p-4 rounded-full bg-muted mb-4">
-                  <FileText className="h-8 w-8 text-muted-foreground" />
+                  <Heart className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <h3 className="text-lg font-medium text-foreground mb-2">
-                  Aucun fichier trouvé
+                  Aucun favori trouvé
                 </h3>
                 <p className="text-muted-foreground max-w-sm">
-                  Essayez de modifier vos critères de recherche ou effacez les filtres actifs.
+                  Ajoutez des fichiers à vos favoris en cliquant sur l'icône cœur.
                 </p>
               </div>
             ) : (
@@ -144,7 +134,7 @@ const Index = () => {
                   <FileCard
                     key={file.id}
                     file={file}
-                    onClick={() => handleFileClick(file.id)}
+                    onClick={() => console.log('Open file:', file.name)}
                     onToggleFavorite={() => toggleFavorite(file.id)}
                   />
                 ))}
@@ -152,21 +142,9 @@ const Index = () => {
             )}
           </div>
         </main>
-
-        {/* Modal de détails du fichier */}
-        <FileDetailsModal
-          file={selectedFile}
-          isOpen={!!selectedFileId}
-          onClose={handleCloseModal}
-          onToggleFavorite={() => {
-            if (selectedFileId) {
-              toggleFavorite(selectedFileId);
-            }
-          }}
-        />
       </div>
     </SidebarProvider>
   );
 };
 
-export default Index;
+export default Favorites;
