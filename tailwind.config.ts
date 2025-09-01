@@ -61,7 +61,24 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Tag colors
+				tag: {
+					blue: 'hsl(var(--tag-blue))',
+					green: 'hsl(var(--tag-green))',
+					orange: 'hsl(var(--tag-orange))',
+					purple: 'hsl(var(--tag-purple))',
+					pink: 'hsl(var(--tag-pink))',
+					yellow: 'hsl(var(--tag-yellow))'
 				}
+			},
+			backgroundImage: {
+				'primary-gradient': 'var(--primary-gradient)',
+				'accent-gradient': 'var(--accent-gradient)'
+			},
+			boxShadow: {
+				'card': 'var(--card-shadow)',
+				'card-hover': 'var(--card-shadow-hover)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
