@@ -3,7 +3,7 @@ import { Document } from "@/contexts/file-context-def";
 import { TagBadge } from "./TagBadge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Heart, MoreHorizontal, FolderOutput } from "lucide-react";
+import { FileText, Heart, MoreHorizontal, FolderOutput, Tags } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { FolderPicker } from "./FolderPicker";
+import { TagEditor } from "./TagEditor";
 import { useFileContext } from "@/hooks/use-files";
 
 interface FileCardProps {
@@ -51,7 +52,8 @@ export function FileCard({
   onToggleFavorite,
 }: FileCardProps) {
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
-  const { moveDocument } = useFileContext();
+  const [isTagEditorOpen, setIsTagEditorOpen] = useState(false);
+  const { moveDocument, updateDocument } = useFileContext();
 
   const fileExtension = document.name.split(".").pop()?.toUpperCase();
   const tags = document.tags.split(",").filter((tag) => tag.trim() !== "");
@@ -62,6 +64,10 @@ export function FileCard({
 
   const handleMove = (targetFolderId: string | null) => {
     moveDocument(document.id, targetFolderId);
+  };
+
+  const handleUpdateTags = (newTags: string) => {
+    updateDocument(document.id, { tags: newTags });
   };
 
   return (
@@ -124,6 +130,15 @@ export function FileCard({
                   <FolderOutput className="h-4 w-4 mr-2" />
                   Déplacer
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsTagEditorOpen(true);
+                  }}
+                >
+                  <Tags className="h-4 w-4 mr-2" />
+                  Modifier les tags
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -156,6 +171,14 @@ export function FileCard({
         onSelect={handleMove}
         currentFolderId={document.folderId || null}
         title="Déplacer le fichier vers"
+      />
+
+      <TagEditor
+        isOpen={isTagEditorOpen}
+        onClose={() => setIsTagEditorOpen(false)}
+        currentTags={document.tags}
+        onSave={handleUpdateTags}
+        title="Modifier les tags du fichier"
       />
     </>
   );
