@@ -18,6 +18,7 @@ export const mockFolders: Folder[] = [
     parentId: undefined,
     children: [],
     documents: [],
+    tags: 'important,work',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01')
   },
@@ -30,6 +31,7 @@ export const mockFolders: Folder[] = [
     parentId: undefined,
     children: [],
     documents: [],
+    tags: 'photos,vacances',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01')
   },
@@ -42,6 +44,7 @@ export const mockFolders: Folder[] = [
     parentId: undefined,
     children: [],
     documents: [],
+    tags: 'work,projet',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-02-15')
   },
@@ -54,6 +57,7 @@ export const mockFolders: Folder[] = [
     parentId: '3',
     children: [],
     documents: [],
+    tags: 'work,projet',
     createdAt: new Date('2024-01-15'),
     updatedAt: new Date('2024-02-15')
   },
@@ -66,6 +70,7 @@ export const mockFolders: Folder[] = [
     parentId: '4',
     children: [],
     documents: [],
+    tags: 'work,projet',
     createdAt: new Date('2024-01-20'),
     updatedAt: new Date('2024-02-15')
   },
@@ -78,6 +83,7 @@ export const mockFolders: Folder[] = [
     parentId: '4',
     children: [],
     documents: [],
+    tags: 'work,projet',
     createdAt: new Date('2024-01-20'),
     updatedAt: new Date('2024-03-01')
   },
@@ -90,6 +96,7 @@ export const mockFolders: Folder[] = [
     parentId: '2',
     children: [],
     documents: [],
+    tags: 'photos,vacances',
     createdAt: new Date('2024-06-15'),
     updatedAt: new Date('2024-08-30')
   },
@@ -102,6 +109,7 @@ export const mockFolders: Folder[] = [
     parentId: '7',
     children: [],
     documents: [],
+    tags: 'photos,vacances,été',
     createdAt: new Date('2024-06-15'),
     updatedAt: new Date('2024-08-30')
   },
@@ -114,6 +122,7 @@ export const mockFolders: Folder[] = [
     parentId: '7',
     children: [],
     documents: [],
+    tags: 'photos,vacances,hiver',
     createdAt: new Date('2024-12-15'),
     updatedAt: new Date('2024-12-30')
   },
@@ -126,6 +135,7 @@ export const mockFolders: Folder[] = [
     parentId: undefined,
     children: [],
     documents: [],
+    tags: 'archives',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01')
   }
