@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { Folder } from '@/contexts/file/def';
 import {
   Sidebar,
   SidebarContent,
@@ -13,8 +14,9 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { TagBadge } from './TagBadge';
-import { Files, Heart, Hash, Settings } from 'lucide-react';
+import { Files, Heart, Hash, Settings, FolderIcon, ChevronRight } from 'lucide-react';
 import { useTags } from '@/hooks/useTags';
+import { useFileContext } from '@/hooks/useFileContext';
 
 interface FileManagerSidebarProps {
   onNavigateToFolder?: (folderId: string) => void;
@@ -30,8 +32,45 @@ export function FileManagerSidebar({ onNavigateToFolder, currentFolderId }: File
   const { open } = useSidebar();
   const location = useLocation();
   const { toggleTagSelection: toggleTag, selectedTags, tags: allTags, getTagCount } = useTags();
+  const { getFolders, getFolderHierarchy, currentFolderId: activeFolder, setCurrentFolderId } = useFileContext();
 
+  const rootFolders = getFolders(null) || [];
   const isActive = (path: string) => location.pathname === path;
+
+  const FolderTreeItem = ({ folder, depth = 0 }: { folder: Folder; depth?: number }) => {
+    const subFolders = getFolders(folder.id);
+    const hasSubFolders = subFolders && subFolders.length > 0;
+    
+    return (
+      <>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild>
+            <Button
+              variant="ghost"
+              className={`w-full justify-start gap-2 px-3 py-2 text-sm ${
+                folder.id === activeFolder
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground'
+              }`}
+              onClick={() => setCurrentFolderId(folder.id)}
+              style={{ paddingLeft: `${(depth + 1) * 0.75}rem` }}
+            >
+              <FolderIcon className="h-4 w-4" style={{ color: folder.color }} />
+              {open && (
+                <>
+                  <span className="flex-1 truncate text-left">{folder.name}</span>
+                  {hasSubFolders && <ChevronRight className="h-4 w-4" />}
+                </>
+              )}
+            </Button>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        {hasSubFolders && subFolders.map((subFolder) => (
+          <FolderTreeItem key={subFolder.id} folder={subFolder} depth={depth + 1} />
+        ))}
+      </>
+    );
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -66,53 +105,83 @@ export function FileManagerSidebar({ onNavigateToFolder, currentFolderId }: File
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Section Dossiers */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-6">
+            <span className="flex items-center gap-2">
+              <FolderIcon className="h-3 w-3" />
+              {open && 'Dossiers'}
+            </span>
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {rootFolders.map((folder) => (
+                <FolderTreeItem key={folder.id} folder={folder} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         {/* Section Tags */}
         <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <SidebarGroupLabel className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-6">
             <span className="flex items-center gap-2">
               <Hash className="h-3 w-3" />
               {open && 'Tags'}
             </span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <div className="space-y-1">
+            <SidebarMenu>
               {allTags.map((tag) => (
-                <div
-                  key={tag.id}
-                  className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
-                    selectedTags.includes(tag.id)
-                      ? 'bg-accent'
-                      : 'hover:bg-accent/50'
-                  }`}
-                  onClick={() => toggleTag(tag.id)}
-                >
-                  {open ? (
-                    <>
-                      <TagBadge name={tag.name} />
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        {getTagCount(tag.id)}
-                      </span>
-                    </>
-                  ) : (
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color + '40' }} />
-                  )}
-                </div>
+                <SidebarMenuItem key={tag.id}>
+                  <SidebarMenuButton asChild>
+                    <Button
+                      variant="ghost"
+                      className={`w-full justify-start gap-2 px-3 py-2 text-sm ${
+                        selectedTags.includes(tag.id)
+                          ? 'bg-accent text-accent-foreground'
+                          : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground'
+                      }`}
+                      onClick={() => toggleTag(tag.id)}
+                    >
+                      <div 
+                        className="h-3 w-3 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: tag.color || '#888' }} 
+                      />
+                      {open && (
+                        <>
+                          <span className="flex-1 truncate text-left">{tag.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {getTagCount(tag.id)}
+                          </span>
+                        </>
+                      )}
+                    </Button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               ))}
-            </div>
+            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Bouton paramètres */}
-        <div className="mt-auto p-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start"
-          >
-            <Settings className="h-4 w-4" />
-            {open && <span className="ml-2">Paramètres</span>}
-          </Button>
-        </div>
+        {/* Section paramètres */}
+        <SidebarGroup>
+          <SidebarGroupContent className="mt-auto">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                  >
+                    <Settings className="h-4 w-4" />
+                    {open && <span>Paramètres</span>}
+                  </Button>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   );

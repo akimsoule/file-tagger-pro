@@ -10,6 +10,7 @@ import { useQuery } from "@/hooks/useQuery";
 import { useTags } from "@/hooks/useTags";
 import { Folder as FolderIcon, FileText } from "lucide-react";
 import { FolderCard } from "@/components/FolderCard";
+import type { Document, Folder } from "@/contexts/file/def";
 
 const Index = () => {
   const {
@@ -35,24 +36,100 @@ const Index = () => {
     getFolderContent
   } = useFileContext();
 
-  const { selectedTags, toggleTagSelection: toggleTag } = useTags();
-
+  const { selectedTags, toggleTagSelection: toggleTag, tags } = useTags();
 
   const clearFilters = useCallback(() => {
     setSearchQuery("");
     setSortBy("date");
-  }, [setSearchQuery, setSortBy]);
+    if (selectedTags.length > 0) {
+      selectedTags.forEach(tagId => toggleTag(tagId));
+    }
+  }, [setSearchQuery, setSortBy, selectedTags, toggleTag]);
 
-  const folderContent = currentFolderId 
-    ? getFolderContent(currentFolderId)
-    : { documents: documents, subFolders: folders };
+  // Obtenir le contenu initial
+  const folderContent = getFolderContent(currentFolderId ?? undefined);
 
-  const filteredDocuments = getFilteredContent(folderContent.documents);
-  const sortedDocuments = getSortedContent(filteredDocuments);
-  const content = {
-    folders: folderContent.subFolders,
-    documents: sortedDocuments
+  // Fonction pour vérifier si un document a tous les tags sélectionnés
+  const documentHasTags = (doc: Document) => {
+    const docTags = doc.tags.split(',').map(t => t.trim());
+    return selectedTags.every(tagId => {
+      const tag = tags.find(t => t.id === tagId);
+      return tag && docTags.includes(tag.name);
+    });
   };
+
+  // Fonction pour vérifier si un dossier est pertinent
+  const folderIsRelevant = (folder: Folder) => {
+    const folderTags = folder.tags.split(',').map(t => t.trim());
+    // Le dossier a les tags directement
+    const hasTagsDirectly = selectedTags.every(tagId => {
+      const tag = tags.find(t => t.id === tagId);
+      return tag && folderTags.includes(tag.name);
+    });
+    
+    // Le dossier contient des documents avec les tags
+    const hasDocumentsWithTags = documents.some(doc => 
+      doc.folderId === folder.id && documentHasTags(doc)
+    );
+    
+    return hasTagsDirectly || hasDocumentsWithTags;
+  };
+
+  // Préparation du contenu
+  let content;
+  
+  if (selectedTags.length > 0) {
+    console.log('=== Filtrage par tags ===');
+    console.log('Tags sélectionnés:', {
+      ids: selectedTags,
+      noms: tags.filter(t => selectedTags.includes(t.id)).map(t => t.name)
+    });
+
+    // Filtrer les documents
+    const filteredDocs = documents.filter(doc => {
+      const hasAllTags = documentHasTags(doc);
+      if (hasAllTags) {
+        console.log('Document correspondant trouvé:', {
+          name: doc.name,
+          tags: doc.tags,
+          selectedTags: selectedTags.map(id => tags.find(t => t.id === id)?.name)
+        });
+      }
+      return hasAllTags;
+    });
+
+    // Filtrer les dossiers
+    const filteredFolders = folders.filter(folder => {
+      const isRelevant = folderIsRelevant(folder);
+      if (isRelevant) {
+        console.log('Dossier correspondant trouvé:', {
+          name: folder.name,
+          tags: folder.tags,
+          selectedTags: selectedTags.map(id => tags.find(t => t.id === id)?.name)
+        });
+      }
+      return isRelevant;
+    });
+
+    console.log('Résultats du filtrage:', {
+      documents: filteredDocs.map(d => d.name),
+      folders: filteredFolders.map(f => f.name)
+    });
+
+    content = {
+      documents: filteredDocs,
+      folders: filteredFolders
+    };
+  } else {
+    // Si pas de tags sélectionnés, afficher le contenu normal du dossier
+    content = {
+      documents: searchQuery ? getFilteredContent(folderContent.documents) : folderContent.documents,
+      folders: folderContent.subFolders
+    };
+  }
+
+  // Tri final des documents
+  content.documents = getSortedContent(content.documents);
 
   const handleNavigateBack = () => {
     if (currentFolderId) {
@@ -128,8 +205,7 @@ const Index = () => {
                 </span>
               </div>
 
-              {content.folders.length === 0 &&
-              content.documents.length === 0 ? (
+              {content.folders.length === 0 && content.documents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="p-4 rounded-full bg-muted mb-4">
                     <FileText className="h-8 w-8 text-muted-foreground" />

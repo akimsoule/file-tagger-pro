@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useSettings } from '../../hooks/useSettings';
 import { useTags } from '../../hooks/useTags';
+import { useFileContext } from '../../hooks/useFileContext';
 import type { Document } from '../file/def';
 import type { QueryContextType, SortBy, ViewMode } from './def';
 import { QueryContext } from './context';
@@ -44,13 +45,17 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     setSelectedTags([]);
   }, [defaultSortBy, defaultViewMode, setSelectedTags]);
 
+  // Importer useFileContext
+  const { getDocumentsWithTags, getFoldersWithTags } = useFileContext();
+
   const getFilteredContent = useCallback((content: Document[]) => {
     let filtered = [...content];
 
     if (filters.selectedTags.length > 0) {
-      filtered = filtered.filter(doc =>
-        filters.selectedTags.every(tag => doc.tags.includes(tag))
-      );
+      // Filtrer d'abord par tags tout en conservant le contexte du dossier courant
+      const documentsWithTags = getDocumentsWithTags(filters.selectedTags);
+      // On ne garde que les documents qui étaient dans le contenu initial
+      filtered = documentsWithTags.filter(doc => content.some(c => c.id === doc.id));
     }
 
     if (filters.showFavorites) {
@@ -66,7 +71,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     }
 
     return filtered;
-  }, [filters.selectedTags, filters.showFavorites, searchQuery]);
+  }, [filters.selectedTags, filters.showFavorites, searchQuery, getDocumentsWithTags]);
 
   const getSortedContent = useCallback((content: Document[]) => {
     return [...content].sort((a, b) => {
@@ -91,9 +96,8 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
 
     // Appliquer les autres filtres
     if (filters.selectedTags.length > 0) {
-      filtered = filtered.filter(doc =>
-        filters.selectedTags.every(tag => doc.tags.includes(tag))
-      );
+      const documentsWithTags = getDocumentsWithTags(filters.selectedTags);
+      filtered = filtered.filter(doc => documentsWithTags.some(d => d.id === doc.id));
     }
 
     // Appliquer la recherche
@@ -108,7 +112,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
 
     // Trier les résultats
     return getSortedContent(filtered);
-  }, [filters.selectedTags, searchQuery, getSortedContent]);
+  }, [filters.selectedTags, searchQuery, getSortedContent, getDocumentsWithTags]);
 
   const value: QueryContextType = {
     searchQuery,

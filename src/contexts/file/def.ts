@@ -29,21 +29,6 @@ export interface Folder {
 }
 
 export interface FileContextType {
-  // Document operations
-  moveDocument: (documentId: string, targetFolderId: string | null) => void;
-  updateDocument: (id: string, updates: Partial<Document>) => void;
-  
-  // Folder operations
-  moveFolder: (folderId: string, targetFolderId: string | null) => void;
-  updateFolder: (id: string, updates: Partial<Folder>) => void;
-  getFolderStats: (folderId: string) => { totalItems: number; totalSize: number };
-  getFolderHierarchy: () => Folder[];
-  getFolderContent: (folderId?: string) => { documents: Document[]; subFolders: Folder[] };
-  currentFolderId: string | null;
-  setCurrentFolderId: (id: string | null) => void;
-}
-
-export interface FileContextType {
   // State
   documents: Document[];
   folders: Folder[];
@@ -52,6 +37,7 @@ export interface FileContextType {
 
   // State setters
   setCurrentFolderId: (id: string | null) => void;
+  selectDocument: (id: string | null) => void;
 
   // Document operations
   findDocumentById: (id: string) => Document | undefined;
@@ -60,7 +46,6 @@ export interface FileContextType {
   addDocument: (document: Omit<Document, 'id' | 'createdAt' | 'modifiedAt'>) => void;
   deleteDocument: (id: string) => void;
   moveDocument: (documentId: string, targetFolderId: string | null) => void;
-  selectDocument: (id: string | null) => void;
   toggleFavorite: (documentId: string) => void;
 
   // Folder operations
@@ -72,4 +57,7 @@ export interface FileContextType {
   getFolderHierarchy: () => Folder[];
   getFolderStats: (folderId: string) => { totalItems: number; totalSize: number };
   getFolderContent: (folderId?: string) => { documents: Document[]; subFolders: Folder[] };
+  getFolders: (parentId: string | null) => Folder[];
+  getDocumentsWithTags: (tagIds: string[]) => Document[];
+  getFoldersWithTags: (tagIds: string[]) => Folder[];
 }
