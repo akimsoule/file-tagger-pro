@@ -39,31 +39,12 @@ const navigationItems = [
 export function FileManagerSidebar({ onNavigateToFolder, currentFolderId }: FileManagerSidebarProps) {
   const { open } = useSidebar();
   const location = useLocation();
-  const { documents, toggleTag, selectedTags } = useFiles();
+  const { toggleTag, selectedTags, getAllTags, getTagCounts } = useFiles();
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Extraire tous les tags uniques des documents
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    documents.forEach(doc => {
-      doc.tags.split(',').forEach(tag => {
-        const trimmedTag = tag.trim();
-        if (trimmedTag) tagSet.add(trimmedTag);
-      });
-    });
-    return Array.from(tagSet);
-  }, [documents]);
-
-  // Calculer le nombre de documents par tag
-  const tagCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    allTags.forEach(tag => {
-      const count = documents.filter(doc => doc.tags.includes(tag)).length;
-      counts.set(tag, count);
-    });
-    return counts;
-  }, [allTags, documents]);
+  const allTags = getAllTags();
+  const tagCounts = getTagCounts();
 
   return (
     <Sidebar collapsible="icon">

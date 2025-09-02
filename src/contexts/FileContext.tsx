@@ -107,6 +107,49 @@ export function FileProvider({ children }: { children: ReactNode }) {
     ));
   }, []);
 
+  // Tag operations
+  const getAllTags = useCallback(() => {
+    // Première passe : collecter les tags uniques et leurs occurrences
+    const tagOccurrences = new Map<string, number>();
+    
+    documents.forEach(doc => {
+      doc.tags.split(',').forEach(tag => {
+        const trimmedTag = tag.trim();
+        if (trimmedTag) {
+          tagOccurrences.set(
+            trimmedTag, 
+            (tagOccurrences.get(trimmedTag) || 0) + 1
+          );
+        }
+      });
+    });
+
+    // Convertir en tableau et trier
+    return Array.from(tagOccurrences.entries())
+      .sort((a, b) => {
+        // Tri par nombre d'occurrences décroissant
+        if (b[1] !== a[1]) {
+          return b[1] - a[1];
+        }
+        // En cas d'égalité, tri alphabétique
+        return a[0].localeCompare(b[0]);
+      })
+      .map(([tag]) => tag); // Ne retourner que les tags, sans les compteurs
+  }, [documents]);
+
+  const getTagCount = useCallback((tag: string) => {
+    return documents.filter(doc => doc.tags.includes(tag)).length;
+  }, [documents]);
+
+  const getTagCounts = useCallback(() => {
+    const counts = new Map<string, number>();
+    const allTagsList = getAllTags();
+    allTagsList.forEach(tag => {
+      counts.set(tag, getTagCount(tag));
+    });
+    return counts;
+  }, [getAllTags, getTagCount]);
+
   // Filtering operations
   const toggleTag = useCallback((tag: string) => {
     console.log("Toggling tag:", tag);
@@ -228,6 +271,11 @@ export function FileProvider({ children }: { children: ReactNode }) {
       getFolderContent,
       getFolderStats,
       updateFolder,
+
+      // Tag operations
+      getAllTags,
+      getTagCount,
+      getTagCounts,
 
       // Filtering operations
       getFilteredContent,

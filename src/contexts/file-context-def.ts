@@ -87,6 +87,9 @@ export interface FileContextType {
     totalItems: number;
     totalSize: number;
   };
+  getAllTags: () => string[]; // Tags triés par nombre d'occurrences décroissant
+  getTagCount: (tag: string) => number;
+  getTagCounts: () => Map<string, number>;
   getFilteredContent: (folderId?: string) => {
     documents: Document[];
     subFolders: Folder[];
