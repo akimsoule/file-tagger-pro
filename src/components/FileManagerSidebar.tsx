@@ -13,8 +13,8 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { TagBadge } from './TagBadge';
-import { useTagContext } from '@/hooks/use-tags';
 import { Files, Heart, Hash, Settings } from 'lucide-react';
+import { useTags } from '@/hooks/useTags';
 
 interface FileManagerSidebarProps {
   onNavigateToFolder?: (folderId: string) => void;
@@ -29,7 +29,7 @@ const navigationItems = [
 export function FileManagerSidebar({ onNavigateToFolder, currentFolderId }: FileManagerSidebarProps) {
   const { open } = useSidebar();
   const location = useLocation();
-  const { toggleTagSelection: toggleTag, selectedTags, tags: allTags, getTagCount } = useTagContext();
+  const { toggleTagSelection: toggleTag, selectedTags, tags: allTags, getTagCount } = useTags();
 
   const isActive = (path: string) => location.pathname === path;
 
