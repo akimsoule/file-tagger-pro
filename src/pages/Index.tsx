@@ -5,40 +5,54 @@ import { SearchBar } from "@/components/SearchBar";
 import { FileCard } from "@/components/FileCard";
 import { FileDetailsModal } from "@/components/FileDetailsModal";
 import { Breadcrumb } from "@/components/Breadcrumb";
-import { useFileContext } from "@/hooks/use-files";
-import { useDocumentManager } from "@/hooks/useDocumentManager";
-import { useFolderManager } from "@/hooks/useFolderManager";
+import { useFileContext } from "@/hooks/useFileContext";
+import { useQuery } from "@/hooks/useQuery";
+import { useTags } from "@/hooks/useTags";
 import { Folder as FolderIcon, FileText } from "lucide-react";
 import { FolderCard } from "@/components/FolderCard";
 
 const Index = () => {
   const {
-    findDocumentById,
-    getFolderPath,
-    getSortedContent,
     searchQuery,
     setSearchQuery,
-    selectedTags,
-    toggleTag,
     viewMode,
     setViewMode,
     sortBy,
     setSortBy,
-    selectedDocumentId,
-    selectDocument,
+    getFilteredContent,
+    getSortedContent
+  } = useQuery();
+  
+  const {
+    documents,
+    folders,
     currentFolderId,
     setCurrentFolderId,
+    selectedDocumentId,
+    selectDocument,
+    findDocumentById,
+    toggleFavorite,
+    getFolderContent
   } = useFileContext();
 
-  const { toggleFavorite } = useDocumentManager();
-  const { folders } = useFolderManager();
+  const { selectedTags, toggleTagSelection: toggleTag } = useTags();
+
 
   const clearFilters = useCallback(() => {
     setSearchQuery("");
     setSortBy("date");
   }, [setSearchQuery, setSortBy]);
 
-  const content = getSortedContent(currentFolderId || undefined);
+  const folderContent = currentFolderId 
+    ? getFolderContent(currentFolderId)
+    : { documents: documents, subFolders: folders };
+
+  const filteredDocuments = getFilteredContent(folderContent.documents);
+  const sortedDocuments = getSortedContent(filteredDocuments);
+  const content = {
+    folders: folderContent.subFolders,
+    documents: sortedDocuments
+  };
 
   const handleNavigateBack = () => {
     if (currentFolderId) {

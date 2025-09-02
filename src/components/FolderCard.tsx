@@ -12,7 +12,7 @@ import {
 import { cn } from '@/lib/utils';
 import { FolderPicker } from './FolderPicker';
 import { TagEditor } from './TagEditor';
-import { useFileContext } from '@/hooks/use-files';
+import { useFileContext } from '@/hooks/useFile';
 
 interface FolderCardProps {
   folder: Folder;

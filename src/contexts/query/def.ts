@@ -18,6 +18,7 @@ export interface QueryContextType {
   // Filtering & Sorting
   getFilteredContent: (content: Document[]) => Document[];
   getSortedContent: (content: Document[]) => Document[];
+  getFilteredAndSortedFavorites: (documents: Document[]) => Document[];
   
   setSearchQuery: (query: string) => void;
   setSortBy: (sort: SortBy) => void;

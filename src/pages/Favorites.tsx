@@ -3,23 +3,25 @@ import { FileManagerSidebar } from '@/components/FileManagerSidebar';
 import { SearchBar } from '@/components/SearchBar';
 import { FileCard } from '@/components/FileCard';
 import { Heart } from 'lucide-react';
+import { useQuery } from '@/hooks/useQuery';
 import { useFileContext } from '@/hooks/useFileContext';
+import { useTags } from '@/hooks/useTags';
 
 const Favorites = () => {
   const {
     getFilteredAndSortedFavorites,
-    toggleFavorite,
     searchQuery,
     setSearchQuery,
     viewMode,
     setViewMode,
     sortBy,
     setSortBy,
-    selectedTags,
     clearFilters
-  } = useFileContext();
+  } = useQuery();
+  const { documents, toggleFavorite } = useFileContext();
+  const { selectedTags } = useTags();
 
-  const filteredAndSortedDocuments = getFilteredAndSortedFavorites();
+  const filteredAndSortedDocuments = getFilteredAndSortedFavorites(documents);
 
   // Plus besoin de handleClearFilters car on utilise clearFilters du contexte
 

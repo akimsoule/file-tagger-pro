@@ -1,12 +1,10 @@
 import React from 'react';
-import { useFileContext } from '@/hooks/use-files';
-import { useFolderManager } from '@/hooks/useFolderManager';
 import { ChevronRight, Home } from 'lucide-react';
 import { Folder } from '@/contexts/file/def';
+import { useFileContext } from '@/hooks/useFileContext';
 
 export function Breadcrumb() {
-  const { currentFolderId, setCurrentFolderId } = useFileContext();
-  const { getFolderPath } = useFolderManager();
+  const { currentFolderId, setCurrentFolderId, getFolderPath } = useFileContext();
 
   // Obtenir le chemin actuel en utilisant le hook useFolderManager
   const currentPath = getFolderPath(currentFolderId || undefined);

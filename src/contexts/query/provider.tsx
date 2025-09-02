@@ -85,6 +85,31 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     });
   }, [sortBy]);
 
+  const getFilteredAndSortedFavorites = useCallback((documents: Document[]) => {
+    // Commencer avec uniquement les favoris
+    let filtered = documents.filter(doc => doc.isFavorite);
+
+    // Appliquer les autres filtres
+    if (filters.selectedTags.length > 0) {
+      filtered = filtered.filter(doc =>
+        filters.selectedTags.every(tag => doc.tags.includes(tag))
+      );
+    }
+
+    // Appliquer la recherche
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(doc =>
+        doc.name.toLowerCase().includes(query) ||
+        doc.description?.toLowerCase().includes(query) ||
+        doc.tags.toLowerCase().includes(query)
+      );
+    }
+
+    // Trier les résultats
+    return getSortedContent(filtered);
+  }, [filters.selectedTags, searchQuery, getSortedContent]);
+
   const value: QueryContextType = {
     searchQuery,
     sortBy,
@@ -97,7 +122,8 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     toggleHiddenFilter,
     clearFilters,
     getFilteredContent,
-    getSortedContent
+    getSortedContent,
+    getFilteredAndSortedFavorites
   };
 
   return <QueryContext.Provider value={value}>{children}</QueryContext.Provider>;

@@ -4,7 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Folder, ChevronRight, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useFileContext } from '@/hooks/use-files';
+import { useFileContext } from '@/hooks/useFile';
 import { Folder as FolderType } from '@/contexts/file/def';
 
 interface FolderPickerProps {
