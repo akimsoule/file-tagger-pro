@@ -31,17 +31,17 @@ export function FileProvider({ children }: { children: ReactNode }) {
     if (!folderId) return [];
 
     const path: Folder[] = [];
-    let currentFolder = mockFolders.find((f) => f.id === folderId);
+    let currentFolder = folders.find((f) => f.id === folderId);
 
     while (currentFolder) {
       path.unshift(currentFolder);
       currentFolder = currentFolder.parentId
-        ? mockFolders.find((f) => f.id === currentFolder.parentId)
+        ? folders.find((f) => f.id === currentFolder.parentId)
         : undefined;
     }
 
     return path;
-  }, []);
+  }, [folders]);
 
   // Met à jour le chemin quand le dossier change
   useEffect(() => {
@@ -277,7 +277,7 @@ export function FileProvider({ children }: { children: ReactNode }) {
 
       // Si on a des filtres actifs, on montre tous les documents/dossiers qui correspondent
       if (hasActiveFilters) {
-        const filteredDocuments = mockDocuments.filter(
+        const filteredDocuments = documents.filter(
           (doc) =>
             doc.tags &&
             doc.tags
@@ -285,7 +285,7 @@ export function FileProvider({ children }: { children: ReactNode }) {
               .some((tag) => normalizedSelectedTags.includes(tag.trim()))
         );
 
-        const filteredFolders = mockFolders.filter(
+        const filteredFolders = folders.filter(
           (folder) =>
             folder.tags &&
             folder.tags
@@ -302,11 +302,11 @@ export function FileProvider({ children }: { children: ReactNode }) {
       }
 
       // Sans filtre, on respecte la hiérarchie
-      const filteredDocuments = mockDocuments.filter(
+      const filteredDocuments = documents.filter(
         (doc) => doc.folderId === folderId
       );
 
-      const filteredFolders = mockFolders.filter(
+      const filteredFolders = folders.filter(
         (folder) => folder.parentId === folderId
       );
 
@@ -317,7 +317,7 @@ export function FileProvider({ children }: { children: ReactNode }) {
 
       return { documents: filteredDocuments, subFolders: filteredFolders };
     },
-    [selectedTags]
+    [selectedTags, documents, folders]
   );
 
   // Sorting operations
@@ -357,24 +357,81 @@ export function FileProvider({ children }: { children: ReactNode }) {
     [getFilteredContent, sortBy]
   );
 
+  // Log operations
+  const addLog = useCallback((logData: Omit<Log, 'id' | 'createdAt'>) => {
+    // Dans une application réelle, ceci serait géré par une API
+    console.log('New log:', {
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+      ...logData
+    });
+  }, []);
+
   // Navigation operations
   const selectDocument = useCallback((id: string | null) => {
     setSelectedDocumentId(id);
   }, []);
 
-  const navigateToFolder = useCallback((id: string | null) => {
-    setCurrentFolderId(id);
-  }, []);
+  const moveDocument = useCallback((documentId: string, targetFolderId: string | null) => {
+    setDocuments(prev => prev.map(doc =>
+      doc.id === documentId
+        ? { ...doc, folderId: targetFolderId, modifiedAt: new Date() }
+        : doc
+    ));
 
-  // Log operations
-  const addLog = useCallback((logData: Omit<Log, "id" | "createdAt">) => {
-    // Dans une application réelle, ceci serait géré par une API
-    console.log("New log:", {
-      id: crypto.randomUUID(),
-      createdAt: new Date(),
-      ...logData,
+    // Log the action
+    addLog({
+      action: "MOVE",
+      entity: "DOCUMENT",
+      entityId: documentId,
+      details: `Moved to folder: ${targetFolderId || 'root'}`,
     });
-  }, []);
+  }, [addLog]);
+
+  const moveFolder = useCallback((folderId: string, targetFolderId: string | null) => {
+    // Vérifie qu'on ne déplace pas un dossier dans un de ses descendants
+    const isValidMove = (sourceId: string, targetId: string | null): boolean => {
+      if (targetId === null) return true;
+      if (sourceId === targetId) return false;
+      
+      const targetFolder = folders.find(f => f.id === targetId);
+      if (!targetFolder) return true;
+      
+      return isValidMove(sourceId, targetFolder.parentId);
+    };
+
+    if (targetFolderId && !isValidMove(folderId, targetFolderId)) {
+      console.error("Cannot move a folder into its own descendant");
+      return;
+    }
+
+    setFolders(prev => prev.map(folder =>
+      folder.id === folderId
+        ? { ...folder, parentId: targetFolderId, updatedAt: new Date() }
+        : folder
+    ));
+
+    // Log the action
+    addLog({
+      action: "MOVE",
+      entity: "FOLDER",
+      entityId: folderId,
+      details: `Moved to folder: ${targetFolderId || 'root'}`,
+    });
+  }, [folders, addLog]);
+
+  const getFolderHierarchy = useCallback(() => {
+    const buildHierarchy = (parentId: string | undefined = undefined): Folder[] => {
+      return folders
+        .filter(folder => folder.parentId === parentId)
+        .map(folder => ({
+          ...folder,
+          children: buildHierarchy(folder.id)
+        }));
+    };
+
+    return buildHierarchy();
+  }, [folders]);
 
   const contextValue: FileContextType = {
     // State
@@ -424,6 +481,11 @@ export function FileProvider({ children }: { children: ReactNode }) {
 
     // Logging
     addLog,
+
+    // Move operations
+    moveDocument,
+    moveFolder,
+    getFolderHierarchy,
   };
 
   return (

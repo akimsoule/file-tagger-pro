@@ -90,6 +90,7 @@ export interface FileContextType {
   updateDocument: (id: string, updates: Partial<Document>) => void;
   toggleFavorite: (id: string) => void;
   selectDocument: (id: string | null) => void;
+  moveDocument: (documentId: string, targetFolderId: string | null) => void;
 
   // Folder operations
   getFolderById: (id: string) => Folder | undefined;
@@ -101,6 +102,8 @@ export interface FileContextType {
     totalItems: number;
     totalSize: number;
   };
+  moveFolder: (folderId: string, targetFolderId: string | null) => void;
+  getFolderHierarchy: () => Folder[];
   getFolderPath: (folderId?: string) => Folder[];
   updateFolder: (id: string, updates: Partial<Folder>) => void;
 

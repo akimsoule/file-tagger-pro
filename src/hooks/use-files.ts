@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { FileContext, FileContextType } from '@/contexts/file-context-def';
+import { FileContext } from '@/contexts/file-context-def';
 
 export function useFileContext() {
   const context = useContext(FileContext);
