@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tag, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useTagContext } from '@/hooks/use-tags';
+import { useTags } from '@/hooks/useTags';
 
 interface TagEditorProps {
   isOpen: boolean;
@@ -22,7 +22,7 @@ export function TagEditor({
   onSave,
   title = "Modifier les tags"
 }: TagEditorProps) {
-  const { getAllTags, getTagCount, getTagsByIds } = useTagContext();
+  const { getAllTags, getTagCount, getTagsByIds } = useTags();
   const [tagIds, setTagIds] = useState(() => 
     currentTags.split(',')
       .map(tag => tag.trim())
