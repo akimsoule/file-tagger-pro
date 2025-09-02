@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Folder } from '@/contexts/file-context-def';
+import { Folder } from '@/contexts/file/def';
 import { TagBadge } from './TagBadge';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, FolderIcon, FolderOutput, Tags } from 'lucide-react';

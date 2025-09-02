@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tag, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useFileContext } from '@/hooks/use-files';
+import { useTagContext } from '@/hooks/use-tags';
 
 interface TagEditorProps {
   isOpen: boolean;
@@ -22,37 +22,40 @@ export function TagEditor({
   onSave,
   title = "Modifier les tags"
 }: TagEditorProps) {
-  const { getAllTags, getTagCount } = useFileContext();
-  const [tags, setTags] = useState(() => 
+  const { getAllTags, getTagCount, getTagsByIds } = useTagContext();
+  const [tagIds, setTagIds] = useState(() => 
     currentTags.split(',')
       .map(tag => tag.trim())
       .filter(Boolean)
   );
   const [inputValue, setInputValue] = useState('');
 
+  const selectedTags = getTagsByIds(tagIds);
   const allTags = getAllTags();
 
-  const handleAddTag = useCallback((newTag: string) => {
-    const trimmedTag = newTag.trim();
-    if (trimmedTag && !tags.includes(trimmedTag)) {
-      setTags(prev => [...prev, trimmedTag]);
+  const handleAddTag = useCallback((tagId: string) => {
+    if (tagId && !tagIds.includes(tagId)) {
+      setTagIds(prev => [...prev, tagId]);
     }
     setInputValue('');
-  }, [tags]);
+  }, [tagIds]);
 
-  const handleRemoveTag = useCallback((tagToRemove: string) => {
-    setTags(prev => prev.filter(tag => tag !== tagToRemove));
+  const handleRemoveTag = useCallback((tagIdToRemove: string) => {
+    setTagIds(prev => prev.filter(id => id !== tagIdToRemove));
   }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && inputValue) {
       e.preventDefault();
-      handleAddTag(inputValue);
+      const matchingTag = allTags.find(tag => tag.name.toLowerCase() === inputValue.toLowerCase());
+      if (matchingTag) {
+        handleAddTag(matchingTag.id);
+      }
     }
   };
 
   const handleSave = () => {
-    onSave(tags.join(', '));
+    onSave(tagIds.join(', '));
     onClose();
   };
 
@@ -86,17 +89,17 @@ export function TagEditor({
 
           {/* Tags actuels */}
           <div className="flex flex-wrap gap-2">
-            {tags.map(tag => (
+            {selectedTags.map(tag => (
               <span
-                key={tag}
+                key={tag.id}
                 className={cn(
                   "inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm",
                   "bg-primary/10 text-primary"
                 )}
               >
-                {tag}
+                {tag.name}
                 <button
-                  onClick={() => handleRemoveTag(tag)}
+                  onClick={() => handleRemoveTag(tag.id)}
                   className="hover:text-primary/80"
                 >
                   <X className="h-3 w-3" />
@@ -113,19 +116,19 @@ export function TagEditor({
               </h4>
               <div className="flex flex-wrap gap-2">
                 {allTags
-                  .filter(tag => !tags.includes(tag))
+                  .filter(tag => !tagIds.includes(tag.id))
                   .map(tag => (
                     <button
-                      key={tag}
-                      onClick={() => handleAddTag(tag)}
+                      key={tag.id}
+                      onClick={() => handleAddTag(tag.id)}
                       className={cn(
                         "inline-flex items-center gap-2 px-2 py-1 rounded-md text-sm",
                         "bg-muted/50 hover:bg-muted transition-colors"
                       )}
                     >
-                      <span>{tag}</span>
+                      <span>{tag.name}</span>
                       <span className="text-xs text-muted-foreground">
-                        {getTagCount(tag)}
+                        {getTagCount(tag.id)}
                       </span>
                     </button>
                   ))}

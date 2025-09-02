@@ -2,8 +2,8 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { FileManagerSidebar } from '@/components/FileManagerSidebar';
 import { SearchBar } from '@/components/SearchBar';
 import { FileCard } from '@/components/FileCard';
-import { useFiles } from '@/hooks/use-files';
 import { Heart } from 'lucide-react';
+import { useFileContext } from '@/hooks/useFileContext';
 
 const Favorites = () => {
   const {
@@ -17,7 +17,7 @@ const Favorites = () => {
     setSortBy,
     selectedTags,
     clearFilters
-  } = useFiles();
+  } = useFileContext();
 
   const filteredAndSortedDocuments = getFilteredAndSortedFavorites();
 

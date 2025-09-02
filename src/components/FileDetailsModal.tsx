@@ -1,4 +1,4 @@
-import { Document } from '@/contexts/file-context-def';
+import { Document } from '@/contexts/file/def';
 import { TagBadge } from './TagBadge';
 import {
   Dialog,

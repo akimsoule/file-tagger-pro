@@ -1,11 +1,11 @@
-import { useFiles } from '@/hooks/use-files';
+import { useFileContext } from '@/hooks/use-files';
 
 type FolderStatsProps = {
   folderId: string;
 };
 
 export const FolderStats = ({ folderId }: FolderStatsProps) => {
-  const { getFolderStats } = useFiles();
+  const { getFolderStats } = useFileContext();
   const stats = getFolderStats(folderId);
 
   // Fonction pour formater la taille en Mo ou Go

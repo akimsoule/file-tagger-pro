@@ -13,18 +13,8 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { TagBadge } from './TagBadge';
-import { useFiles } from '@/hooks/use-files';
+import { useTagContext } from '@/hooks/use-tags';
 import { Files, Heart, Hash, Settings } from 'lucide-react';
-
-// Fonction pour générer une couleur stable pour un tag
-const getTagColor = (tag: string): string => {
-  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#EF4444'];
-  let hash = 0;
-  for (let i = 0; i < tag.length; i++) {
-    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-};
 
 interface FileManagerSidebarProps {
   onNavigateToFolder?: (folderId: string) => void;
@@ -39,12 +29,9 @@ const navigationItems = [
 export function FileManagerSidebar({ onNavigateToFolder, currentFolderId }: FileManagerSidebarProps) {
   const { open } = useSidebar();
   const location = useLocation();
-  const { toggleTag, selectedTags, getAllTags, getTagCounts } = useFiles();
+  const { toggleTagSelection: toggleTag, selectedTags, tags: allTags, getTagCount } = useTagContext();
 
   const isActive = (path: string) => location.pathname === path;
-
-  const allTags = getAllTags();
-  const tagCounts = getTagCounts();
 
   return (
     <Sidebar collapsible="icon">
@@ -91,23 +78,23 @@ export function FileManagerSidebar({ onNavigateToFolder, currentFolderId }: File
             <div className="space-y-1">
               {allTags.map((tag) => (
                 <div
-                  key={tag}
+                  key={tag.id}
                   className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
-                    selectedTags.includes(tag)
+                    selectedTags.includes(tag.id)
                       ? 'bg-accent'
                       : 'hover:bg-accent/50'
                   }`}
-                  onClick={() => toggleTag(tag)}
+                  onClick={() => toggleTag(tag.id)}
                 >
                   {open ? (
                     <>
-                      <TagBadge name={tag} />
+                      <TagBadge name={tag.name} />
                       <span className="text-xs text-muted-foreground ml-auto">
-                        {tagCounts.get(tag)}
+                        {getTagCount(tag.id)}
                       </span>
                     </>
                   ) : (
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getTagColor(tag) + '40' }} />
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color + '40' }} />
                   )}
                 </div>
               ))}

@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { FileContext } from '@/contexts/file-context-def';
+import { FileContext } from '../contexts/file/context';
 
 export function useFileContext() {
   const context = useContext(FileContext);
@@ -8,6 +8,3 @@ export function useFileContext() {
   }
   return context;
 }
-
-// Pour la rétrocompatibilité
-export const useFiles = useFileContext;

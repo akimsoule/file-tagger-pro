@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Folder, ChevronRight, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFileContext } from '@/hooks/use-files';
-import { Folder as FolderType } from '@/contexts/file-context-def';
+import { Folder as FolderType } from '@/contexts/file/def';
 
 interface FolderPickerProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ export const FolderPicker: FC<FolderPickerProps> = ({
   excludeFolderId,
   title = 'Choisir un dossier'
 }) => {
-  const { getFolderHierarchy, currentPath, getFolderContent } = useFileContext();
+  const { getFolderHierarchy, getFolderContent } = useFileContext();
 
   const handleSelect = (folderId: string | null) => {
     onSelect(folderId);

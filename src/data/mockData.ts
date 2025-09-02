@@ -1,9 +1,16 @@
-import { User, Document, Folder } from '@/contexts/file-context-def';
+
+import { User } from '../contexts/user/def';
+import { Document, Folder } from '../contexts/file/def';
 
 export const mockUser: User = {
   id: '1',
   email: 'user@example.com',
   name: 'John Doe',
+  role: 'user',
+  preferences: {
+    theme: 'light',
+    language: 'fr'
+  },
   documents: [],
   folders: []
 };

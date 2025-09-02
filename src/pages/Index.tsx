@@ -3,18 +3,18 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { FileManagerSidebar } from "@/components/FileManagerSidebar";
 import { SearchBar } from "@/components/SearchBar";
 import { FileCard } from "@/components/FileCard";
-import { FolderStats } from "@/components/FolderStats";
 import { FileDetailsModal } from "@/components/FileDetailsModal";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { useFileContext } from "@/hooks/use-files";
+import { useDocumentManager } from "@/hooks/useDocumentManager";
+import { useFolderManager } from "@/hooks/useFolderManager";
 import { Folder as FolderIcon, FileText } from "lucide-react";
 import { FolderCard } from "@/components/FolderCard";
 
 const Index = () => {
   const {
-    toggleFavorite,
-    getDocumentById,
-    getFolderById,
+    findDocumentById,
+    getFolderPath,
     getSortedContent,
     searchQuery,
     setSearchQuery,
@@ -30,6 +30,9 @@ const Index = () => {
     setCurrentFolderId,
   } = useFileContext();
 
+  const { toggleFavorite } = useDocumentManager();
+  const { folders } = useFolderManager();
+
   const clearFilters = useCallback(() => {
     setSearchQuery("");
     setSortBy("date");
@@ -39,15 +42,17 @@ const Index = () => {
 
   const handleNavigateBack = () => {
     if (currentFolderId) {
-      const currentFolder = getFolderById(currentFolderId);
+      const currentFolder = folders.find(f => f.id === currentFolderId);
       setCurrentFolderId(currentFolder?.parentId || null);
     }
   };
 
   const selectedDocument = selectedDocumentId
-    ? getDocumentById(selectedDocumentId)
+    ? findDocumentById(selectedDocumentId)
     : null;
-  const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
+  const currentFolder = currentFolderId 
+    ? folders.find(f => f.id === currentFolderId)
+    : null;
 
   return (
     <SidebarProvider>

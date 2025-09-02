@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Document } from "@/contexts/file-context-def";
+import { Document } from "@/contexts/file/def";
 import { TagBadge } from "./TagBadge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
