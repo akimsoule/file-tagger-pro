@@ -3,25 +3,15 @@ import { Document } from "@/contexts/file/def";
 import { TagBadge } from "./TagBadge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  FileText,
-  Heart,
-  MoreHorizontal,
-  FolderOutput,
-  Tags,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { FileText } from "lucide-react";
+import { FileActions } from "./FileActions";
 import { cn } from "@/lib/utils";
 import { FolderPicker } from "./FolderPicker";
 import { TagEditor } from "./TagEditor";
 import { useFileContext } from "@/hooks/useFileContext";
 
 import { FileTreeNode } from "@/logic/FileTreeNode";
+import { formatFileSize, formatDate } from "@/lib/format";
 
 interface FileCardProps {
   node: FileTreeNode;
@@ -29,30 +19,7 @@ interface FileCardProps {
   onToggleFavorite?: () => void;
 }
 
-const formatFileSize = (bytes: number): string => {
-  const units = ["B", "KB", "MB", "GB"];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
-};
-
-const formatDate = (date: Date): string => {
-  return date.toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-};
-
-const getFileIcon = (type: string) => {
-  return <FileText className="h-8 w-8 text-muted-foreground" />;
-};
+const getFileIcon = () => <FileText className="h-8 w-8 text-muted-foreground" />;
 
 export function FileCard({ node, onClick, onToggleFavorite }: FileCardProps) {
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
@@ -66,11 +33,7 @@ export function FileCard({ node, onClick, onToggleFavorite }: FileCardProps) {
   const document = node.getData() as Document;
 
   const fileExtension = document.name.split(".").pop()?.toUpperCase();
-  const tags = document.tags.split(",").filter((tag) => tag.trim() !== "");
-
-  const handleAction = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
+  const tags = document.tags.split(",").map(t => t.trim()).filter(Boolean);
 
   const handleMove = (targetFolderId: string | null) => {
     console.log("Déplacement du document :", {
@@ -106,7 +69,7 @@ export function FileCard({ node, onClick, onToggleFavorite }: FileCardProps) {
         {/* Header avec icône et actions */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="shrink-0">{getFileIcon(document.type)}</div>
+            <div className="shrink-0">{getFileIcon()}</div>
             <div className="flex-1 min-w-0 overflow-hidden">
               <h3 className="font-medium text-foreground truncate pr-2">
                 {document.name}
@@ -119,53 +82,12 @@ export function FileCard({ node, onClick, onToggleFavorite }: FileCardProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFavorite?.();
-              }}
-            >
-              <Heart
-                className={cn(
-                  "h-4 w-4",
-                  document.isFavorite
-                    ? "fill-red-500 text-red-500"
-                    : "text-muted-foreground"
-                )}
-              />
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={handleAction}>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsFolderPickerOpen(true);
-                  }}
-                >
-                  <FolderOutput className="h-4 w-4 mr-2" />
-                  Déplacer
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsTagEditorOpen(true);
-                  }}
-                >
-                  <Tags className="h-4 w-4 mr-2" />
-                  Modifier les tags
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <FileActions
+            isFavorite={document.isFavorite}
+            onToggleFavorite={() => onToggleFavorite?.()}
+            onOpenMove={() => setIsFolderPickerOpen(true)}
+            onOpenTagEditor={() => setIsTagEditorOpen(true)}
+          />
         </div>
 
         {/* Tags */}
