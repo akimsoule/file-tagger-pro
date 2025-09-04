@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { useFileContext } from '@/hooks/useFileContext';
 import { useQuery } from '@/hooks/useQuery';
-import { useTags } from '@/hooks/useTags';
 import { FileTreeNode } from '@/logic/FileTreeNode';
 import type { Document, Folder } from '@/contexts/file/def';
 import type { FileNodeStats } from '@/logic/FileTreeNode';
+import { useSelectedTagNames } from '@/hooks/useSelectedTagNames';
+import { sortFolders } from '@/lib/sort';
+import { resolveFolderSize } from '@/lib/size';
 
 interface FilteredNodesResult {
   folders: FileTreeNode[];
@@ -15,12 +17,7 @@ interface FilteredNodesResult {
 export function useFilteredNodes(currentNode: FileTreeNode | null): FilteredNodesResult {
   const { getNodeContent } = useFileContext();
   const { getFilteredContent, getSortedContent, searchQuery, sortBy } = useQuery();
-  const { selectedTags, tags } = useTags();
-
-  const selectedTagNames = useMemo(() => selectedTags.map(id => {
-    const t = tags.find(tag => tag.id === id);
-    return t ? t.name : id.replace(/^tag-/, '');
-  }), [selectedTags, tags]);
+  const { selectedTagNames } = useSelectedTagNames();
 
   const hasActiveFilter = selectedTagNames.length > 0 || !!searchQuery;
 
@@ -75,29 +72,9 @@ export function useFilteredNodes(currentNode: FileTreeNode | null): FilteredNode
 
     // Tri des dossiers (même logique que documents, mais adapté aux champs Folder)
     if (filteredFolderNodes.length > 1) {
-      filteredFolderNodes = [...filteredFolderNodes].sort((a, b) => {
-        const aData = a.getData() as Folder;
-        const bData = b.getData() as Folder;
-        switch (sortBy) {
-          case 'name':
-            return aData.name.localeCompare(bData.name);
-          case 'type':
-            // On peut considérer tous les dossiers comme même type → fallback tri par nom
-            return aData.name.localeCompare(bData.name);
-          case 'size': {
-            const aSize = ((a.stats as FileNodeStats)?.totalSize) || 0;
-            const bSize = ((b.stats as FileNodeStats)?.totalSize) || 0;
-            return aSize - bSize; // cohérent avec documents (ascendant)
-          }
-          case 'date': {
-            const aDate = new Date(aData.updatedAt || aData.createdAt).getTime();
-            const bDate = new Date(bData.updatedAt || bData.createdAt).getTime();
-            return bDate - aDate; // plus récent d'abord (cohérent avec documents)
-          }
-          default:
-            return 0;
-        }
-      });
+      const folderData = filteredFolderNodes.map(f => f.getData() as Folder);
+  const sortedFolderData = sortFolders(folderData, sortBy, folder => resolveFolderSize(folder, filteredFolderNodes));
+      filteredFolderNodes = sortedFolderData.map(f => filteredFolderNodes.find(n => n.id === f.id)!)
     }
 
     return {

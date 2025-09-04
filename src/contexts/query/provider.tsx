@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSettings } from '../../hooks/useSettings';
 import { useTags } from '../../hooks/useTags';
-import { useFileContext } from '../../hooks/useFileContext';
+import { useSelectedTagNames } from '@/hooks/useSelectedTagNames';
+import { sortDocuments } from '@/lib/sort';
 import type { Document } from '../file/def';
 import type { QueryContextType, SortBy, ViewMode } from './def';
 import { QueryContext } from './context';
@@ -56,17 +57,8 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     setSelectedTags([]);
   }, [settings.defaultSortBy, settings.defaultViewMode, setSelectedTags]);
 
-  const { selectedTags, tags: allTags } = useTags();
-
-  // Convertir les IDs sélectionnés en noms de tags (les documents stockent les noms)
-  const selectedTagNames = useMemo(() => {
-    return selectedTags.map(id => {
-      const tagObj = allTags.find(t => t.id === id);
-      if (tagObj) return tagObj.name;
-      // Fallback: retirer éventuel préfixe 'tag-'
-      return id.replace(/^tag-/, '');
-    });
-  }, [selectedTags, allTags]);
+  const { selectedTagNames } = useSelectedTagNames();
+  const { selectedTags } = useTags();
 
   const getFilteredContent = useCallback((content: Document[]) => {
     let filtered = [...content];
@@ -94,22 +86,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     return filtered;
   }, [selectedTagNames, filters.showFavorites, searchQuery]);
 
-  const getSortedContent = useCallback((content: Document[]) => {
-    return [...content].sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'type':
-          return (a.type || '').localeCompare(b.type || '');
-        case 'size':
-          return a.size - b.size;
-        case 'date':
-          return new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime();
-        default:
-          return 0;
-      }
-    });
-  }, [sortBy]);
+  const getSortedContent = useCallback((content: Document[]) => sortDocuments(content, sortBy), [sortBy]);
 
   const getFilteredAndSortedFavorites = useCallback((documents: Document[]) => {
     // Commencer avec uniquement les favoris
