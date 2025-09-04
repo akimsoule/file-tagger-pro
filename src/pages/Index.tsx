@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { FileManagerSidebar } from "@/components/FileManagerSidebar";
 import { SearchBar } from "@/components/SearchBar";
@@ -36,6 +36,17 @@ const Index = () => {
 
   const { selectedTags, toggleTagSelection: toggleTag, tags } = useTags();
 
+  // IDs -> noms (tags dans les données sont stockés comme noms)
+  const selectedTagNames = useMemo(
+    () =>
+      selectedTags.map((id) => {
+        const t = tags.find((tag) => tag.id === id);
+        if (t) return t.name;
+        return id.replace(/^tag-/, "");
+      }),
+    [selectedTags, tags]
+  );
+
   const clearFilters = useCallback(() => {
     setSearchQuery("");
     setSortBy("date");
@@ -44,41 +55,71 @@ const Index = () => {
     }
   }, [setSearchQuery, setSortBy, selectedTags, toggleTag]);
 
-  // Obtenir le contenu du nœud courant
-  const currentContent = currentNode ? getNodeContent(currentNode) : [];
+  // Collecte récursive des descendants si un filtrage est actif (tags ou recherche)
+  const hasActiveFilter = selectedTagNames.length > 0 || !!searchQuery;
 
-  // Filtrer les nœuds par type
-  const documentNodes = currentContent.filter(
-    (node) => node.type === "file"
-  ) as FileTreeNode[];
-  const folderNodes = currentContent.filter(
-    (node) => node.type === "folder"
-  ) as FileTreeNode[];
+  const collectDescendants = useCallback((node: FileTreeNode): FileTreeNode[] => {
+    const stack: FileTreeNode[] = [node];
+    const collected: FileTreeNode[] = [];
+    while (stack.length) {
+      const n = stack.pop()!;
+      if (n !== node) collected.push(n);
+      stack.push(...(n.children as FileTreeNode[]));
+    }
+    return collected;
+  }, []);
 
-  // Préparation du contenu filtré
-  let filteredNodes = documentNodes;
-  if (searchQuery) {
-    const documents = documentNodes
-      .map((node) => node.getData() as Document)
-      .filter(Boolean);
-    const filteredDocs = getFilteredContent(documents);
-    filteredNodes = documentNodes.filter((node) =>
-      filteredDocs.some((doc) => doc.id === node.id)
-    );
-  }
+  const baseNodes = currentNode
+    ? hasActiveFilter
+      ? collectDescendants(currentNode)
+      : (getNodeContent(currentNode) as FileTreeNode[])
+    : [];
 
-  // Trier les nœuds
-  const nodeDocuments = filteredNodes
+  const documentNodes = baseNodes.filter((n) => n.type === "file") as FileTreeNode[];
+  const folderNodes = baseNodes.filter((n) => n.type === "folder") as FileTreeNode[];
+
+  // Filtrage des documents via le contexte (tags, favoris, recherche)
+  const docData = documentNodes
     .map((node) => node.getData() as Document)
     .filter(Boolean);
-  const sortedDocs = getSortedContent(nodeDocuments);
-  const sortedNodes = sortedDocs
-    .map((doc) => filteredNodes.find((node) => node.id === doc.id))
+  const filteredDocData = getFilteredContent(docData);
+  const filteredDocumentNodes = documentNodes.filter((node) =>
+    filteredDocData.some((doc) => doc.id === node.id)
+  );
+
+  // Filtrage des dossiers (tags + recherche). Les favoris ne concernent que les documents.
+  let filteredFolderNodes = folderNodes;
+  if (selectedTagNames.length > 0 || searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filteredFolderNodes = folderNodes.filter((node) => {
+      const data = node.getData() as Folder;
+      // Tags
+      if (selectedTagNames.length > 0) {
+        const folderTags = (data.tags || '')
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean);
+        if (!selectedTagNames.every((tag) => folderTags.includes(tag))) return false;
+      }
+      // Recherche
+      if (searchQuery) {
+        const nameMatch = data.name.toLowerCase().includes(q);
+        const descMatch = data.description?.toLowerCase().includes(q);
+        if (!nameMatch && !descMatch) return false;
+      }
+      return true;
+    });
+  }
+
+  // Tri des documents uniquement (garder les dossiers dans leur ordre naturel pour l'instant)
+  const sortedDocs = getSortedContent(filteredDocData);
+  const sortedDocumentNodes = sortedDocs
+    .map((doc) => filteredDocumentNodes.find((node) => node.id === doc.id))
     .filter((node): node is FileTreeNode => node !== undefined);
 
   const content = {
-    documents: sortedNodes,
-    folders: folderNodes,
+    documents: sortedDocumentNodes,
+    folders: filteredFolderNodes,
   };
 
   const navigateUp = useCallback(() => {
@@ -126,7 +167,7 @@ const Index = () => {
             </div>
           </header>
 
-          <div className="flex flex-1 flex-col p-3 sm:p-6 md:p-8 gap-4 sm:gap-6 md:gap-8">
+          <div className="flex flex-1 flex-col p-3 sm:p-6 md:p-8 gap-4 sm:gap-6 md:gap-8 overflow-y-auto">
             <Breadcrumb />
             <SearchBar
               searchQuery={searchQuery}

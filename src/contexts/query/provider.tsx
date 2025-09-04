@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSettings } from '../../hooks/useSettings';
 import { useTags } from '../../hooks/useTags';
 import { useFileContext } from '../../hooks/useFileContext';
@@ -56,17 +56,26 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     setSelectedTags([]);
   }, [settings.defaultSortBy, settings.defaultViewMode, setSelectedTags]);
 
-  const { documents: allDocuments } = useFileContext();
-  const { selectedTags } = useTags();
+  const { selectedTags, tags: allTags } = useTags();
+
+  // Convertir les IDs sélectionnés en noms de tags (les documents stockent les noms)
+  const selectedTagNames = useMemo(() => {
+    return selectedTags.map(id => {
+      const tagObj = allTags.find(t => t.id === id);
+      if (tagObj) return tagObj.name;
+      // Fallback: retirer éventuel préfixe 'tag-'
+      return id.replace(/^tag-/, '');
+    });
+  }, [selectedTags, allTags]);
 
   const getFilteredContent = useCallback((content: Document[]) => {
     let filtered = [...content];
 
-    if (selectedTags.length > 0) {
+  if (selectedTagNames.length > 0) {
       // Filtrer par tags en vérifiant les tags des documents
       filtered = filtered.filter(doc => {
         const docTags = doc.tags.split(',').map(t => t.trim());
-        return selectedTags.every(tagId => docTags.includes(tagId));
+    return selectedTagNames.every(tagName => docTags.includes(tagName));
       });
     }
 
@@ -83,7 +92,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     }
 
     return filtered;
-  }, [selectedTags, filters.showFavorites, searchQuery]);
+  }, [selectedTagNames, filters.showFavorites, searchQuery]);
 
   const getSortedContent = useCallback((content: Document[]) => {
     return [...content].sort((a, b) => {
@@ -107,10 +116,10 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     let filtered = documents.filter(doc => doc.isFavorite);
 
     // Appliquer les autres filtres
-    if (selectedTags.length > 0) {
+  if (selectedTagNames.length > 0) {
       filtered = filtered.filter(doc => {
         const docTags = doc.tags.split(',').map(t => t.trim());
-        return selectedTags.every(tagId => docTags.includes(tagId));
+    return selectedTagNames.every(tagName => docTags.includes(tagName));
       });
     }
 
@@ -125,7 +134,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
 
     // Trier les résultats
     return getSortedContent(filtered);
-  }, [selectedTags, searchQuery, getSortedContent]);
+  }, [selectedTagNames, searchQuery, getSortedContent]);
 
   const value: QueryContextType = {
     searchQuery,
