@@ -3,7 +3,13 @@ import { Document } from "@/contexts/file/def";
 import { TagBadge } from "./TagBadge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Heart, MoreHorizontal, FolderOutput, Tags } from "lucide-react";
+import {
+  FileText,
+  Heart,
+  MoreHorizontal,
+  FolderOutput,
+  Tags,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,16 +54,12 @@ const getFileIcon = (type: string) => {
   return <FileText className="h-8 w-8 text-muted-foreground" />;
 };
 
-export function FileCard({
-  node,
-  onClick,
-  onToggleFavorite,
-}: FileCardProps) {
+export function FileCard({ node, onClick, onToggleFavorite }: FileCardProps) {
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
   const [isTagEditorOpen, setIsTagEditorOpen] = useState(false);
-  const { moveDocument, updateDocument } = useFileContext();
+  const { moveNode, updateNode } = useFileContext();
 
-  if (!node || node.type !== 'file') {
+  if (!node || node.type !== "file") {
     return null;
   }
 
@@ -71,18 +73,25 @@ export function FileCard({
   };
 
   const handleMove = (targetFolderId: string | null) => {
-    console.log('Déplacement du document :', {
+    console.log("Déplacement du document :", {
       documentId: document.id,
       documentName: document.name,
-      fromFolder: document.folderId || 'racine',
-      toFolder: targetFolderId || 'racine'
+      fromFolder: document.folderId || "racine",
+      toFolder: targetFolderId || "racine",
     });
-    moveDocument(document.id, targetFolderId);
+    moveNode(document.id, targetFolderId);
   };
 
   const handleUpdateTags = (newTags: string) => {
-    console.log('Mise à jour des tags du document', document.id, 'de', document.tags, 'vers', newTags);
-    updateDocument(document.id, { tags: newTags });
+    console.log(
+      "Mise à jour des tags du document",
+      document.id,
+      "de",
+      document.tags,
+      "vers",
+      newTags
+    );
+    updateNode(document.id, { tags: newTags });
   };
 
   return (
@@ -163,7 +172,11 @@ export function FileCard({
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3 max-w-full overflow-hidden">
             {tags.slice(0, 3).map((tag) => (
-              <TagBadge key={tag} name={tag.trim()} className="max-w-[120px] text-xs" />
+              <TagBadge
+                key={tag}
+                name={tag.trim()}
+                className="max-w-[120px] text-xs"
+              />
             ))}
             {tags.length > 3 && (
               <span className="text-xs text-muted-foreground px-2 py-1 whitespace-nowrap">
@@ -175,7 +188,9 @@ export function FileCard({
 
         {/* Métadonnées */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span className="truncate flex-1 mr-2">{formatDate(document.modifiedAt)}</span>
+          <span className="truncate flex-1 mr-2">
+            {formatDate(document.modifiedAt)}
+          </span>
           <span className="shrink-0">{formatFileSize(document.size)}</span>
         </div>
       </Card>
