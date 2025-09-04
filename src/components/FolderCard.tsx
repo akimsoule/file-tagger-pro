@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { FileTreeNode } from '@/logic/FileTreeNode';
 import { Folder } from '@/contexts/file/def';
 import { TagBadge } from './TagBadge';
 import { Button } from '@/components/ui/button';
@@ -15,31 +16,37 @@ import { TagEditor } from './TagEditor';
 import { useFileContext } from '@/hooks/useFileContext';
 
 interface FolderCardProps {
-  folder: Folder;
+  node: FileTreeNode;
   onClick?: () => void;
 }
 
-export function FolderCard({ folder, onClick }: FolderCardProps) {
+export function FolderCard({ node, onClick }: FolderCardProps) {
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
   const [isTagEditorOpen, setIsTagEditorOpen] = useState(false);
-  const { moveFolder, updateFolder, getFolderStats } = useFileContext();
-
-  const tags = folder.tags.split(',').filter(tag => tag.trim() !== '');
-  const stats = getFolderStats(folder.id);
+  const { moveNode, updateNode, getNodeStats } = useFileContext();
+  
+  const folderData = node.getData() as Folder;
+  // findNodeById n'est pas nécessaire ici, on utilise directement l'id cible
+  const tagList = node.tags.map(tag => tag.name);
+  const stats = getNodeStats(node);
 
   const handleAction = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
 
-  const handleMove = (targetFolderId: string | null) => {
-    if (targetFolderId !== folder.parentId) {
-      moveFolder(folder.id, targetFolderId);
+  const handleMove = useCallback((targetFolderId: string | null) => {
+    if (targetFolderId !== node.parentId) {
+      moveNode(node.id, targetFolderId);
     }
-  };
+  }, [node, moveNode]);
 
-  const handleUpdateTags = (newTags: string) => {
-    updateFolder(folder.id, { tags: newTags });
-  };
+  const handleUpdateTags = useCallback((newTags: string) => {
+    updateNode(node.id, { tags: newTags });
+  }, [node, updateNode]);
+
+  if (!node || node.type !== 'folder') {
+    return null;
+  }
 
   return (
     <>
@@ -54,16 +61,16 @@ export function FolderCard({ folder, onClick }: FolderCardProps) {
           <div className="flex items-center gap-3">
             <div
               className="shrink-0 p-2 rounded-lg"
-              style={{ backgroundColor: folder.color + '20' }}
+              style={{ backgroundColor: folderData.color + '20' }}
             >
               <FolderIcon
                 className="h-5 w-5"
-                style={{ color: folder.color }}
+                style={{ color: folderData.color }}
               />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-foreground truncate">
-                {folder.name}
+                {node.name}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {stats.totalItems} éléments • {(stats.totalSize / (1024 * 1024)).toFixed(1)} Mo
@@ -105,18 +112,18 @@ export function FolderCard({ folder, onClick }: FolderCardProps) {
           </div>
 
           {/* Tags */}
-          {tags.length > 0 && (
+          {tagList.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {tags.slice(0, 3).map((tag) => (
+              {tagList.slice(0, 3).map((tagName) => (
                 <TagBadge
-                  key={tag}
-                  name={tag.trim()}
+                  key={tagName}
+                  name={tagName}
                   className="max-w-[150px]"
                 />
               ))}
-              {tags.length > 3 && (
+              {tagList.length > 3 && (
                 <span className="text-xs text-muted-foreground px-2 py-1 whitespace-nowrap">
-                  +{tags.length - 3}
+                  +{tagList.length - 3}
                 </span>
               )}
             </div>
@@ -128,15 +135,15 @@ export function FolderCard({ folder, onClick }: FolderCardProps) {
         isOpen={isFolderPickerOpen}
         onClose={() => setIsFolderPickerOpen(false)}
         onSelect={handleMove}
-        currentFolderId={folder.id}
-        excludeFolderId={folder.id}
+        currentFolderId={node.id}
+        excludeFolderId={node.id}
         title="Déplacer le dossier vers"
       />
 
       <TagEditor
         isOpen={isTagEditorOpen}
         onClose={() => setIsTagEditorOpen(false)}
-        currentTags={folder.tags}
+        currentTags={node.tags.map(t => t.name).join(',')}
         onSave={handleUpdateTags}
         title="Modifier les tags du dossier"
       />

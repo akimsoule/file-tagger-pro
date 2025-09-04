@@ -16,23 +16,25 @@ import { Files, Heart, Hash, Settings } from 'lucide-react';
 import { useTags } from '@/hooks/useTags';
 import { useFileContext } from '@/hooks/useFileContext';
 
+import { FileTreeNode } from "@/logic/FileTreeNode";
+
 interface FileManagerSidebarProps {
-  onNavigateToFolder?: (folderId: string) => void;
-  currentFolderId?: string | null;
+  onNavigateToFolder?: (node: FileTreeNode) => void;
+  currentNode?: FileTreeNode | null;
 }
 
 const navigationItems = [
-  { title: 'Tous les documents', url: '/', icon: Files },
+  { title: 'Root', url: '/', icon: Files, isRoot: true },
   { title: 'Favoris', url: '/favorites', icon: Heart },
 ];
 
-export function FileManagerSidebar({ onNavigateToFolder, currentFolderId }: FileManagerSidebarProps) {
+export function FileManagerSidebar({ onNavigateToFolder, currentNode }: FileManagerSidebarProps) {
   const { open } = useSidebar();
   const location = useLocation();
-  const { toggleTagSelection: toggleTag, selectedTags, tags: allTags, getTagCount } = useTags();
-  const { getFolders, currentFolderId: activeFolder } = useFileContext();
+  const { toggleTagSelection: toggleTag, selectedTags, tags: allTags } = useTags();
+  const { getNodeContent, currentNode: activeNode, getTagCount, setCurrentNode } = useFileContext();
 
-  const rootFolders = getFolders(null, selectedTags) || [];
+  const rootNodes = activeNode ? getNodeContent(activeNode.parent ? activeNode.parent as FileTreeNode : activeNode) : [];
   const isActive = (path: string) => location.pathname === path;
 
   return (
@@ -57,6 +59,11 @@ export function FileManagerSidebar({ onNavigateToFolder, currentFolderId }: File
                             : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                         }`
                       }
+                      onClick={() => {
+                        if (item.isRoot) {
+                          setCurrentNode(null);
+                        }
+                      }}
                     >
                       <item.icon className="h-4 w-4 flex-shrink-0" />
                       {open && <span>{item.title}</span>}

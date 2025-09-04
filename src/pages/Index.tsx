@@ -10,6 +10,7 @@ import { useQuery } from "@/hooks/useQuery";
 import { useTags } from "@/hooks/useTags";
 import { Folder as FolderIcon, FileText, ChevronLeft } from "lucide-react";
 import { FolderCard } from "@/components/FolderCard";
+import { FileTreeNode } from "@/logic/FileTreeNode";
 import type { Document, Folder } from "@/contexts/file/def";
 
 const Index = () => {
@@ -21,89 +22,90 @@ const Index = () => {
     sortBy,
     setSortBy,
     getFilteredContent,
-    getSortedContent
+    getSortedContent,
   } = useQuery();
-  
+
   const {
-    documents,
-    folders,
-    currentFolderId,
-    setCurrentFolderId,
-    selectedDocumentId,
-    selectDocument,
-    findDocumentById,
-    toggleFavorite,
-    getFolderContent
+    currentNode,
+    selectedNode,
+    setCurrentNode,
+    setSelectedNode,
+    getNodeContent,
+    updateNode,
   } = useFileContext();
 
   const { selectedTags, toggleTagSelection: toggleTag, tags } = useTags();
-
-  // Debug logs
-  console.log('=== Index Component State ===');
-  console.log('currentFolderId:', currentFolderId);
-  console.log('selectedTags:', selectedTags);
 
   const clearFilters = useCallback(() => {
     setSearchQuery("");
     setSortBy("date");
     if (selectedTags.length > 0) {
-      selectedTags.forEach(tagId => toggleTag(tagId));
+      selectedTags.forEach((tagId) => toggleTag(tagId));
     }
   }, [setSearchQuery, setSortBy, selectedTags, toggleTag]);
 
-  // Obtenir le contenu initial avec les tags sélectionnés
-  const folderContent = getFolderContent(currentFolderId ?? undefined, selectedTags);
-  
-  // Debug logs après avoir obtenu le contenu
-  console.log('=== Contenu du dossier ===');
-  console.log('Documents:', folderContent.documents.map(d => d.name));
-  console.log('Sous-dossiers:', folderContent.subFolders.map(f => f.name));
+  // Obtenir le contenu du nœud courant
+  const currentContent = currentNode ? getNodeContent(currentNode) : [];
 
-  // Préparation du contenu
-  let filteredDocuments = folderContent.documents;
+  // Filtrer les nœuds par type
+  const documentNodes = currentContent.filter(
+    (node) => node.type === "file"
+  ) as FileTreeNode[];
+  const folderNodes = currentContent.filter(
+    (node) => node.type === "folder"
+  ) as FileTreeNode[];
+
+  // Préparation du contenu filtré
+  let filteredNodes = documentNodes;
   if (searchQuery) {
-    filteredDocuments = getFilteredContent(filteredDocuments);
+    const documents = documentNodes
+      .map((node) => node.getData() as Document)
+      .filter(Boolean);
+    const filteredDocs = getFilteredContent(documents);
+    filteredNodes = documentNodes.filter((node) =>
+      filteredDocs.some((doc) => doc.id === node.id)
+    );
   }
-  filteredDocuments = getSortedContent(filteredDocuments);
+
+  // Trier les nœuds
+  const nodeDocuments = filteredNodes
+    .map((node) => node.getData() as Document)
+    .filter(Boolean);
+  const sortedDocs = getSortedContent(nodeDocuments);
+  const sortedNodes = sortedDocs
+    .map((doc) => filteredNodes.find((node) => node.id === doc.id))
+    .filter((node): node is FileTreeNode => node !== undefined);
 
   const content = {
-    documents: filteredDocuments,
-    folders: folderContent.subFolders
+    documents: sortedNodes,
+    folders: folderNodes,
   };
 
-  const handleNavigateBack = () => {
-    if (currentFolderId) {
-      const currentFolder = folders.find(f => f.id === currentFolderId);
-      setCurrentFolderId(currentFolder?.parentId || null);
+  const navigateUp = useCallback(() => {
+    if (currentNode?.parent) {
+      setCurrentNode(currentNode.parent as FileTreeNode);
     }
-  };
-
-  const selectedDocument = selectedDocumentId
-    ? findDocumentById(selectedDocumentId)
-    : null;
-  const currentFolder = currentFolderId 
-    ? folders.find(f => f.id === currentFolderId)
-    : null;
+  }, [currentNode, setCurrentNode]);
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="flex h-screen w-full overflow-hidden">
         <FileManagerSidebar
-          onNavigateToFolder={setCurrentFolderId}
-          currentFolderId={currentFolderId}
+          onNavigateToFolder={(node) => setCurrentNode(node as FileTreeNode)}
+          currentNode={currentNode}
         />
 
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col min-w-0 w-full">
           <header className="flex items-center gap-4 p-4 border-b border-border bg-card/50">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="shrink-0" />
-              {currentFolderId && (
+              {currentNode?.parent && (
                 <button
-                  onClick={handleNavigateBack}
-                  className="h-9 w-9 flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+                  onClick={navigateUp}
+                  className="p-2 hover:bg-accent rounded-lg"
+                  aria-label="Back"
                 >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span className="sr-only">Retour</span>
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
               )}
             </div>
@@ -112,12 +114,13 @@ const Index = () => {
                 <FolderIcon className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-foreground">
-                  {currentFolder ? currentFolder.name : "Root Folder"}
+                <h1 className="text-2xl font-bold flex items-center gap-2 mb-2">
+                  <FolderIcon className="w-6 h-6" />
+                  {currentNode ? currentNode.name : "Root Folder"}
                 </h1>
-                <p className="text-sm text-muted-foreground">
-                  {currentFolder?.description ||
-                    "Organisez vos documents avec des tags intelligents"}
+                <p className="text-muted-foreground">
+                  {(currentNode?.getData() as Folder)?.description ||
+                    "This is the root folder of your files."}
                 </p>
               </div>
             </div>
@@ -150,14 +153,19 @@ const Index = () => {
                 <span className="hidden sm:inline">•</span>
                 <span className="whitespace-nowrap">
                   {(
-                    content.documents.reduce((acc, doc) => acc + doc.size, 0) /
+                    content.documents.reduce(
+                      (acc, doc) =>
+                        acc + ((doc.getData() as Document)?.size || 0),
+                      0
+                    ) /
                     (1024 * 1024)
                   ).toFixed(2)}{" "}
                   Mo
                 </span>
               </div>
 
-              {content.folders.length === 0 && content.documents.length === 0 ? (
+              {content.folders.length === 0 &&
+              content.documents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="p-4 rounded-full bg-muted mb-4">
                     <FileText className="h-8 w-8 text-muted-foreground" />
@@ -178,20 +186,27 @@ const Index = () => {
                       : "space-y-2"
                   }
                 >
-                  {content.folders.map((folder) => (
+                  {content.folders.map((folderNode) => (
                     <FolderCard
-                      key={folder.id}
-                      folder={folder}
-                      onClick={() => setCurrentFolderId(folder.id)}
+                      key={folderNode.id}
+                      node={folderNode}
+                      onClick={() => setCurrentNode(folderNode)}
                     />
                   ))}
 
-                  {content.documents.map((doc) => (
+                  {content.documents.map((docNode) => (
                     <FileCard
-                      key={doc.id}
-                      document={doc}
-                      onClick={() => selectDocument(doc.id)}
-                      onToggleFavorite={() => toggleFavorite(doc.id)}
+                      key={docNode.id}
+                      node={docNode}
+                      onClick={() => setSelectedNode(docNode)}
+                      onToggleFavorite={() => {
+                        const doc = docNode.getData() as Document;
+                        const updatedDoc = {
+                          ...doc,
+                          isFavorite: !doc.isFavorite,
+                        };
+                        updateNode(docNode.id, updatedDoc);
+                      }}
                     />
                   ))}
                 </div>
@@ -201,12 +216,14 @@ const Index = () => {
         </main>
 
         <FileDetailsModal
-          document={selectedDocument}
-          isOpen={!!selectedDocumentId}
-          onClose={() => selectDocument(null)}
+          document={selectedNode ? (selectedNode.getData() as Document) : null}
+          isOpen={!!selectedNode}
+          onClose={() => setSelectedNode(null)}
           onToggleFavorite={() => {
-            if (selectedDocumentId) {
-              toggleFavorite(selectedDocumentId);
+            if (selectedNode) {
+              const doc = selectedNode.getData() as Document;
+              const updatedDoc = { ...doc, isFavorite: !doc.isFavorite };
+              updateNode(selectedNode.id, updatedDoc);
             }
           }}
           onTagClick={toggleTag}

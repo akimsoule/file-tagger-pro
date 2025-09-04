@@ -2,7 +2,7 @@ import TreeNode from './TreeNode';
 import type { Document, Folder, Tag } from '@/contexts/file/def';
 import type { TreeNodeType } from '@/types';
 
-interface FileNodeStats {
+export interface FileNodeStats {
   totalSize: number;
   tagsCount: number;
   totalItems?: number;
@@ -68,6 +68,59 @@ export class FileTreeNode extends TreeNode {
       folder.parentId
     );
   }
+
+public static buildRootTree(documents: Document[], folders: Folder[]): FileTreeNode {
+    // Créer le dossier racine avec ses propriétés minimales requises
+    const root = FileTreeNode.createFolder({
+        id: 'root',
+        name: 'root', // Le nom doit être "root" pour que l'index soit initialisé
+        parentId: null,
+        tags: '',
+        description: 'Dossier racine',
+        color: '#000000',
+        ownerId: '',
+        createdAt: new Date(),
+        updatedAt: new Date()
+    } as Folder);
+
+    // Créer une map des dossiers pour un accès rapide
+    const folderMap = new Map<string, FileTreeNode>();
+    folderMap.set('root', root);
+
+    // Créer les nœuds de dossier et les ajouter à la map
+    folders.forEach(folder => {
+        const node = FileTreeNode.createFolder(folder);
+        folderMap.set(folder.id, node);
+    });
+
+    // Établir les relations parent-enfant pour les dossiers
+    folders.forEach(folder => {
+        const currentNode = folderMap.get(folder.id);
+        if (!currentNode) return;
+
+        const parentNode = folderMap.get(folder.parentId || 'root');
+        if (parentNode) {
+            parentNode.addChild(currentNode);
+        }
+    });
+
+    // Ajouter les documents aux dossiers appropriés
+    documents.forEach(doc => {
+        const node = FileTreeNode.createDocument(doc);
+        const parentFolder = folderMap.get(doc.folderId || 'root');
+        if (parentFolder) {
+            parentFolder.addChild(node);
+        }
+    });
+
+    // Mettre à jour les statistiques de l'arbre complet
+    root.updateStats();
+
+    const result = root.printTree();
+    console.log(result);
+
+    return root;
+}
 
   public updateData(updates: Partial<Document | Folder>): void {
     this.data = { ...this.data, ...updates };
@@ -175,5 +228,38 @@ export class FileTreeNode extends TreeNode {
       });
 
     return filtered;
+  } 
+
+   public printTree(indent: string = ''): string {
+    // Informations de base du nœud
+    let output = `${indent}${this.type === 'folder' ? '📁' : '📄'} ${this.name} (${this.id})\n`;
+    
+    // Ajouter les tags s'il y en a
+    // if (this.tags.length > 0) {
+    //   output += `${indent}  🏷️ Tags: ${this.tags.map(t => t.name).join(', ')}\n`;
+    // }
+    
+    // Ajouter les stats
+    // if (this.type === 'file') {
+    //   const stats = this.stats as FileNodeStats;
+    //   output += `${indent}  📊 Taille: ${stats.totalSize} octets\n`;
+    // } else {
+    //   const stats = this.stats as FileNodeStats;
+    //   output += `${indent}  📊 Stats: ${stats.filesCount} fichiers, ` +
+    //             `${stats.foldersCount} dossiers, ` +
+    //             `${stats.totalSize} octets au total\n`;
+    // }
+    
+    // Récursivement afficher les enfants
+    if (this.children.length > 0) {
+      output += `${indent}  📁 Contenu:\n`;
+      this.children.forEach((child, index) => {
+        const isLast = index === this.children.length - 1;
+        const childIndent = `${indent}  ${isLast ? '└─' : '├─'}`;
+        output += (child as FileTreeNode).printTree(childIndent);
+      });
+    }
+    
+    return output;
   }
 }

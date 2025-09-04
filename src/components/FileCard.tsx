@@ -15,8 +15,10 @@ import { FolderPicker } from "./FolderPicker";
 import { TagEditor } from "./TagEditor";
 import { useFileContext } from "@/hooks/useFileContext";
 
+import { FileTreeNode } from "@/logic/FileTreeNode";
+
 interface FileCardProps {
-  document: Document;
+  node: FileTreeNode;
   onClick?: () => void;
   onToggleFavorite?: () => void;
 }
@@ -47,13 +49,19 @@ const getFileIcon = (type: string) => {
 };
 
 export function FileCard({
-  document,
+  node,
   onClick,
   onToggleFavorite,
 }: FileCardProps) {
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
   const [isTagEditorOpen, setIsTagEditorOpen] = useState(false);
   const { moveDocument, updateDocument } = useFileContext();
+
+  if (!node || node.type !== 'file') {
+    return null;
+  }
+
+  const document = node.getData() as Document;
 
   const fileExtension = document.name.split(".").pop()?.toUpperCase();
   const tags = document.tags.split(",").filter((tag) => tag.trim() !== "");
@@ -63,10 +71,17 @@ export function FileCard({
   };
 
   const handleMove = (targetFolderId: string | null) => {
+    console.log('Déplacement du document :', {
+      documentId: document.id,
+      documentName: document.name,
+      fromFolder: document.folderId || 'racine',
+      toFolder: targetFolderId || 'racine'
+    });
     moveDocument(document.id, targetFolderId);
   };
 
   const handleUpdateTags = (newTags: string) => {
+    console.log('Mise à jour des tags du document', document.id, 'de', document.tags, 'vers', newTags);
     updateDocument(document.id, { tags: newTags });
   };
 

@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useMemo } from 'react';
+import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { mockDocuments, mockFolders } from '../../data/mockData';
 import type { Document, Folder, Tag } from './def';
 import { FileContext } from './context';
@@ -11,99 +11,38 @@ const defaultColors = [
 ];
 
 export function FileProvider({ children }: { children: React.ReactNode }) {
-  // État de l'interface
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  // ==================== État ====================
+  const [rootNode] = useState(() => FileTreeNode.buildRootTree(mockDocuments, mockFolders));
+  // Navigation basée sur références directes (évite collisions d'IDs entre dossiers et documents)
+  const [currentNodeRef, setCurrentNodeRef] = useState<FileTreeNode | null>(rootNode);
+  const [selectedNodeRef, setSelectedNodeRef] = useState<FileTreeNode | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTags, setCustomTags] = useState<Tag[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [treeVersion, setTreeVersion] = useState(0);
 
   // Gestion de l'arbre
-  const [rootNode] = useState(() => {
-    // Créer le nœud racine
-    const root = FileTreeNode.createFolder({
-      id: 'root',
-      name: 'root',
-      description: '',
-      color: '#000000',
-      ownerId: '',
-      children: [],
-      documents: [],
-      tags: '',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
-
-    // Ajouter les dossiers
-    for (const folder of mockFolders) {
-      const folderNode = FileTreeNode.createFolder(folder);
-      if (!folder.parentId) {
-        root.addChild(folderNode);
-      } else {
-        const parentNode = root.findChildById(folder.parentId);
-        if (parentNode) {
-          parentNode.addChild(folderNode);
-        }
-      }
-    }
-
-    // Ajouter les documents
-    for (const doc of mockDocuments) {
-      const docNode = FileTreeNode.createDocument(doc);
-      if (!doc.folderId) {
-        root.addChild(docNode);
-      } else {
-        const parentNode = root.findChildById(doc.folderId);
-        if (parentNode) {
-          parentNode.addChild(docNode);
-        }
-      }
-    }
-
-    return root;
-  });
+  
 
   // Récupérer tous les nœuds
   const getAllNodes = useCallback(() => {
-    const nodes: FileTreeNode[] = [];
-    const stack = [rootNode];
-    const visited = new Set<string>();
-
-    while (stack.length > 0) {
-      const current = stack.pop()!;
-      if (visited.has(current.id)) continue;
-      visited.add(current.id);
-
-      nodes.push(current);
-      stack.push(...current.children.map(child => child as FileTreeNode));
+    const rootIndex = rootNode.getRootIndex();
+    if (!rootIndex) {
+      console.error("Index racine non trouvé");
+      return [];
     }
-
-    return nodes;
+    return Array.from(rootIndex.values()) as FileTreeNode[];
   }, [rootNode]);
 
-  // État dérivé : documents et dossiers
-  const documents = useMemo(() => 
-    getAllNodes()
-      .filter(node => node.type === 'file')
-      .map(node => (node as FileTreeNode).getData() as Document),
-    [getAllNodes]
-  );
-
-  const folders = useMemo(() => 
-    getAllNodes()
-      .filter(node => node.type === 'folder')
-      .map(node => (node as FileTreeNode).getData() as Folder),
-    [getAllNodes]
-  );
+  // État : nœud courant et sélectionné
+  const currentNode = currentNodeRef;
+  const selectedNode = selectedNodeRef;
 
   // Navigation et contenu
   const getCurrentContent = useCallback(() => {
-    if (!currentFolderId) {
-      return rootNode.children.map(child => child as FileTreeNode);
-    }
-    const currentNode = rootNode.findChildById(currentFolderId);
-    return currentNode?.children.map(child => child as FileTreeNode) || [];
-  }, [currentFolderId, rootNode]);
+    const node = currentNodeRef || rootNode;
+    return node.children.map(c => c as FileTreeNode);
+  }, [currentNodeRef, rootNode]);
 
   // Opérations sur les documents
   const findDocumentById = useCallback((id: string) => {
@@ -111,66 +50,91 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
     return node?.type === 'file' ? node.getData() as Document : undefined;
   }, [rootNode]);
 
-    const getFolderContent = useCallback((folderId?: string) => {
-    const currentNode = folderId ? rootNode.findChildById(folderId) as FileTreeNode : rootNode;
-    if (!currentNode) return { documents: [], subFolders: [] };
-    
-    // Fonction pour vérifier si un nœud correspond aux tags sélectionnés
-    const matchesTags = (node: FileTreeNode) => {
+  const getFolderContent = useCallback((folderId?: string) => {
+    // Si pas d'ID fourni, retourner le contenu de la racine
+    if (!folderId) {
+      return {
+        documents: rootNode.children
+          .filter((child): child is FileTreeNode => child instanceof FileTreeNode && child.type === 'file')
+          .map(node => node.getData() as Document),
+        subFolders: rootNode.children
+          .filter((child): child is FileTreeNode => child instanceof FileTreeNode && child.type === 'folder')
+          .map(node => {
+            const folderData = node.getData() as Folder;
+            // S'assurer que les enfants sont correctement remplis
+            folderData.children = node.children
+              .filter(child => child.type === 'folder')
+              .map(child => (child as FileTreeNode).getData() as Folder);
+            folderData.documents = node.children
+              .filter(child => child.type === 'file')
+              .map(child => (child as FileTreeNode).getData() as Document);
+            return folderData;
+          })
+      };
+    }
+
+    // Chercher le nœud
+    const node = rootNode.findChildById(folderId) as FileTreeNode;
+    if (!node || !(node instanceof FileTreeNode)) {
+      return { documents: [], subFolders: [] };
+    }
+
+    // Si c'est un fichier, retourner des listes vides
+    if (node.type === 'file') {
+      return { documents: [], subFolders: [] };
+    }
+
+    // Fonction pour vérifier les tags
+    const hasMatchingTags = (node: FileTreeNode) => {
       if (selectedTags.length === 0) return true;
-      
-      console.log('Node:', node.name);
-      console.log('Node tags:', node.tags);
-      console.log('Selected tags:', selectedTags);
-      
       const nodeTags = node.tags.map(tag => tag.id);
-      console.log('Node tag IDs:', nodeTags);
-      
-      const matches = selectedTags.every(tagId => nodeTags.includes(tagId));
-      console.log('Matches:', matches);
-      
-      return matches;
+      return selectedTags.every(tagId => nodeTags.includes(tagId));
     };
-    
-    let nodesToFilter: FileTreeNode[];
-    
-    if (selectedTags.length > 0) {
-      // Si des tags sont sélectionnés, on fait une recherche dans l'arbre
-      const stack = currentNode.children.map(child => child as FileTreeNode);
-      const allNodes: FileTreeNode[] = [];
+
+    // Récupérer tous les enfants récursivement
+    const getAllChildren = (node: FileTreeNode): FileTreeNode[] => {
+      const result: FileTreeNode[] = [];
+      const stack = [node];
       
       while (stack.length > 0) {
-        const node = stack.pop()!;
-        allNodes.push(node);
-        for (const child of node.children) {
-          stack.push(child as FileTreeNode);
-        }
+        const current = stack.pop()!;
+        current.children.forEach(child => {
+          const fileChild = child as FileTreeNode;
+          if (hasMatchingTags(fileChild)) {
+            result.push(fileChild);
+            if (fileChild.type === 'folder') {
+              stack.push(fileChild);
+            }
+          }
+        });
       }
       
-      nodesToFilter = allNodes;
-    } else {
-      // Sinon, on ne prend que les enfants directs
-      nodesToFilter = currentNode.children.map(child => child as FileTreeNode);
-    }
-    
-    const filteredNodes = nodesToFilter.filter(matchesTags);
-    console.log('Filtered nodes:', filteredNodes.map(n => n.name));
-
-    const matchingDocuments = filteredNodes
-      .filter(node => node.type === 'file')
-      .map(node => node.getData() as Document);
-    
-    const matchingFolders = filteredNodes
-      .filter(node => node.type === 'folder')
-      .map(node => node.getData() as Folder);
-    
-    console.log('Matching documents:', matchingDocuments.map(d => d.name));
-    console.log('Matching folders:', matchingFolders.map(f => f.name));
-    
-    return {
-      documents: matchingDocuments,
-      subFolders: matchingFolders
+      return result;
     };
+
+    // Récupérer tous les enfants
+    const allChildren = getAllChildren(node);
+
+    // Filtrer et mapper les documents et sous-dossiers
+    const documents = allChildren
+      .filter(child => child.type === 'file')
+      .map(child => child.getData() as Document);
+
+    const subFolders = allChildren
+      .filter(child => child.type === 'folder')
+      .map(child => {
+        const folderData = child.getData() as Folder;
+        // S'assurer que les enfants sont correctement remplis
+        folderData.children = child.children
+          .filter(c => c.type === 'folder')
+          .map(c => (c as FileTreeNode).getData() as Folder);
+        folderData.documents = child.children
+          .filter(c => c.type === 'file')
+          .map(c => (c as FileTreeNode).getData() as Document);
+        return folderData;
+      });
+
+    return { documents, subFolders };
   }, [rootNode, selectedTags]);
 
   // Opérations sur les dossiers
@@ -254,11 +218,18 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
         : [...prev, tagId]
     );
   }, []);
+
+  // Mise à jour des tags
+  const customTagsRef = useRef(customTags);
+  useEffect(() => {
+    customTagsRef.current = customTags;
+  }, [customTags]);
+
   const updateTags = useCallback(() => {
     const tagsInfo = rootNode.getTagsInfo();
     
     const newTags: Tag[] = tagsInfo.map((info, index) => ({
-      id: `tag-${info.name}`, // Utiliser le même format que dans FileTreeNode
+      id: `tag-${info.name}`,
       name: info.name,
       color: defaultColors[index % defaultColors.length],
       count: info.count,
@@ -266,13 +237,21 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
       updatedAt: new Date()
     }));
 
-    setTags([...newTags, ...customTags]);
-  }, [customTags, rootNode]);
+    setTags(prevTags => {
+      const mergedTags = [...newTags];
+      // Ajouter uniquement les custom tags qui n'existent pas déjà
+      customTagsRef.current.forEach(customTag => {
+        if (!mergedTags.some(tag => tag.id === customTag.id)) {
+          mergedTags.push(customTag);
+        }
+      });
+      return mergedTags;
+    });
+  }, [rootNode]);
 
-  // Mettre à jour les tags quand l'arbre change
   useEffect(() => {
     updateTags();
-  }, [updateTags]);
+  }, [updateTags, treeVersion]); // Ajout de treeVersion comme dépendance
 
   // Ajouter un tag à un dossier
   const addFolderTag = useCallback((folderId: string, tagName: string) => {
@@ -312,32 +291,51 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 
   // Déplacer un dossier
   const moveFolder = useCallback((folderId: string, targetFolderId: string | null) => {
-    const node = rootNode.findChildById(folderId) as FileTreeNode;
+    const folderNode = rootNode.findChildById(folderId) as FileTreeNode | null;
+    if (!folderNode) return;
+    rootNode.moveNodeFrom(folderNode.parent?.id || 'root', targetFolderId || 'root', folderId);
+    setTreeVersion(v => v + 1);
+
+  }, [rootNode]);
+
+  // Déplacer un document
+  // Mise à jour d'un document
+  const updateDocument = useCallback((documentId: string, updates: Partial<Document>) => {
+    const sourceNode = rootNode.findChildById(documentId) as FileTreeNode;
+    if (!sourceNode || sourceNode.type !== 'file') return;
+
+    if ('tags' in updates) {
+      const tags = updates.tags!
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean)
+        .join(',');
+      
+      sourceNode.updateData({ ...updates, tags });
+      updateTags();
+      setTreeVersion(v => v + 1);
+    } else {
+      sourceNode.updateData(updates);
+      setTreeVersion(v => v + 1);
+    }
+  }, [rootNode, updateTags]);
+
+  const moveDocument = useCallback((documentId: string, targetFolderId: string | null) => {
+    const sourceNode = rootNode.findChildById(documentId) as FileTreeNode;
+    if (!sourceNode || sourceNode.type !== 'file') {
+      console.error(`Document source non trouvé ou invalide: ${documentId}`);
+      return;
+    }
+
     const targetNode = targetFolderId ? rootNode.findChildById(targetFolderId) as FileTreeNode : rootNode;
-    
-    if (!node || node.type !== 'folder') return;
-    if (targetFolderId && (!targetNode || targetNode.type !== 'folder')) return;
-
-    // Vérifier qu'on ne déplace pas dans un descendant
-    let parent = targetNode;
-    while (parent) {
-      if (parent.id === folderId) return; // Éviter les cycles
-      parent = parent.parent as FileTreeNode;
+    if (targetFolderId && (!targetNode || targetNode.type !== 'folder')) {
+      console.error(`Dossier de destination non trouvé ou invalide: ${targetFolderId}`);
+      return;
     }
 
-    // Retirer le nœud de son parent actuel
-    const oldParent = node.parent as FileTreeNode;
-    if (oldParent) {
-      oldParent.children = oldParent.children.filter(child => child.id !== folderId);
-    }
-
-    // Mettre à jour le parentId du nœud
-    node.updateData({ parentId: targetFolderId || undefined });
-    node.parent = targetNode;
-
-    // Ajouter le nœud à son nouveau parent
-    targetNode.addChild(node);
-
+    // Utiliser la méthode moveNodeFrom intégrée
+  rootNode.moveNodeFrom(sourceNode.parent?.id || 'root', targetFolderId || 'root', documentId);
+    setTreeVersion(v => v + 1);
   }, [rootNode]);
 
   // Mise à jour d'un dossier
@@ -365,30 +363,78 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
   return (
     <FileContext.Provider
       value={{
-        documents,
-        folders,
-        currentFolderId,
-        selectedDocumentId,
+        currentNode,
+        selectedNode,
         tags,
         selectedTags,
-        setCurrentFolderId,
-        selectDocument: setSelectedDocumentId,
+  setCurrentNode: (node: FileTreeNode | null) => setCurrentNodeRef(node || rootNode),
+  setSelectedNode: (node: FileTreeNode | null) => setSelectedNodeRef(node),
         setSelectedTags,
-        findDocumentById,
-        getFolderContent,
-        getCurrentContent,
-        getFolders,
-        getFolderPath,
-        getFolderStats,
-        getFolderHierarchy,
+        findNodeById: (id: string) => rootNode.findChildById(id) as FileTreeNode | null,
+        getNodeContent: (node: FileTreeNode | null) => {
+          if (!node) return rootNode.children as FileTreeNode[];
+          return node.children as FileTreeNode[];
+        },
+        getNodePath: (node: FileTreeNode) => {
+          const path: FileTreeNode[] = [];
+          let current: FileTreeNode | null = node;
+          while (current) {
+            path.unshift(current);
+            current = current.parent as FileTreeNode | null;
+          }
+          return path;
+        },
+        getNodeStats: (node: FileTreeNode) => node.stats,
+        getNodeHierarchy: () => rootNode.children as FileTreeNode[],
         getTagsByIds,
         getAllTags,
         getTagCount,
         toggleTagSelection,
-        updateFolder,
-        addFolderTag,
-        removeFolderTag,
-        moveFolder
+  updateNode: async (nodeId: string, updates: Partial<Document | Folder>) => {
+          const node = rootNode.findChildById(nodeId) as FileTreeNode | null;
+          if (!node) return;
+          node.updateData(updates);
+          updateTags();
+          setTreeVersion(v => v + 1);
+        },
+        addToFavorites: async (nodeId: string) => {
+          const node = rootNode.findChildById(nodeId) as FileTreeNode | null;
+          if (!node || node.type !== 'file') return;
+          const data = node.getData() as Document;
+          node.updateData({ isFavorite: true });
+          updateTags();
+          setTreeVersion(v => v + 1);
+        },
+        removeFromFavorites: async (nodeId: string) => {
+          const node = rootNode.findChildById(nodeId) as FileTreeNode | null;
+          if (!node || node.type !== 'file') return;
+            node.updateData({ isFavorite: false });
+            updateTags();
+            setTreeVersion(v => v + 1);
+        },
+        updateTag: async () => {},
+        createTag: async () => {},
+        deleteTag: async () => {},
+        addNodeTag: (node: FileTreeNode, tagName: string) => {
+          const currentTags = node.getData().tags.split(',').map(t => t.trim()).filter(Boolean);
+          if (!currentTags.includes(tagName)) {
+            const newTags = [...currentTags, tagName].join(',');
+            node.updateData({ tags: newTags });
+            updateTags();
+          }
+        },
+        removeNodeTag: (node: FileTreeNode, tagName: string) => {
+          const currentTags = node.getData().tags.split(',').map(t => t.trim()).filter(Boolean);
+          const newTags = currentTags.filter(tag => tag !== tagName).join(',');
+          node.updateData({ tags: newTags });
+          updateTags();
+        },
+  moveNode: async (nodeId: string, targetFolderId: string | null) => {
+          const node = rootNode.findChildById(nodeId) as FileTreeNode | null;
+          if (!node) return;
+          rootNode.moveNodeFrom(node.parent?.id || 'root', targetFolderId || 'root', node.id);
+          setTreeVersion(v => v + 1);
+        }
       }}
     >
       {children}

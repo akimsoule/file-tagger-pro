@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Folder, ChevronRight, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFileContext } from '@/hooks/useFileContext';
-import { Folder as FolderType } from '@/contexts/file/def';
+import { FileTreeNode } from '@/logic/FileTreeNode';
 
 interface FolderPickerProps {
   isOpen: boolean;
@@ -24,42 +24,43 @@ export const FolderPicker: FC<FolderPickerProps> = ({
   excludeFolderId,
   title = 'Choisir un dossier'
 }) => {
-  const { getFolderHierarchy, getFolderContent } = useFileContext();
+  const { getNodeHierarchy, getNodeContent } = useFileContext();
 
   const handleSelect = (folderId: string | null) => {
     onSelect(folderId);
     onClose();
   };
 
-  const renderFolder = (folder: FolderType, level: number = 0) => {
-    if (folder.id === excludeFolderId) return null;
+  const renderFolder = (node: FileTreeNode, level: number = 0) => {
+    if (node.id === excludeFolderId) return null;
+    if (node.type !== 'folder') return null;
 
-    const { subFolders } = getFolderContent(folder.id);
+  const folderData = node.getData() as { color: string; name: string }; // Partial Folder fields needed
+    const subFolders = getNodeContent(node).filter(n => n.type === 'folder');
     const hasSubFolders = subFolders.length > 0;
 
     return (
-      <div key={folder.id} className="w-full">
+      <div key={node.id} className="w-full">
         <button
-          onClick={() => handleSelect(folder.id)}
+          onClick={() => handleSelect(node.id)}
           className={cn(
             "w-full flex items-center gap-2 p-2 hover:bg-accent rounded-lg transition-colors",
             "text-left text-sm",
-            currentFolderId === folder.id && "bg-accent"
+            currentFolderId === node.id && "bg-accent"
           )}
           style={{ paddingLeft: `${(level + 1) * 1}rem` }}
         >
           <div className="flex items-center gap-2 min-w-0">
-            <div className="shrink-0 p-1 rounded" style={{ backgroundColor: folder.color + '20' }}>
-              <Folder className="h-4 w-4" style={{ color: folder.color }} />
+            <div className="shrink-0 p-1 rounded" style={{ backgroundColor: folderData.color + '20' }}>
+              <Folder className="h-4 w-4" style={{ color: folderData.color }} />
             </div>
-            <span className="truncate">{folder.name}</span>
+            <span className="truncate">{node.name}</span>
           </div>
           {hasSubFolders && <ChevronRight className="h-4 w-4 ml-auto opacity-50" />}
         </button>
-        
         {hasSubFolders && (
           <div className="w-full">
-            {subFolders.map(subFolder => renderFolder(subFolder, level + 1))}
+            {subFolders.map(sub => renderFolder(sub, level + 1))}
           </div>
         )}
       </div>
@@ -87,7 +88,9 @@ export const FolderPicker: FC<FolderPickerProps> = ({
                 <span>Racine</span>
               </button>
 
-              {getFolderHierarchy().map(folder => renderFolder(folder))}
+              {getNodeHierarchy()
+                .filter(node => node.type === 'folder')
+                .map(folderNode => renderFolder(folderNode as FileTreeNode))}
             </div>
           </ScrollArea>
           <div className="flex justify-end gap-2">

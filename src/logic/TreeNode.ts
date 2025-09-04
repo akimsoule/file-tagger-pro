@@ -44,6 +44,10 @@ export default class TreeNode {
 
   // === PROPRIÉTÉS ET UTILITAIRES DE BASE ===
 
+  public getRootIndex(): Map<string, TreeNode> | undefined {
+    return this.rootIndex;
+  }
+
   public isRoot(): boolean {
     return this.rootIndex !== undefined;
   }

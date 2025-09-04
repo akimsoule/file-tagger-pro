@@ -37,39 +37,46 @@ export interface Tag {
   updatedAt: Date;
 }
 
-import type { FileTreeNode } from '../../logic/FileTreeNode';
+import type { FileTreeNode } from '@/logic/FileTreeNode';
+import { FileNodeStats } from "@/logic/FileTreeNode";
 
 export interface FileContextType {
   // État principal
-  documents: Document[];
-  folders: Folder[];
-  currentFolderId: string | null;
-  selectedDocumentId: string | null;
+  currentNode: FileTreeNode | null;
+  selectedNode: FileTreeNode | null;
   tags: Tag[];
   selectedTags: string[];
 
   // Setters
-  setCurrentFolderId: (id: string | null) => void;
-  selectDocument: (id: string | null) => void;
-  setSelectedTags: (tagIds: string[]) => void;
+  setCurrentNode: (node: FileTreeNode | null) => void;
+  setSelectedNode: (node: FileTreeNode | null) => void;
+  setSelectedTags: (tags: string[]) => void;
 
-  // Opérations sur les fichiers et dossiers
-  findDocumentById: (id: string) => Document | undefined;
-  getFolderContent: (folderId?: string) => { 
-    documents: Document[],
-    subFolders: Folder[]
-  };
-  getCurrentContent: () => FileTreeNode[];
-  getFolders: (parentId?: string | null, selectedTags?: string[]) => Folder[];
-  getFolderPath: (folderId?: string) => FileTreeNode[];
-  getFolderStats: (folderId: string) => { totalItems: number; totalSize: number };
-  getFolderHierarchy: () => FileTreeNode[];
+  // Opérations sur les nœuds
+  getNodeContent: (node: FileTreeNode | null) => FileTreeNode[];
+  findNodeById: (id: string) => FileTreeNode | null;
+  getNodePath: (node: FileTreeNode) => FileTreeNode[];
+  getNodeStats: (node: FileTreeNode) => FileNodeStats;
+  getNodeHierarchy: () => FileTreeNode[];
+
+  // Gestion des fichiers
+  moveNode: (nodeId: string, targetFolderId: string | null) => Promise<void>;
+  updateNode: (nodeId: string, data: Partial<Document | Folder>) => Promise<void>;
+  addToFavorites: (nodeId: string) => Promise<void>;
+  removeFromFavorites: (nodeId: string) => Promise<void>;
+
+  // Gestion des tags
   getTagsByIds: (ids: string[]) => Tag[];
   getAllTags: () => Tag[];
   getTagCount: (tagId: string) => number;
   toggleTagSelection: (tagId: string) => void;
-  updateFolder: (folderId: string, updates: Partial<Folder>) => void;
-  addFolderTag: (folderId: string, tagName: string) => void;
-  removeFolderTag: (folderId: string, tagName: string) => void;
-  moveFolder: (folderId: string, targetFolderId: string | null) => void;
+  updateTag: (tagId: string, updates: Partial<Tag>) => Promise<void>;
+  createTag: (tag: Omit<Tag, 'id' | 'count'>) => Promise<void>;
+  deleteTag: (tagId: string) => Promise<void>;
+
+  // Recherche & filtrage
+  searchNodes?: (query: string) => FileTreeNode[];
+  filterNodes?: (criteria: { tags?: string[]; favorite?: boolean }) => FileTreeNode[];
+  addNodeTag?: (node: FileTreeNode, tagName: string) => void;
+  removeNodeTag?: (node: FileTreeNode, tagName: string) => void;
 }

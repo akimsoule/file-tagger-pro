@@ -2,25 +2,36 @@ import React from 'react';
 import { ChevronRight, Home, FolderIcon } from 'lucide-react';
 import { Button } from './ui/button';
 import { useFileContext } from '@/hooks/useFileContext';
-import { Folder } from '@/contexts/file/def';
+import { FileTreeNode } from '@/logic/FileTreeNode';
 
 export function Breadcrumb() {
-  const { currentFolderId, setCurrentFolderId, getFolderPath } = useFileContext();
+  const { currentNode, setCurrentNode, getNodePath } = useFileContext();
 
-  // Obtenir le chemin actuel en utilisant le hook useFileContext
-  const currentPath = getFolderPath(currentFolderId || undefined);
+  const path = currentNode ? getNodePath(currentNode) : [];
 
-  const handleNavigate = (folderId: string | null) => {
-    setCurrentFolderId(folderId);
+  // Inclure racine virtuelle (home) si chemin non vide
+  const fullPath: (FileTreeNode | { id: string; name: string })[] = path.length > 0
+    ? path
+    : [];
+
+  const showFullPath = fullPath.length <= 2;
+  const visiblePath = showFullPath
+    ? fullPath
+    : [
+        ...(fullPath.length > 0 ? [fullPath[0]] : []),
+        ...(fullPath.length > 2 ? [{ id: 'ellipsis', name: '...' }] : []),
+        ...(fullPath.length > 1 ? [fullPath[fullPath.length - 1]] : [])
+      ];
+
+  const handleNavigate = (nodeId: string | null) => {
+    if (!nodeId) {
+      setCurrentNode(null); // vers racine
+      return;
+    }
+    // Trouver dans le chemin pour éviter une recherche globale (chemin garantit l'ordre)
+    const target = path.find(n => n.id === nodeId) || null;
+    setCurrentNode(target);
   };
-
-  // Ne montrer que le dernier dossier sur mobile, tout sur desktop
-  const showFullPath = currentPath.length <= 2;
-  const visiblePath = showFullPath ? currentPath : [
-    ...(currentPath.length > 0 ? [currentPath[0]] : []),
-    ...(currentPath.length > 2 ? [{ id: 'ellipsis', name: '...' }] : []),
-    ...(currentPath.length > 1 ? [currentPath[currentPath.length - 1]] : [])
-  ];
 
   return (
     <nav className="flex items-center space-x-1.5 text-sm text-muted-foreground overflow-x-auto overflow-y-hidden w-full scrollbar-none py-1 px-0.5">
