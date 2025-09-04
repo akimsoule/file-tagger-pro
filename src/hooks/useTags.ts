@@ -1,10 +1,38 @@
 import { useContext } from 'react';
-import { TagContext } from '../contexts/tag/context';
+import { FileContext } from '../contexts/file/context';
 
 export function useTags() {
-  const context = useContext(TagContext);
-  if (!context) {
-    throw new Error('useTags must be used within a TagProvider');
+  const {
+    tags,
+    selectedTags,
+    toggleTagSelection,
+    clearTagSelection,
+    getTagById,
+    addTag,
+    updateTag,
+    deleteTag,
+    setSelectedTags,
+    getAllTags,
+    getTagsByIds,
+    getTagCount
+  } = useContext(FileContext);
+
+  if (!tags) {
+    throw new Error('useTags must be used within a FileProvider');
   }
-  return context;
+
+  return {
+    tags,
+    selectedTags,
+    toggleTagSelection,
+    clearTagSelection,
+    getTagById,
+    addTag,
+    updateTag,
+    deleteTag,
+    setSelectedTags,
+    getAllTags,
+    getTagsByIds,
+    getTagCount
+  };
 }

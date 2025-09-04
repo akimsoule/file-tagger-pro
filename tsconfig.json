@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },

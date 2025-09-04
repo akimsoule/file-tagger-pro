@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Grid3X3, List, SortAsc, ChevronLeft } from 'lucide-react';
+import { Search, Grid3X3, List, SortAsc, X } from 'lucide-react';
 import { ViewMode, SortBy } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -18,10 +18,11 @@ interface SearchBarProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   sortBy: SortBy;
-  onNavigateBack?: () => void;
   onSortChange: (sort: SortBy) => void;
   selectedTags: string[];
   onClearFilters: () => void;
+  toggleTagSelection: (tagId: string) => void;
+  tags: Array<{ id: string; name: string; count?: number }>;
 }
 
 export function SearchBar({
@@ -33,7 +34,8 @@ export function SearchBar({
   onSortChange,
   selectedTags,
   onClearFilters,
-  onNavigateBack,
+  toggleTagSelection,
+  tags,
 }: SearchBarProps) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -45,90 +47,105 @@ export function SearchBar({
   ];
 
   return (
-    <div className="flex items-center gap-4 p-4 bg-background border-b border-border">
-      {/* Bouton de retour */}
-      {onNavigateBack && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onNavigateBack}
-          className="shrink-0"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span className="sr-only">Retour</span>
-        </Button>
-      )}
-
-      {/* Barre de recherche */}
-      <div className="relative flex-1 max-w-md">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Rechercher des fichiers..."
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-10 bg-accent/50 border-border focus-visible:ring-primary"
-        />
+    <div className="flex flex-col gap-2 p-2 sm:p-4 bg-background border-b border-border">
+      {/* Première ligne : barre de recherche */}
+      <div className="w-full">
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-8 h-8 bg-accent/50 border-border focus-visible:ring-primary w-full"
+          />
+        </div>
       </div>
 
-      {/* Filtres actifs */}
+      {/* Deuxième ligne : filtres actifs */}
       {selectedTags.length > 0 && (
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-xs">
-            {selectedTags.length} filtre{selectedTags.length > 1 ? 's' : ''}
-          </Badge>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClearFilters}
-            className="text-xs h-6 px-2"
-          >
-            Effacer
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedTags.map((tagId) => {
+            const tag = tags.find((t) => t.id === tagId);
+            if (!tag) return null;
+            return (
+              <Badge
+                key={tagId}
+                variant="secondary"
+                className="flex items-center gap-1 px-2 py-1 h-6"
+              >
+                <span>{tag.name}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => toggleTagSelection(tagId)}
+                  className="h-4 w-4 p-0 hover:bg-transparent"
+                >
+                  <X className="h-3 w-3" />
+                  <span className="sr-only">Retirer le tag {tag.name}</span>
+                </Button>
+              </Badge>
+            );
+          })}
+          {selectedTags.length > 1 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearFilters}
+              className="text-xs h-6 px-2"
+            >
+              Tout effacer
+            </Button>
+          )}
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        {/* Bouton de tri */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <SortAsc className="h-4 w-4" />
-              <span className="hidden sm:inline">Trier</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {sortOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.value}
-                onClick={() => onSortChange(option.value)}
-                className={cn(
-                  sortBy === option.value && 'bg-accent'
-                )}
-              >
-                {option.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+      {/* Troisième ligne : contrôles */}
+      <div className="flex items-center justify-between gap-2">
 
-        {/* Boutons de vue */}
-        <div className="flex items-center rounded-lg border border-border overflow-hidden">
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => onViewModeChange('grid')}
-            className="rounded-none border-0"
-          >
-            <Grid3X3 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => onViewModeChange('list')}
-            className="rounded-none border-0 border-l border-border"
-          >
-            <List className="h-4 w-4" />
-          </Button>
+        {/* Contrôles de droite */}
+        <div className="flex items-center gap-2">
+          {/* Bouton de tri */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-8 w-8">
+                <SortAsc className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {sortOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => onSortChange(option.value)}
+                  className={cn(
+                    sortBy === option.value && 'bg-accent'
+                  )}
+                >
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Boutons de vue */}
+          <div className="flex items-center rounded-lg border border-border overflow-hidden h-8">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => onViewModeChange('grid')}
+              className="rounded-none border-0 h-8 w-8"
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => onViewModeChange('list')}
+              className="rounded-none border-0 border-l border-border h-8 w-8"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

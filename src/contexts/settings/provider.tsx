@@ -8,19 +8,23 @@ const defaultSettings: Settings = {
   language: 'fr',
   defaultViewMode: 'grid',
   defaultSortBy: 'name',
-  showHiddenFiles: false,
-  showFileExtensions: true,
-  autoExpandFolders: false,
 };
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [settings, setSettings] = useState<Settings>(() => {
+    const savedSettings = localStorage.getItem('file-tagger-settings');
+    return savedSettings ? JSON.parse(savedSettings) : defaultSettings;
+  });
 
   const updateSettings = useCallback((newSettings: Partial<Settings>) => {
-    setSettings(prev => ({
-      ...prev,
-      ...newSettings,
-    }));
+    setSettings(prev => {
+      const updated = {
+        ...prev,
+        ...newSettings,
+      };
+      localStorage.setItem('file-tagger-settings', JSON.stringify(updated));
+      return updated;
+    });
   }, []);
 
   const resetSettings = useCallback(() => {
@@ -33,9 +37,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     resetSettings,
     defaultViewMode: settings.defaultViewMode,
     defaultSortBy: settings.defaultSortBy,
-    showHiddenFiles: settings.showHiddenFiles,
-    showFileExtensions: settings.showFileExtensions,
-    autoExpandFolders: settings.autoExpandFolders,
   };
 
   return (

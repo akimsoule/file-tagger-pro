@@ -19,7 +19,7 @@ const Favorites = () => {
     clearFilters
   } = useQuery();
   const { documents, toggleFavorite } = useFileContext();
-  const { selectedTags } = useTags();
+  const { selectedTags, toggleTagSelection: toggleTag, tags } = useTags();
 
   const filteredAndSortedDocuments = getFilteredAndSortedFavorites(documents);
 
@@ -59,10 +59,12 @@ const Favorites = () => {
             onSortChange={setSortBy}
             selectedTags={selectedTags}
             onClearFilters={clearFilters}
+            toggleTagSelection={toggleTag}
+            tags={tags}
           />
 
           {/* Zone de contenu principal */}
-          <div className="flex-1 p-6">
+          <div className="flex-1 p-2 sm:p-4 md:p-6">
             {/* Statistiques */}
             <div className="mb-6 flex items-center gap-4 text-sm text-muted-foreground">
               <span>{filteredAndSortedDocuments.length} documents favoris</span>

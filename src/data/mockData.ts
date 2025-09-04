@@ -1,4 +1,3 @@
-
 import { User } from '../contexts/user/def';
 import { Document, Folder } from '../contexts/file/def';
 
@@ -15,258 +14,170 @@ export const mockUser: User = {
   folders: []
 };
 
+// Fonction utilitaire pour créer un document
+const createDocument = (
+  id: string,
+  name: string,
+  type: string,
+  size: number,
+  description: string,
+  tags: string,
+  folderId: string | undefined,
+  isFavorite: boolean = false
+): Document => ({
+  id,
+  name,
+  type,
+  size,
+  description,
+  tags,
+  fileId: `mega-file-id-${id}`,
+  hash: `hash${id}`,
+  ownerId: mockUser.id,
+  folderId,
+  isFavorite,
+  createdAt: new Date('2024-01-01'),
+  modifiedAt: new Date('2024-01-01')
+});
+
+// Fonction utilitaire pour créer un dossier
+const createFolder = (
+  id: string,
+  name: string,
+  description: string,
+  color: string,
+  tags: string,
+  parentId?: string
+): Folder => ({
+  id,
+  name,
+  description,
+  color,
+  ownerId: mockUser.id,
+  parentId,
+  children: [],
+  documents: [],
+  tags,
+  createdAt: new Date('2024-01-01'),
+  updatedAt: new Date('2024-01-01')
+});
+
 export const mockFolders: Folder[] = [
-  {
-    id: '1',
-    name: 'Documents Importants',
-    description: 'Dossier pour les documents importants',
-    color: '#3B82F6',
-    ownerId: mockUser.id,
-    parentId: undefined,
-    children: [],
-    documents: [],
-    tags: 'important,work',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01')
-  },
-  {
-    id: '2',
-    name: 'Photos',
-    description: 'Album photos',
-    color: '#EC4899',
-    ownerId: mockUser.id,
-    parentId: undefined,
-    children: [],
-    documents: [],
-    tags: 'photos,vacances',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01')
-  },
-  {
-    id: '3',
-    name: 'Projets',
-    description: 'Tous les projets en cours',
-    color: '#10B981',
-    ownerId: mockUser.id,
-    parentId: undefined,
-    children: [],
-    documents: [],
-    tags: 'work,projet',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-02-15')
-  },
-  {
-    id: '4',
-    name: 'Projet A',
-    description: 'Documents du projet A',
-    color: '#10B981',
-    ownerId: mockUser.id,
-    parentId: '3',
-    children: [],
-    documents: [],
-    tags: 'work,projet',
-    createdAt: new Date('2024-01-15'),
-    updatedAt: new Date('2024-02-15')
-  },
-  {
-    id: '5',
-    name: 'Spécifications',
-    description: 'Spécifications techniques',
-    color: '#8B5CF6',
-    ownerId: mockUser.id,
-    parentId: '4',
-    children: [],
-    documents: [],
-    tags: 'work,projet',
-    createdAt: new Date('2024-01-20'),
-    updatedAt: new Date('2024-02-15')
-  },
-  {
-    id: '6',
-    name: 'Designs',
-    description: 'Maquettes et designs',
-    color: '#F59E0B',
-    ownerId: mockUser.id,
-    parentId: '4',
-    children: [],
-    documents: [],
-    tags: 'work,projet',
-    createdAt: new Date('2024-01-20'),
-    updatedAt: new Date('2024-03-01')
-  },
-  {
-    id: '7',
-    name: 'Vacances 2024',
-    description: 'Photos et documents des vacances',
-    color: '#EC4899',
-    ownerId: mockUser.id,
-    parentId: '2',
-    children: [],
-    documents: [],
-    tags: 'photos,vacances',
-    createdAt: new Date('2024-06-15'),
-    updatedAt: new Date('2024-08-30')
-  },
-  {
-    id: '8',
-    name: 'Été',
-    description: 'Vacances d\'été',
-    color: '#F59E0B',
-    ownerId: mockUser.id,
-    parentId: '7',
-    children: [],
-    documents: [],
-    tags: 'photos,vacances,été',
-    createdAt: new Date('2024-06-15'),
-    updatedAt: new Date('2024-08-30')
-  },
-  {
-    id: '9',
-    name: 'Hiver',
-    description: 'Vacances d\'hiver',
-    color: '#60A5FA',
-    ownerId: mockUser.id,
-    parentId: '7',
-    children: [],
-    documents: [],
-    tags: 'photos,vacances,hiver',
-    createdAt: new Date('2024-12-15'),
-    updatedAt: new Date('2024-12-30')
-  },
-  {
-    id: '10',
-    name: 'Archives',
-    description: 'Documents archivés',
-    color: '#6B7280',
-    ownerId: mockUser.id,
-    parentId: undefined,
-    children: [],
-    documents: [],
-    tags: 'archives',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01')
-  }
+  // Dossiers racine
+  createFolder('1', 'Documents Importants', 'Dossier pour les documents importants', '#3B82F6', 'important,work'),
+  createFolder('2', 'Photos', 'Album photos', '#EC4899', 'photos'),
+  createFolder('3', 'Projets', 'Tous les projets en cours', '#10B981', 'work,projet'),
+  createFolder('10', 'Archives', 'Documents archivés', '#6B7280', 'archives'),
+
+  // Sous-dossiers de Photos
+  createFolder('7', 'Vacances', 'Photos et documents des vacances', '#EC4899', 'photos,vacances', '2'),
+  createFolder('8', 'Été', 'Vacances d\'été', '#F59E0B', 'photos,vacances,été', '7'),
+  createFolder('9', 'Hiver', 'Vacances d\'hiver', '#60A5FA', 'photos,vacances,hiver', '7'),
+
+  // Sous-dossiers de Projets
+  createFolder('4', 'Projet A', 'Premier projet', '#10B981', 'work,projet', '3'),
+  createFolder('5', 'Documentation', 'Documentation du projet', '#8B5CF6', 'work,projet,docs', '4'),
+  createFolder('6', 'UI Design', 'Design de l\'interface', '#EC4899', 'work,projet,design', '4')
 ];
 
 export const mockDocuments: Document[] = [
-  {
-    id: '1',
-    name: 'Presentation Q4.pptx',
-    type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    size: 2048576,
-    description: 'Présentation du Q4 2024',
-    tags: 'important,work',
-    fileId: 'mega-file-id-1',
-    hash: 'hash1',
-    ownerId: mockUser.id,
-    folderId: '1',
-    isFavorite: true,
-    createdAt: new Date('2024-01-15'),
-    modifiedAt: new Date('2024-01-15')
-  },
-  {
-    id: '2',
-    name: 'Rapport Financier 2024.pdf',
-    type: 'application/pdf',
-    size: 1536000,
-    description: 'Rapport financier annuel',
-    tags: 'important,finance',
-    fileId: 'mega-file-id-2',
-    hash: 'hash2',
-    ownerId: mockUser.id,
-    folderId: '1',
-    isFavorite: true,
-    createdAt: new Date('2024-01-10'),
-    modifiedAt: new Date('2024-01-10')
-  },
-  {
-    id: '3',
-    name: 'Photo Plage.jpg',
-    type: 'image/jpeg',
-    size: 3145728,
-    description: 'Photos de la plage',
-    tags: 'photos,vacances,été',
-    fileId: 'mega-file-id-3',
-    hash: 'hash3',
-    ownerId: mockUser.id,
-    folderId: '8',
-    isFavorite: false,
-    createdAt: new Date('2024-08-15'),
-    modifiedAt: new Date('2024-08-15')
-  },
-  {
-    id: '4',
-    name: 'Photos Ski.jpg',
-    type: 'image/jpeg',
-    size: 2097152,
-    description: 'Photos des vacances au ski',
-    tags: 'photos,vacances,hiver',
-    fileId: 'mega-file-id-4',
-    hash: 'hash4',
-    ownerId: mockUser.id,
-    folderId: '9',
-    isFavorite: false,
-    createdAt: new Date('2024-12-25'),
-    modifiedAt: new Date('2024-12-25')
-  },
-  {
-    id: '5',
-    name: 'Spécifications Techniques v1.pdf',
-    type: 'application/pdf',
-    size: 1048576,
-    description: 'Document des spécifications techniques',
-    tags: 'work,specs,projet',
-    fileId: 'mega-file-id-5',
-    hash: 'hash5',
-    ownerId: mockUser.id,
-    folderId: '5',
-    isFavorite: true,
-    createdAt: new Date('2024-02-01'),
-    modifiedAt: new Date('2024-02-15')
-  },
-  {
-    id: '6',
-    name: 'Design System.fig',
-    type: 'application/figma',
-    size: 4194304,
-    description: 'Design system du projet',
-    tags: 'design,ui,projet',
-    fileId: 'mega-file-id-6',
-    hash: 'hash6',
-    ownerId: mockUser.id,
-    folderId: '6',
-    isFavorite: true,
-    createdAt: new Date('2024-02-20'),
-    modifiedAt: new Date('2024-03-01')
-  },
-  {
-    id: '7',
-    name: 'Budget Prévisionnel 2023.xlsx',
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    size: 524288,
-    description: 'Budget prévisionnel de l\'année dernière',
-    tags: 'finance,archives',
-    fileId: 'mega-file-id-7',
-    hash: 'hash7',
-    ownerId: mockUser.id,
-    folderId: '10',
-    isFavorite: false,
-    createdAt: new Date('2023-12-15'),
-    modifiedAt: new Date('2023-12-15')
-  },
-  {
-    id: '8',
-    name: 'Planning Projet A.xlsx',
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    size: 786432,
-    description: 'Planning détaillé du projet A',
-    tags: 'projet,planning',
-    fileId: 'mega-file-id-8',
-    hash: 'hash8',
-    ownerId: mockUser.id,
-    folderId: '4',
-    isFavorite: true,
-    createdAt: new Date('2024-01-15'),
-    modifiedAt: new Date('2024-02-15')
-  }
+  // Documents du dossier "Documents Importants"
+  createDocument(
+    '1',
+    'Contrat de travail.pdf',
+    'application/pdf',
+    524288,
+    'Mon contrat de travail',
+    'important,work',
+    '1',
+    true
+  ),
+  createDocument(
+    '2',
+    'Passeport.jpg',
+    'image/jpeg',
+    1048576,
+    'Scan du passeport',
+    'important,documents',
+    '1'
+  ),
+
+  // Documents du dossier "Photos"
+  createDocument(
+    '3',
+    'Photo de profil.jpg',
+    'image/jpeg',
+    262144,
+    'Photo de profil pour les réseaux sociaux',
+    'photos,perso',
+    '2',
+    true
+  ),
+
+  // Documents du dossier "Hiver" (sous-dossier de Photos/Vacances)
+  createDocument(
+    '4',
+    'Vacances au ski.jpg',
+    'image/jpeg',
+    2097152,
+    'Photos des vacances au ski',
+    'photos,vacances,hiver',
+    '9'
+  ),
+
+  // Documents du dossier "Documentation" (sous-dossier de Projets/Projet A)
+  createDocument(
+    '5',
+    'Spécifications Techniques v1.pdf',
+    'application/pdf',
+    1048576,
+    'Document des spécifications techniques',
+    'work,projet',
+    '5',
+    true
+  ),
+  createDocument(
+    '6',
+    'Design System.fig',
+    'application/figma',
+    4194304,
+    'Design system du projet',
+    'design,work,projet',
+    '5',
+    true
+  ),
+
+  // Documents du dossier "Archives"
+  createDocument(
+    '7',
+    'Budget 2023.xlsx',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    524288,
+    'Budget prévisionnel de l\'année dernière',
+    'finance,archives',
+    '10'
+  ),
+  
+  // Documents du dossier "Projet A"
+  createDocument(
+    '8',
+    'Notes de réunion.md',
+    'text/markdown',
+    8192,
+    'Notes de la dernière réunion d\'équipe',
+    'work,projet',
+    '4'
+  ),
+
+  // Documents du dossier "Été" (sous-dossier de Photos/Vacances)
+  createDocument(
+    '9',
+    'Photos plage.jpg',
+    'image/jpeg',
+    3145728,
+    'Album photos des vacances d\'été',
+    'photos,vacances,été',
+    '8',
+    true
+  )
 ];

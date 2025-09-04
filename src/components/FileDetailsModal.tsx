@@ -63,19 +63,21 @@ export function FileDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-start gap-4">
-            {getFileIcon(doc)}
-            <div>
-              <DialogTitle className="text-xl mb-1">
+            <div className="shrink-0">
+              {getFileIcon(doc)}
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-xl mb-1 truncate">
                 {doc.name}
               </DialogTitle>
               <DialogDescription asChild>
                 <div>
-                  <span>Type : {extension || 'Document'}</span>
+                  <span className="text-sm">Type : {extension || 'Document'}</span>
                   {doc.description && (
-                    <p className="mt-1 text-sm">{doc.description}</p>
+                    <p className="mt-1 text-sm line-clamp-2">{doc.description}</p>
                   )}
                 </div>
               </DialogDescription>
@@ -84,7 +86,7 @@ export function FileDetailsModal({
         </DialogHeader>
 
         {/* Métadonnées du fichier */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p className="text-sm text-muted-foreground mb-1">
               Taille
@@ -97,7 +99,7 @@ export function FileDetailsModal({
             <p className="text-sm text-muted-foreground mb-1">
               Dernière modification
             </p>
-            <p className="font-medium">
+            <p className="font-medium text-sm">
               {formatDate(doc.modifiedAt)}
             </p>
           </div>
@@ -109,7 +111,7 @@ export function FileDetailsModal({
             <Separator className="my-4" />
             <div>
               <h4 className="text-sm text-muted-foreground mb-2">Tags</h4>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {tags.map((tag) => (
                   <TagBadge
                     key={tag}
@@ -117,15 +119,10 @@ export function FileDetailsModal({
                     size="md"
                     onClick={onTagClick ? () => onTagClick(tag.trim()) : undefined}
                     className={cn(
-                      'cursor-pointer hover:ring-2 hover:ring-offset-2',
-                      selectedTags?.includes(tag.trim()) && 'ring-2 ring-offset-2'
+                      'cursor-pointer hover:ring-2 hover:ring-offset-1',
+                      selectedTags?.includes(tag.trim()) && 'ring-2 ring-offset-1'
                     )}
                   />
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {tags.map((tag) => (
-                  <TagBadge key={tag} name={tag.trim()} />
                 ))}
               </div>
             </div>
@@ -134,41 +131,41 @@ export function FileDetailsModal({
 
         {/* Actions */}
         <Separator className="my-4" />
-        <div className="flex gap-2 justify-end">
+        <div className="flex flex-wrap gap-2 justify-end">
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="flex-1 sm:flex-none gap-2 min-w-[120px]"
             onClick={onToggleFavorite}
           >
             <Heart className={cn(
               "h-4 w-4",
               doc.isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"
             )} />
-            {doc.isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+            <span className="truncate">{doc.isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="flex-1 sm:flex-none gap-2 min-w-[120px]"
           >
             <Download className="h-4 w-4" />
-            Télécharger
+            <span className="truncate">Télécharger</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="flex-1 sm:flex-none gap-2 min-w-[120px]"
           >
             <Share className="h-4 w-4" />
-            Partager
+            <span className="truncate">Partager</span>
           </Button>
           <Button
             size="sm"
-            className="gap-2"
+            className="flex-1 sm:flex-none gap-2 min-w-[120px]"
           >
             <Edit className="h-4 w-4" />
-            Modifier
+            <span className="truncate">Modifier</span>
           </Button>
         </div>
       </DialogContent>

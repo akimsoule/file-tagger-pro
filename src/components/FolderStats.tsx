@@ -1,4 +1,4 @@
-import { useFileContext } from '@/hooks/useFile';
+import { useFileContext } from '@/hooks/useFileContext';
 
 type FolderStatsProps = {
   folderId: string;

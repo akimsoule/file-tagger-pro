@@ -5,9 +5,6 @@ export interface Settings {
   language: string;
   defaultViewMode: ViewMode;
   defaultSortBy: SortBy;
-  showHiddenFiles: boolean;
-  showFileExtensions: boolean;
-  autoExpandFolders: boolean;
 }
 
 export interface SettingsContextType {
@@ -21,7 +18,4 @@ export interface SettingsContextType {
   // Getters
   defaultViewMode: ViewMode;
   defaultSortBy: SortBy;
-  showHiddenFiles: boolean;
-  showFileExtensions: boolean;
-  autoExpandFolders: boolean;
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSettings } from '../../hooks/useSettings';
 import { useTags } from '../../hooks/useTags';
 import { useFileContext } from '../../hooks/useFileContext';
@@ -7,16 +7,28 @@ import type { QueryContextType, SortBy, ViewMode } from './def';
 import { QueryContext } from './context';
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
-  const { defaultViewMode, defaultSortBy } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const { setSelectedTags } = useTags();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<SortBy>(defaultSortBy);
-  const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode);
+  const [sortBy, setSortBy] = useState<SortBy>(settings.defaultSortBy);
+  const [viewMode, setViewMode] = useState<ViewMode>(settings.defaultViewMode);
+
+  // Effet pour synchroniser le mode de vue avec les settings
+  useEffect(() => {
+    setViewMode(settings.defaultViewMode);
+  }, [settings.defaultViewMode]);
+
+  // Wrapper pour mettre à jour le mode de vue
+  const handleViewModeChange = useCallback((newMode: ViewMode) => {
+    setViewMode(newMode);
+    updateSettings({ defaultViewMode: newMode });
+  }, [updateSettings]);
+
+  // Utiliser les tags sélectionnés du contexte Tag
   const [filters, setFilters] = useState({
     showFavorites: false,
-    showHidden: false,
-    selectedTags: [] as string[],
+    showHidden: false
   });
 
   const toggleFavoriteFilter = useCallback(() => {
@@ -35,27 +47,27 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
 
   const clearFilters = useCallback(() => {
     setSearchQuery('');
-    setSortBy(defaultSortBy);
-    setViewMode(defaultViewMode);
+    setSortBy(settings.defaultSortBy);
+    setViewMode(settings.defaultViewMode);
     setFilters({
       showFavorites: false,
-      showHidden: false,
-      selectedTags: [],
+      showHidden: false
     });
     setSelectedTags([]);
-  }, [defaultSortBy, defaultViewMode, setSelectedTags]);
+  }, [settings.defaultSortBy, settings.defaultViewMode, setSelectedTags]);
 
-  // Importer useFileContext
-  const { getDocumentsWithTags, getFoldersWithTags } = useFileContext();
+  const { documents: allDocuments } = useFileContext();
+  const { selectedTags } = useTags();
 
   const getFilteredContent = useCallback((content: Document[]) => {
     let filtered = [...content];
 
-    if (filters.selectedTags.length > 0) {
-      // Filtrer d'abord par tags tout en conservant le contexte du dossier courant
-      const documentsWithTags = getDocumentsWithTags(filters.selectedTags);
-      // On ne garde que les documents qui étaient dans le contenu initial
-      filtered = documentsWithTags.filter(doc => content.some(c => c.id === doc.id));
+    if (selectedTags.length > 0) {
+      // Filtrer par tags en vérifiant les tags des documents
+      filtered = filtered.filter(doc => {
+        const docTags = doc.tags.split(',').map(t => t.trim());
+        return selectedTags.every(tagId => docTags.includes(tagId));
+      });
     }
 
     if (filters.showFavorites) {
@@ -71,7 +83,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     }
 
     return filtered;
-  }, [filters.selectedTags, filters.showFavorites, searchQuery, getDocumentsWithTags]);
+  }, [selectedTags, filters.showFavorites, searchQuery]);
 
   const getSortedContent = useCallback((content: Document[]) => {
     return [...content].sort((a, b) => {
@@ -95,9 +107,11 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     let filtered = documents.filter(doc => doc.isFavorite);
 
     // Appliquer les autres filtres
-    if (filters.selectedTags.length > 0) {
-      const documentsWithTags = getDocumentsWithTags(filters.selectedTags);
-      filtered = filtered.filter(doc => documentsWithTags.some(d => d.id === doc.id));
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(doc => {
+        const docTags = doc.tags.split(',').map(t => t.trim());
+        return selectedTags.every(tagId => docTags.includes(tagId));
+      });
     }
 
     // Appliquer la recherche
@@ -105,23 +119,25 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(doc =>
         doc.name.toLowerCase().includes(query) ||
-        doc.description?.toLowerCase().includes(query) ||
-        doc.tags.toLowerCase().includes(query)
+        doc.description?.toLowerCase().includes(query)
       );
     }
 
     // Trier les résultats
     return getSortedContent(filtered);
-  }, [filters.selectedTags, searchQuery, getSortedContent, getDocumentsWithTags]);
+  }, [selectedTags, searchQuery, getSortedContent]);
 
   const value: QueryContextType = {
     searchQuery,
     sortBy,
     viewMode,
-    filters,
+    filters: {
+      ...filters,
+      selectedTags: selectedTags
+    },
     setSearchQuery,
     setSortBy,
-    setViewMode,
+    setViewMode: handleViewModeChange,
     toggleFavoriteFilter,
     toggleHiddenFilter,
     clearFilters,

@@ -81,10 +81,10 @@ export function FileCard({
       >
         {/* Header avec icône et actions */}
         <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="shrink-0">{getFileIcon(document.type)}</div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-foreground truncate">
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <h3 className="font-medium text-foreground truncate pr-2">
                 {document.name}
               </h3>
               {fileExtension && (
@@ -95,7 +95,7 @@ export function FileCard({
             </div>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0 ml-2">
+          <div className="flex items-center gap-1 shrink-0">
             <Button
               variant="ghost"
               size="sm"
@@ -146,9 +146,9 @@ export function FileCard({
 
         {/* Tags */}
         {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-3 max-w-full">
+          <div className="flex flex-wrap gap-1 mb-3 max-w-full overflow-hidden">
             {tags.slice(0, 3).map((tag) => (
-              <TagBadge key={tag} name={tag.trim()} className="max-w-[150px]" />
+              <TagBadge key={tag} name={tag.trim()} className="max-w-[120px] text-xs" />
             ))}
             {tags.length > 3 && (
               <span className="text-xs text-muted-foreground px-2 py-1 whitespace-nowrap">
@@ -160,8 +160,8 @@ export function FileCard({
 
         {/* Métadonnées */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{formatDate(document.modifiedAt)}</span>
-          <span>{formatFileSize(document.size)}</span>
+          <span className="truncate flex-1 mr-2">{formatDate(document.modifiedAt)}</span>
+          <span className="shrink-0">{formatFileSize(document.size)}</span>
         </div>
       </Card>
 

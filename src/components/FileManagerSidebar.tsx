@@ -1,6 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Folder } from '@/contexts/file/def';
 import {
   Sidebar,
   SidebarContent,
@@ -13,8 +12,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { TagBadge } from './TagBadge';
-import { Files, Heart, Hash, Settings, FolderIcon, ChevronRight } from 'lucide-react';
+import { Files, Heart, Hash, Settings } from 'lucide-react';
 import { useTags } from '@/hooks/useTags';
 import { useFileContext } from '@/hooks/useFileContext';
 
@@ -32,45 +30,10 @@ export function FileManagerSidebar({ onNavigateToFolder, currentFolderId }: File
   const { open } = useSidebar();
   const location = useLocation();
   const { toggleTagSelection: toggleTag, selectedTags, tags: allTags, getTagCount } = useTags();
-  const { getFolders, getFolderHierarchy, currentFolderId: activeFolder, setCurrentFolderId } = useFileContext();
+  const { getFolders, currentFolderId: activeFolder } = useFileContext();
 
-  const rootFolders = getFolders(null) || [];
+  const rootFolders = getFolders(null, selectedTags) || [];
   const isActive = (path: string) => location.pathname === path;
-
-  const FolderTreeItem = ({ folder, depth = 0 }: { folder: Folder; depth?: number }) => {
-    const subFolders = getFolders(folder.id);
-    const hasSubFolders = subFolders && subFolders.length > 0;
-    
-    return (
-      <>
-        <SidebarMenuItem>
-          <SidebarMenuButton asChild>
-            <Button
-              variant="ghost"
-              className={`w-full justify-start gap-2 px-3 py-2 text-sm ${
-                folder.id === activeFolder
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground'
-              }`}
-              onClick={() => setCurrentFolderId(folder.id)}
-              style={{ paddingLeft: `${(depth + 1) * 0.75}rem` }}
-            >
-              <FolderIcon className="h-4 w-4" style={{ color: folder.color }} />
-              {open && (
-                <>
-                  <span className="flex-1 truncate text-left">{folder.name}</span>
-                  {hasSubFolders && <ChevronRight className="h-4 w-4" />}
-                </>
-              )}
-            </Button>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-        {hasSubFolders && subFolders.map((subFolder) => (
-          <FolderTreeItem key={subFolder.id} folder={subFolder} depth={depth + 1} />
-        ))}
-      </>
-    );
-  };
 
   return (
     <Sidebar collapsible="icon">
@@ -100,23 +63,6 @@ export function FileManagerSidebar({ onNavigateToFolder, currentFolderId }: File
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Section Dossiers */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-6">
-            <span className="flex items-center gap-2">
-              <FolderIcon className="h-3 w-3" />
-              {open && 'Dossiers'}
-            </span>
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {rootFolders.map((folder) => (
-                <FolderTreeItem key={folder.id} folder={folder} />
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -170,13 +116,19 @@ export function FileManagerSidebar({ onNavigateToFolder, currentFolderId }: File
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                  <NavLink
+                    to="/settings"
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                      }`
+                    }
                   >
-                    <Settings className="h-4 w-4" />
+                    <Settings className="h-4 w-4 flex-shrink-0" />
                     {open && <span>Paramètres</span>}
-                  </Button>
+                  </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
