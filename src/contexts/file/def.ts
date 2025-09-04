@@ -37,60 +37,36 @@ export interface Tag {
   updatedAt: Date;
 }
 
-import type { TreeNode } from '../../logic/Tree';
+import type { FileTreeNode } from '../../logic/FileTreeNode';
 
 export interface FileContextType {
-  // Document & Folder State
+  // État principal
   documents: Document[];
   folders: Folder[];
   currentFolderId: string | null;
   selectedDocumentId: string | null;
-  treeNodes: TreeNode[];
-
-  // Tag State
   tags: Tag[];
   selectedTags: string[];
 
-  // State setters
+  // Setters
   setCurrentFolderId: (id: string | null) => void;
   selectDocument: (id: string | null) => void;
   setSelectedTags: (tagIds: string[]) => void;
 
-  // Navigation dans l'arbre
-  getCurrentPath: () => TreeNode[];
-  getCurrentContent: () => TreeNode[];
-  getFilteredContent: () => TreeNode[];
-
-  // Document operations
+  // Opérations sur les fichiers et dossiers
   findDocumentById: (id: string) => Document | undefined;
-  updateDocument: (id: string, updates: Partial<Document>) => void;
-  addDocument: (document: Omit<Document, 'id' | 'createdAt' | 'modifiedAt'>) => void;
-  deleteDocument: (id: string) => void;
-  moveDocument: (documentId: string, targetFolderId: string | null) => void;
-  toggleFavorite: (documentId: string) => void;
-
-  // Tag operations
-  toggleTagSelection: (tagId: string) => void;
-  clearTagSelection: () => void;
-  getTagById: (id: string) => Tag | undefined;
-  getAllTags: () => Tag[];
-  getTagsByIds: (ids: string[]) => Tag[];
-  getTagCount: (tagId: string) => number;
-  addTag: (tag: Omit<Tag, 'id' | 'createdAt' | 'updatedAt' | 'count'>) => void;
-  updateTag: (id: string, updates: Partial<Tag>) => void;
-  deleteTag: (id: string) => void;
-
-  // Folder operations
-  getFolderPath: (folderId?: string) => TreeNode[];
-  getFolderContent: (folderId?: string, selectedTags?: string[]) => { 
+  getFolderContent: (folderId?: string) => { 
     documents: Document[],
     subFolders: Folder[]
   };
+  getCurrentContent: () => FileTreeNode[];
   getFolders: (parentId?: string | null, selectedTags?: string[]) => Folder[];
-  getFolderHierarchy: () => TreeNode[];
-  updateFolder: (id: string, updates: Partial<Folder>) => void;
-  addFolder: (folder: Omit<Folder, 'id' | 'createdAt' | 'updatedAt' | 'children' | 'documents'>) => void;
-  deleteFolder: (id: string) => void;
-  moveFolder: (folderId: string, targetFolderId: string | null) => void;
-  getFolderStats: (folderId: string) => { totalItems: number; totalSize: number }
+  getFolderPath: (folderId?: string) => FileTreeNode[];
+  getFolderStats: (folderId: string) => { totalItems: number; totalSize: number };
+  getFolderHierarchy: () => FileTreeNode[];
+  getTagsByIds: (ids: string[]) => Tag[];
+  getAllTags: () => Tag[];
+  getTagCount: (tagId: string) => number;
+  toggleTagSelection: (tagId: string) => void;
+  updateFolder: (folderId: string, updates: Partial<Folder>) => void;
 }
