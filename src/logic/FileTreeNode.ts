@@ -69,7 +69,7 @@ export class FileTreeNode extends TreeNode {
     );
   }
 
-public static buildRootTree(documents: Document[], folders: Folder[]): FileTreeNode {
+public static buildRootTree(documents: Document[], folders: Folder[], options?: { debug?: boolean }): FileTreeNode {
     // Créer le dossier racine avec ses propriétés minimales requises
     const root = FileTreeNode.createFolder({
         id: 'root',
@@ -116,10 +116,11 @@ public static buildRootTree(documents: Document[], folders: Folder[]): FileTreeN
     // Mettre à jour les statistiques de l'arbre complet
     root.updateStats();
 
-    const result = root.printTree();
-    console.log(result);
+    if (options?.debug) {
+      console.log(root.printTree());
+    }
 
-    return root;
+  return root;
 }
 
   public updateData(updates: Partial<Document | Folder>): void {
@@ -182,34 +183,19 @@ public static buildRootTree(documents: Document[], folders: Folder[]): FileTreeN
 
   public getTagsInfo(): { id: string; name: string; count: number }[] {
     const tagsMap = new Map<string, { id: string; name: string; count: number }>();
-
-    const processNode = (node: FileTreeNode) => {
+    for (const node of FileTreeNode.iterate(this)) {
       for (const tag of node.tags) {
-        const info = tagsMap.get(tag.id) || { id: tag.id, name: tag.name, count: 0 };
-        info.count++;
-        tagsMap.set(tag.id, info);
+        const entry = tagsMap.get(tag.id) || { id: tag.id, name: tag.name, count: 0 };
+        entry.count++;
+        tagsMap.set(tag.id, entry);
       }
-    };
-
-    // Parcourir l'arbre avec une pile
-    const stack: FileTreeNode[] = [this];
-    const visited = new Set<string>();
-
-    while (stack.length > 0) {
-      const node = stack.pop()!;
-      if (visited.has(node.id)) continue;
-      visited.add(node.id);
-
-      processNode(node);
-      stack.push(...node.children.map(child => child as FileTreeNode));
     }
-
-    return Array.from(tagsMap.values());
+    return [...tagsMap.values()];
   }
 
   public filter(predicate: (node: FileTreeNode) => boolean): FileTreeNode {
-    // On crée un nouveau nœud avec les mêmes données
-    const filtered = new FileTreeNode(
+    // Création du nœud racine filtré
+    const filteredRoot = new FileTreeNode(
       this.id,
       this.name,
       this.type,
@@ -217,49 +203,78 @@ public static buildRootTree(documents: Document[], folders: Folder[]): FileTreeN
       { ...this.stats } as FileNodeStats,
       this.parentId
     );
-    
-    // On filtre les enfants récursivement
-    filtered.children = this.children
-      .filter(child => predicate(child as FileTreeNode))
-      .map(child => {
-        const filteredChild = (child as FileTreeNode).filter(predicate);
-        filteredChild.parent = filtered;
-        return filteredChild;
-      });
 
-    return filtered;
-  } 
+    // Pile pour parcours itératif : original -> filtréParent
+    const stack: Array<{ original: FileTreeNode; filteredParent: FileTreeNode }> = [];
+    stack.push({ original: this, filteredParent: filteredRoot });
 
-   public printTree(indent: string = ''): string {
-    // Informations de base du nœud
-    let output = `${indent}${this.type === 'folder' ? '📁' : '📄'} ${this.name} (${this.id})\n`;
-    
-    // Ajouter les tags s'il y en a
-    // if (this.tags.length > 0) {
-    //   output += `${indent}  🏷️ Tags: ${this.tags.map(t => t.name).join(', ')}\n`;
-    // }
-    
-    // Ajouter les stats
-    // if (this.type === 'file') {
-    //   const stats = this.stats as FileNodeStats;
-    //   output += `${indent}  📊 Taille: ${stats.totalSize} octets\n`;
-    // } else {
-    //   const stats = this.stats as FileNodeStats;
-    //   output += `${indent}  📊 Stats: ${stats.filesCount} fichiers, ` +
-    //             `${stats.foldersCount} dossiers, ` +
-    //             `${stats.totalSize} octets au total\n`;
-    // }
-    
-    // Récursivement afficher les enfants
-    if (this.children.length > 0) {
-      output += `${indent}  📁 Contenu:\n`;
-      this.children.forEach((child, index) => {
-        const isLast = index === this.children.length - 1;
-        const childIndent = `${indent}  ${isLast ? '└─' : '├─'}`;
-        output += (child as FileTreeNode).printTree(childIndent);
-      });
+    while (stack.length) {
+      const { original, filteredParent } = stack.pop()!;
+      for (const child of original.children as FileTreeNode[]) {
+        if (!predicate(child)) continue;
+        const cloned = new FileTreeNode(
+          child.id,
+          child.name,
+          child.type,
+          { ...(child.getData() as Document | Folder) },
+          { ...(child.stats as FileNodeStats) },
+          child.parentId
+        );
+        cloned.parent = filteredParent;
+        filteredParent.children.push(cloned);
+        if (child.children.length > 0) {
+          stack.push({ original: child, filteredParent: cloned });
+        }
+      }
     }
-    
+
+    return filteredRoot;
+  }
+
+  public printTree(): string {
+    let output = '';
+    interface Frame { node: FileTreeNode; prefix: string; isLast: boolean; isRoot: boolean; }
+    const stack: Frame[] = [{ node: this, prefix: '', isLast: true, isRoot: true }];
+
+    while (stack.length) {
+      const { node, prefix, isLast, isRoot } = stack.pop()!;
+      const connector = isRoot ? '' : (isLast ? '└─' : '├─');
+      output += `${prefix}${connector}${node.type === 'folder' ? '📁' : '📄'} ${node.name} (${node.id})\n`;
+
+      const children = node.children as FileTreeNode[];
+      if (children.length > 0) {
+        const nextPrefix = prefix + (isRoot ? '' : (isLast ? '   ' : '│  '));
+        // Empiler en ordre inverse pour parcourir dans l'ordre original
+        for (let i = children.length - 1; i >= 0; i--) {
+          const child = children[i];
+          stack.push({
+            node: child,
+            prefix: nextPrefix,
+            isLast: i === children.length - 1,
+            isRoot: false
+          });
+        }
+      }
+    }
+
     return output;
+  }
+
+  /**
+   * Générateur itératif DFS (pré-ordre) sans récursivité.
+   */
+  public static *iterate(root: FileTreeNode): Generator<FileTreeNode> {
+    const stack: FileTreeNode[] = [root];
+    const visited = new Set<string>();
+    while (stack.length) {
+      const node = stack.pop()!;
+      if (visited.has(node.id)) continue;
+      visited.add(node.id);
+      yield node;
+      // Empiler les enfants en ordre inverse pour garder l'ordre naturel
+      for (let i = node.children.length - 1; i >= 0; i--) {
+        stack.push(node.children[i] as FileTreeNode);
+      }
+    }
   }
 }

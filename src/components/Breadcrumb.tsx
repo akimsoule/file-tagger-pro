@@ -7,12 +7,9 @@ import { FileTreeNode } from '@/logic/FileTreeNode';
 export function Breadcrumb() {
   const { currentNode, setCurrentNode, getNodePath } = useFileContext();
 
-  const path = currentNode ? getNodePath(currentNode) : [];
-
-  // Inclure racine virtuelle (home) si chemin non vide
-  const fullPath: (FileTreeNode | { id: string; name: string })[] = path.length > 0
-    ? path
-    : [];
+  const fullPathRaw = currentNode ? getNodePath(currentNode) : [];
+  // On exclut explicitement le nœud racine interne (id 'root') pour ne pas l'afficher (le bouton Home suffit)
+  const fullPath: (FileTreeNode | { id: string; name: string })[] = fullPathRaw.filter(n => (n as FileTreeNode).id !== 'root');
 
   const showFullPath = fullPath.length <= 2;
   const visiblePath = showFullPath
@@ -25,11 +22,11 @@ export function Breadcrumb() {
 
   const handleNavigate = (nodeId: string | null) => {
     if (!nodeId) {
-      setCurrentNode(null); // vers racine
+      setCurrentNode(null); // retour racine
       return;
     }
-    // Trouver dans le chemin pour éviter une recherche globale (chemin garantit l'ordre)
-    const target = path.find(n => n.id === nodeId) || null;
+    // On recherche dans fullPathRaw (inclut root) au lieu de path ancien
+    const target = fullPathRaw.find(n => n.id === nodeId) || null;
     setCurrentNode(target);
   };
 
@@ -44,7 +41,7 @@ export function Breadcrumb() {
       >
         <Home className="h-4 w-4" />
       </Button>
-      {visiblePath.length > 0 && (
+  {visiblePath.length > 0 && (
         <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/50" />
       )}
       {visiblePath.map((folder, index) => (

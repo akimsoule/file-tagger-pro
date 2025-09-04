@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useMemo, useRef } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { mockDocuments, mockFolders } from "../../data/mockData";
 import type { Document, Folder, Tag } from "./def";
 import { FileContext } from "./context";
@@ -268,24 +268,18 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
   }, [customTags]);
 
   const updateTags = useCallback(() => {
-    // Comptage global dossiers + documents : 1 point par nœud contenant le tag
     const countMap = new Map<string, number>();
-    const stack: FileTreeNode[] = [rootNode];
-    const visited = new Set<string>();
-    while (stack.length) {
-      const node = stack.pop()!;
-      const visitKey = `${node.type}:${node.id}`;
-      if (visited.has(visitKey)) continue;
-      visited.add(visitKey);
+    for (const node of FileTreeNode.iterate(rootNode)) {
       const names = node.getData().tags.split(',').map(t => t.trim()).filter(Boolean);
-      names.forEach(n => countMap.set(n, (countMap.get(n) || 0) + 1));
-      stack.push(...(node.children as FileTreeNode[]));
+      for (const n of names) {
+        countMap.set(n, (countMap.get(n) || 0) + 1);
+      }
     }
 
     setTags(prev => {
       const prevColorMap = new Map<string, string>();
       prev.forEach(t => prevColorMap.set(t.name, t.color));
-      const tagNames = Array.from(countMap.keys());
+      const tagNames = [...countMap.keys()];
       const regenerated: Tag[] = tagNames.map((name, index) => ({
         id: `tag-${name}`,
         name,
@@ -294,13 +288,11 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date(),
         updatedAt: new Date()
       }));
-      // Réintégrer les custom tags absents (gardés avec count actuel ou 0)
       customTagsRef.current.forEach(customTag => {
         if (!regenerated.some(t => t.id === customTag.id)) {
           regenerated.push(customTag);
         }
       });
-      // Tri: count desc puis nom asc
       regenerated.sort((a,b) => (b.count - a.count) || a.name.localeCompare(b.name));
       return regenerated;
     });
