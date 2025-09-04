@@ -1,4 +1,5 @@
 import { Document } from '@/contexts/file/def';
+import { formatFileSize, formatDate } from '@/lib/format';
 import { TagBadge } from './TagBadge';
 import {
   Dialog,
@@ -21,28 +22,7 @@ interface FileDetailsModalProps {
   selectedTags?: string[];
 }
 
-const formatFileSize = (bytes: number): string => {
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let size = bytes;
-  let unitIndex = 0;
-  
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-  
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
-};
-
-const formatDate = (date: Date): string => {
-  return date.toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
+// Suppression des implémentations locales de formatage au profit d'utilitaires globaux
 
 const getFileIcon = (doc: Document) => {
   return <FileText className="h-12 w-12 text-muted-foreground" />;

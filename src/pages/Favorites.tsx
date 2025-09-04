@@ -4,6 +4,9 @@ import { SearchBar } from '@/components/SearchBar';
 import { FileCard } from '@/components/FileCard';
 import { FileDetailsModal } from '@/components/FileDetailsModal';
 import { Heart } from 'lucide-react';
+import { formatFileSize } from '@/lib/format';
+import { StatsBar } from '@/components/StatsBar';
+import { useTotalSize } from '@/hooks/useTotalSize';
 import { useQuery } from '@/hooks/useQuery';
 import { useFileContext } from '@/hooks/useFileContext';
 import { useTags } from '@/hooks/useTags';
@@ -108,11 +111,12 @@ const Favorites = () => {
           {/* Zone de contenu principal */}
           <div className="flex-1 p-2 sm:p-4 md:p-6">
             {/* Statistiques */}
-            <div className="mb-6 flex items-center gap-4 text-sm text-muted-foreground">
-              <span>{sortedFavoriteNodes.length} documents favoris</span>
-              <span>•</span>
-              <span>{(totalSize / (1024 * 1024)).toFixed(2)} Mo</span>
-            </div>
+            <StatsBar
+              folders={0}
+              documents={sortedFavoriteNodes.length}
+              sizeBytes={totalSize}
+              className="mb-6"
+            />
 
             {/* Grille de documents */}
             {sortedFavoriteNodes.length === 0 ? (

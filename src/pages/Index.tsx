@@ -10,6 +10,9 @@ import { useFilteredNodes } from "@/hooks/useFilteredNodes";
 import { useQuery } from "@/hooks/useQuery";
 import { useTags } from "@/hooks/useTags";
 import { Folder as FolderIcon, FileText, ChevronLeft } from "lucide-react";
+import { formatFileSize } from '@/lib/format';
+import { StatsBar } from '@/components/StatsBar';
+import { useTotalSize } from '@/hooks/useTotalSize';
 import { FolderCard } from "@/components/FolderCard";
 import { FileTreeNode } from "@/logic/FileTreeNode";
 import type { Document, Folder } from "@/contexts/file/def";
@@ -64,6 +67,8 @@ const Index = () => {
       setCurrentNode(currentNode.parent as FileTreeNode);
     }
   }, [currentNode, setCurrentNode]);
+
+  const totalSize = useTotalSize(content.documents);
 
   return (
     <SidebarProvider>
@@ -120,27 +125,11 @@ const Index = () => {
             />
 
             <div className="flex-1 p-2 sm:p-4 md:p-6">
-              <div className="mb-6 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <span className="whitespace-nowrap">
-                  {content.folders.length} dossiers
-                </span>
-                <span className="hidden sm:inline">•</span>
-                <span className="whitespace-nowrap">
-                  {content.documents.length} documents
-                </span>
-                <span className="hidden sm:inline">•</span>
-                <span className="whitespace-nowrap">
-                  {(
-                    content.documents.reduce(
-                      (acc, doc) =>
-                        acc + ((doc.getData() as Document)?.size || 0),
-                      0
-                    ) /
-                    (1024 * 1024)
-                  ).toFixed(2)}{" "}
-                  Mo
-                </span>
-              </div>
+              <StatsBar
+                folders={content.folders.length}
+                documents={content.documents.length}
+                sizeBytes={totalSize}
+              />
 
               {content.folders.length === 0 &&
               content.documents.length === 0 ? (
