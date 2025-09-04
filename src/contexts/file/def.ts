@@ -69,4 +69,7 @@ export interface FileContextType {
   getTagCount: (tagId: string) => number;
   toggleTagSelection: (tagId: string) => void;
   updateFolder: (folderId: string, updates: Partial<Folder>) => void;
+  addFolderTag: (folderId: string, tagName: string) => void;
+  removeFolderTag: (folderId: string, tagName: string) => void;
+  moveFolder: (folderId: string, targetFolderId: string | null) => void;
 }

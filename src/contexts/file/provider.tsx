@@ -274,13 +274,89 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
     updateTags();
   }, [updateTags]);
 
+  // Ajouter un tag à un dossier
+  const addFolderTag = useCallback((folderId: string, tagName: string) => {
+    const node = rootNode.findChildById(folderId) as FileTreeNode;
+    if (!node || node.type !== 'folder') return;
+
+    const currentTags = node.getData().tags
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean);
+
+    // Vérifier si le tag existe déjà
+    if (!currentTags.includes(tagName)) {
+      const newTags = [...currentTags, tagName].join(',');
+      node.updateData({ tags: newTags });
+      updateTags();
+    }
+  }, [rootNode, updateTags]);
+
+  // Supprimer un tag d'un dossier
+  const removeFolderTag = useCallback((folderId: string, tagName: string) => {
+    const node = rootNode.findChildById(folderId) as FileTreeNode;
+    if (!node || node.type !== 'folder') return;
+
+    const currentTags = node.getData().tags
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean);
+
+    const newTags = currentTags
+      .filter(tag => tag !== tagName)
+      .join(',');
+
+    node.updateData({ tags: newTags });
+    updateTags();
+  }, [rootNode, updateTags]);
+
+  // Déplacer un dossier
+  const moveFolder = useCallback((folderId: string, targetFolderId: string | null) => {
+    const node = rootNode.findChildById(folderId) as FileTreeNode;
+    const targetNode = targetFolderId ? rootNode.findChildById(targetFolderId) as FileTreeNode : rootNode;
+    
+    if (!node || node.type !== 'folder') return;
+    if (targetFolderId && (!targetNode || targetNode.type !== 'folder')) return;
+
+    // Vérifier qu'on ne déplace pas dans un descendant
+    let parent = targetNode;
+    while (parent) {
+      if (parent.id === folderId) return; // Éviter les cycles
+      parent = parent.parent as FileTreeNode;
+    }
+
+    // Retirer le nœud de son parent actuel
+    const oldParent = node.parent as FileTreeNode;
+    if (oldParent) {
+      oldParent.children = oldParent.children.filter(child => child.id !== folderId);
+    }
+
+    // Mettre à jour le parentId du nœud
+    node.updateData({ parentId: targetFolderId || undefined });
+    node.parent = targetNode;
+
+    // Ajouter le nœud à son nouveau parent
+    targetNode.addChild(node);
+
+  }, [rootNode]);
+
   // Mise à jour d'un dossier
   const updateFolder = useCallback((folderId: string, updates: Partial<Folder>) => {
     const node = rootNode.findChildById(folderId) as FileTreeNode;
     if (!node || node.type !== 'folder') return;
 
-    // Mettre à jour les données du nœud
-    node.updateData(updates);
+    // Si la mise à jour concerne les tags, assurons-nous qu'ils sont au bon format
+    if ('tags' in updates) {
+      const tags = updates.tags
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean)
+        .join(',');
+      
+      node.updateData({ ...updates, tags });
+    } else {
+      node.updateData(updates);
+    }
 
     // Mettre à jour les tags après la modification
     updateTags();
@@ -309,7 +385,10 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
         getAllTags,
         getTagCount,
         toggleTagSelection,
-        updateFolder
+        updateFolder,
+        addFolderTag,
+        removeFolderTag,
+        moveFolder
       }}
     >
       {children}
