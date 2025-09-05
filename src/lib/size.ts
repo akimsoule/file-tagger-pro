@@ -1,6 +1,6 @@
-import { FileTreeNode } from '@/logic/FileTreeNode';
-import type { Document, Folder } from '@/contexts/file/def';
-import type { FileNodeStats } from '@/logic/FileTreeNode';
+import { FileTreeNode } from '@/logic/local/FileTreeNode';
+import type { Document, Folder } from '@/contexts/file';
+import type { FileNodeStats } from '@/logic/local/FileTreeNode';
 
 /**
  * Retourne la taille (octets) d'un nœud fichier.

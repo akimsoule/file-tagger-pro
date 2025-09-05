@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Document } from "@/contexts/file/def";
+import { Document } from "@/contexts/file";
 import { TagBadge } from "./TagBadge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { FolderPicker } from "./FolderPicker";
 import { TagEditor } from "./TagEditor";
 import { useFileContext } from "@/hooks/useFileContext";
 
-import { FileTreeNode } from "@/logic/FileTreeNode";
+import { FileTreeNode } from "@/logic/local/FileTreeNode";
 import { formatFileSize, formatDate } from "@/lib/format";
 
 interface FileCardProps {

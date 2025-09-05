@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { FileManagerSidebar } from "@/components/FileManagerSidebar";
 import { SearchBar } from "@/components/SearchBar";
@@ -9,13 +9,15 @@ import { useFileContext } from "@/hooks/useFileContext";
 import { useFilteredNodes } from "@/hooks/useFilteredNodes";
 import { useQuery } from "@/hooks/useQuery";
 import { useTags } from "@/hooks/useTags";
-import { Folder as FolderIcon, FileText, ChevronLeft } from "lucide-react";
+import { Folder as FolderIcon, FileText, ChevronLeft, Plus, Upload } from "lucide-react";
+import { CreateFolderModal } from '@/components/CreateFolderModal';
+import { UploadDocumentModal } from '@/components/UploadDocumentModal';
 import { formatFileSize } from '@/lib/format';
 import { StatsBar } from '@/components/StatsBar';
 import { useTotalSize } from '@/hooks/useTotalSize';
 import { FolderCard } from "@/components/FolderCard";
-import { FileTreeNode } from "@/logic/FileTreeNode";
-import type { Document, Folder } from "@/contexts/file/def";
+import { FileTreeNode } from "@/logic/local/FileTreeNode";
+import type { Document, Folder } from "@/contexts/file";
 
 const Index = () => {
   const {
@@ -34,7 +36,7 @@ const Index = () => {
     selectedNode,
     setCurrentNode,
     setSelectedNode,
-    getNodeContent,
+  // getNodeContent supprimé
     updateNode,
   } = useFileContext();
 
@@ -69,6 +71,8 @@ const Index = () => {
   }, [currentNode, setCurrentNode]);
 
   const totalSize = useTotalSize(content.documents);
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   return (
     <SidebarProvider>
@@ -78,7 +82,7 @@ const Index = () => {
           currentNode={currentNode}
         />
 
-        <main className="flex-1 flex flex-col min-w-0 w-full">
+  <main className="flex-1 flex flex-col min-w-0 w-full min-h-0">
           <header className="flex items-center gap-4 p-4 border-b border-border bg-card/50">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="shrink-0" />
@@ -109,7 +113,7 @@ const Index = () => {
             </div>
           </header>
 
-          <div className="flex flex-1 flex-col p-3 sm:p-6 md:p-8 gap-4 sm:gap-6 md:gap-8 overflow-y-auto">
+          <div className="flex flex-1 flex-col min-h-0 p-3 gap-2 sm:gap-4 md:gap-6">
             <Breadcrumb />
             <SearchBar
               searchQuery={searchQuery}
@@ -123,8 +127,9 @@ const Index = () => {
               toggleTagSelection={toggleTag}
               tags={tags}
             />
-
-            <div className="flex-1 p-2 sm:p-4 md:p-6">
+            {/* Zone scrollable principale */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="p-2 sm:p-4 md:p-6 pb-10">
               <StatsBar
                 folders={content.folders.length}
                 documents={content.documents.length}
@@ -133,17 +138,31 @@ const Index = () => {
 
               {content.folders.length === 0 &&
               content.documents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="p-4 rounded-full bg-muted mb-4">
-                    <FileText className="h-8 w-8 text-muted-foreground" />
+                <div className="flex flex-col items-center justify-center py-20 text-center gap-6">
+                  <div className="p-5 rounded-full bg-muted/60 mb-2">
+                    <FileText className="h-10 w-10 text-muted-foreground" />
                   </div>
-                  <h3 className="text-lg font-medium text-foreground mb-2">
-                    Dossier vide
-                  </h3>
-                  <p className="text-muted-foreground max-w-sm">
-                    Ce dossier est vide ou aucun élément ne correspond à vos
-                    critères de recherche.
-                  </p>
+                  <div className="space-y-2 max-w-sm">
+                    <h3 className="text-xl font-semibold text-foreground">Dossier vide</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      Vous n'avez encore ajouté aucun élément ici. Créez un dossier pour organiser vos fichiers ou uploadez directement votre premier document.
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={() => setCreateFolderOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    >
+                      <Plus className="h-4 w-4" /> Nouveau dossier
+                    </button>
+                    <button
+                      onClick={() => setUploadOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-md border border-border px-5 py-2.5 text-sm font-medium hover:bg-accent focus:outline-none focus:ring-2 focus:ring-accent"
+                    >
+                      <Upload className="h-4 w-4" /> Uploader un fichier
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground max-w-xs">Astuce: vous pouvez aussi glisser-déposer un fichier ici (à implémenter).</p>
                 </div>
               ) : (
                 <div
@@ -160,7 +179,7 @@ const Index = () => {
                       onClick={() => setCurrentNode(folderNode)}
                     />
                   ))}
-
+          
                   {content.documents.map((docNode) => (
                     <FileCard
                       key={docNode.id}
@@ -178,6 +197,7 @@ const Index = () => {
                   ))}
                 </div>
               )}
+              </div>
             </div>
           </div>
         </main>
@@ -197,6 +217,8 @@ const Index = () => {
           selectedTags={selectedTags}
         />
       </div>
+  <CreateFolderModal open={createFolderOpen} onClose={() => setCreateFolderOpen(false)} parentId={currentNode?.id} />
+  <UploadDocumentModal open={uploadOpen} onClose={() => setUploadOpen(false)} />
     </SidebarProvider>
   );
 };

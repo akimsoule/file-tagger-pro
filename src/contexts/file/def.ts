@@ -37,8 +37,8 @@ export interface Tag {
   updatedAt: Date;
 }
 
-import type { FileTreeNode } from '@/logic/FileTreeNode';
-import { FileNodeStats } from "@/logic/FileTreeNode";
+import type { FileTreeNode } from '@/logic/local/FileTreeNode';
+import { FileNodeStats } from "@/logic/local/FileTreeNode";
 
 export interface FileContextType {
   // État principal
@@ -53,11 +53,6 @@ export interface FileContextType {
   setSelectedTags: (tags: string[]) => void;
 
   // Opérations sur les nœuds
-  getNodeContent: (node: FileTreeNode | null) => FileTreeNode[];
-  findNodeById: (id: string) => FileTreeNode | null;
-  getNodePath: (node: FileTreeNode) => FileTreeNode[];
-  getNodeStats: (node: FileTreeNode) => FileNodeStats;
-  getNodeHierarchy: () => FileTreeNode[];
 
   // Gestion des fichiers
   moveNode: (nodeId: string, targetFolderId: string | null) => Promise<void>;
@@ -73,10 +68,13 @@ export interface FileContextType {
   updateTag: (tagId: string, updates: Partial<Tag>) => Promise<void>;
   createTag: (tag: Omit<Tag, 'id' | 'count'>) => Promise<void>;
   deleteTag: (tagId: string) => Promise<void>;
+  customTags?: Tag[];
 
   // Recherche & filtrage
   searchNodes?: (query: string) => FileTreeNode[];
   filterNodes?: (criteria: { tags?: string[]; favorite?: boolean }) => FileTreeNode[];
   addNodeTag?: (node: FileTreeNode, tagName: string) => void;
   removeNodeTag?: (node: FileTreeNode, tagName: string) => void;
+  createFolder?: (folder: Folder) => void;
+  createDocument?: (doc: Document) => void;
 }

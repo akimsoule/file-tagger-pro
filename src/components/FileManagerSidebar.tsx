@@ -12,11 +12,12 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Files, Heart, Hash, Settings } from 'lucide-react';
+import { Files, Heart, Hash, Settings, LogOut } from 'lucide-react';
+import { useUser } from '@/hooks/useUser';
 import { useTags } from '@/hooks/useTags';
 import { useFileContext } from '@/hooks/useFileContext';
 
-import { FileTreeNode } from "@/logic/FileTreeNode";
+import { FileTreeNode } from "@/logic/local/FileTreeNode";
 
 interface FileManagerSidebarProps {
   onNavigateToFolder?: (node: FileTreeNode) => void;
@@ -32,14 +33,17 @@ export function FileManagerSidebar({ onNavigateToFolder, currentNode }: FileMana
   const { open } = useSidebar();
   const location = useLocation();
   const { toggleTagSelection: toggleTag, selectedTags, tags: allTags } = useTags();
-  const { getNodeContent, currentNode: activeNode, getTagCount, setCurrentNode } = useFileContext();
+  const { currentNode: activeNode, getTagCount, setCurrentNode } = useFileContext();
+  const { logout, session } = useUser();
 
-  const rootNodes = activeNode ? getNodeContent(activeNode.parent ? activeNode.parent as FileTreeNode : activeNode) : [];
+  const rootNodes: FileTreeNode[] = activeNode
+    ? ((activeNode.parent ? (activeNode.parent as FileTreeNode) : activeNode).children as FileTreeNode[])
+    : [];
   const isActive = (path: string) => location.pathname === path;
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-2 flex flex-col">
         {/* Navigation principale */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -117,30 +121,46 @@ export function FileManagerSidebar({ onNavigateToFolder, currentNode }: FileMana
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Section paramètres */}
-        <SidebarGroup>
-          <SidebarGroupContent className="mt-auto">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink
-                    to="/settings"
-                    className={({ isActive }) =>
-                      `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                      }`
-                    }
-                  >
-                    <Settings className="h-4 w-4 flex-shrink-0" />
-                    {open && <span>Paramètres</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Footer: Paramètres + Déconnexion */}
+        <div className="mt-auto">
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to="/settings"
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          isActive
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                        }`
+                      }
+                    >
+                      <Settings className="h-4 w-4 flex-shrink-0" />
+                      {open && <span>Paramètres</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <button
+                      onClick={async () => { await logout(); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    >
+                      <LogOut className="h-4 w-4 flex-shrink-0" />
+                      {open && <span>Déconnexion</span>}
+                    </button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+          {open && session.user && (
+            <div className="px-3 py-2 text-xs text-muted-foreground truncate">{session.user.email}</div>
+          )}
+        </div>
       </SidebarContent>
     </Sidebar>
   );

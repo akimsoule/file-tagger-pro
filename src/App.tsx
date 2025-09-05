@@ -6,6 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Favorites from "./pages/Favorites";
 import Settings from "./pages/Settings";
+import LoginPage from "./pages/Login";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { PublicRoute } from "./components/auth/PublicRoute";
 import NotFound from "./pages/NotFound";
 import { AppProviders } from "./contexts/AppProviders";
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -21,9 +24,10 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/favorites" element={<Favorites />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

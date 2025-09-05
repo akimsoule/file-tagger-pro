@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Folder, ChevronRight, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFileContext } from '@/hooks/useFileContext';
-import { FileTreeNode } from '@/logic/FileTreeNode';
+import { FileTreeNode } from '@/logic/local/FileTreeNode';
 
 interface FolderPickerProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ export const FolderPicker: FC<FolderPickerProps> = ({
   excludeFolderId,
   title = 'Choisir un dossier'
 }) => {
-  const { getNodeHierarchy, getNodeContent } = useFileContext();
+  const { currentNode } = useFileContext();
 
   const handleSelect = (folderId: string | null) => {
     onSelect(folderId);
@@ -36,7 +36,7 @@ export const FolderPicker: FC<FolderPickerProps> = ({
     if (node.type !== 'folder') return null;
 
   const folderData = node.getData() as { color: string; name: string }; // Partial Folder fields needed
-    const subFolders = getNodeContent(node).filter(n => n.type === 'folder');
+  const subFolders = (node.children as FileTreeNode[]).filter(n => n.type === 'folder');
     const hasSubFolders = subFolders.length > 0;
 
     return (
@@ -88,7 +88,8 @@ export const FolderPicker: FC<FolderPickerProps> = ({
                 <span>Racine</span>
               </button>
 
-              {getNodeHierarchy()
+              {/* Parcourt les enfants racine depuis currentNode=null => racine réelle */}
+              {(currentNode ? (currentNode.children as FileTreeNode[]) : [])
                 .filter(node => node.type === 'folder')
                 .map(folderNode => renderFolder(folderNode as FileTreeNode))}
             </div>

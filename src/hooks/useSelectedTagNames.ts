@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTags } from '@/hooks/useTags';
 
 /**
- * Retourne les noms des tags sélectionnés (les documents stockent les noms, pas les IDs).
+ * Mappe les IDs de tags sélectionnés vers leurs noms (fallback: suppression du préfixe tag-).
  */
 export function useSelectedTagNames() {
   const { selectedTags, tags } = useTags();
@@ -15,5 +15,6 @@ export function useSelectedTagNames() {
     [selectedTags, tags]
   );
 
-  return { selectedTagNames, hasSelectedTags: selectedTagNames.length > 0 };
+  const hasSelectedTags = selectedTagNames.length > 0;
+  return { selectedTagNames, hasSelectedTags };
 }

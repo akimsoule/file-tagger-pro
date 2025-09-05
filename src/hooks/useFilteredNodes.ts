@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useFileContext } from '@/hooks/useFileContext';
 import { useQuery } from '@/hooks/useQuery';
-import { FileTreeNode } from '@/logic/FileTreeNode';
-import type { Document, Folder } from '@/contexts/file/def';
-import type { FileNodeStats } from '@/logic/FileTreeNode';
+import { FileTreeNode } from '@/logic/local/FileTreeNode';
+import type { Document, Folder } from '@/contexts/file';
+import type { FileNodeStats } from '@/logic/local/FileTreeNode';
 import { useSelectedTagNames } from '@/hooks/useSelectedTagNames';
 import { sortFolders } from '@/lib/sort';
 import { resolveFolderSize } from '@/lib/size';
@@ -11,33 +11,34 @@ import { resolveFolderSize } from '@/lib/size';
 interface FilteredNodesResult {
   folders: FileTreeNode[];
   documents: FileTreeNode[];
-  hasActiveFilter: boolean;
+  hasActiveFilter: boolean; // vrai si tags ou recherche actifs
 }
 
 export function useFilteredNodes(currentNode: FileTreeNode | null): FilteredNodesResult {
-  const { getNodeContent } = useFileContext();
+  const { currentNode: ctxCurrent } = useFileContext();
   const { getFilteredContent, getSortedContent, searchQuery, sortBy } = useQuery();
   const { selectedTagNames } = useSelectedTagNames();
 
-  const hasActiveFilter = selectedTagNames.length > 0 || !!searchQuery;
+  const hasActiveFilter = selectedTagNames.length > 0 || !!searchQuery; // vrai si tags ou recherche actifs
 
   // Collecte récursive seulement si filtrage actif
-  const collectDescendants = (node: FileTreeNode): FileTreeNode[] => {
+  const collectDescendants = useCallback((node: FileTreeNode): FileTreeNode[] => {
     const stack: FileTreeNode[] = [node];
     const collected: FileTreeNode[] = [];
     while (stack.length) {
       const n = stack.pop()!;
       if (n !== node) collected.push(n);
-      stack.push(...(n.children as FileTreeNode[]));
+      if (n.children.length) stack.push(...(n.children as FileTreeNode[]));
     }
     return collected;
-  };
+  }, []);
 
   return useMemo(() => {
-    const baseNodes = currentNode
+    const target = currentNode || ctxCurrent;
+    const baseNodes = target
       ? hasActiveFilter
-        ? collectDescendants(currentNode)
-        : (getNodeContent(currentNode) as FileTreeNode[])
+        ? collectDescendants(target)
+        : (target.children as FileTreeNode[])
       : [];
 
     const documentNodes = baseNodes.filter(n => n.type === 'file') as FileTreeNode[];
@@ -73,7 +74,7 @@ export function useFilteredNodes(currentNode: FileTreeNode | null): FilteredNode
     // Tri des dossiers (même logique que documents, mais adapté aux champs Folder)
     if (filteredFolderNodes.length > 1) {
       const folderData = filteredFolderNodes.map(f => f.getData() as Folder);
-  const sortedFolderData = sortFolders(folderData, sortBy, folder => resolveFolderSize(folder, filteredFolderNodes));
+      const sortedFolderData = sortFolders(folderData, sortBy, folder => resolveFolderSize(folder, filteredFolderNodes));
       filteredFolderNodes = sortedFolderData.map(f => filteredFolderNodes.find(n => n.id === f.id)!)
     }
 
@@ -82,5 +83,5 @@ export function useFilteredNodes(currentNode: FileTreeNode | null): FilteredNode
       documents: filteredDocumentNodes,
       hasActiveFilter
     };
-  }, [currentNode, hasActiveFilter, getNodeContent, getFilteredContent, getSortedContent, selectedTagNames, searchQuery, sortBy]);
+  }, [currentNode, ctxCurrent, hasActiveFilter, getFilteredContent, getSortedContent, selectedTagNames, searchQuery, sortBy, collectDescendants]);
 }

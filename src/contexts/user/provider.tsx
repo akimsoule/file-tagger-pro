@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { User, UserContextType, UserSession } from './def';
 import { UserContext } from './context';
-import { mockUser } from '@/data/mockData';
+import { mockUser } from '@/data/mockData'; // Fallback possible
+import { authLogin, authRegister, authRefresh, authVerify, setAuthToken, loadStoredToken, onAuthError } from '@/lib/api/api';
 
 
 const initialSession: UserSession = {
@@ -17,74 +18,35 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     try {
       setSession(prev => ({ ...prev, isLoading: true, error: undefined }));
-      // Simuler un appel API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (email === 'test@example.com' && password === 'password') {
-        setSession({
-          user: mockUser,
-          isAuthenticated: true,
-          isLoading: false,
-          error: undefined,
-        });
-      } else {
-        throw new Error('Identifiants invalides');
-      }
+      const { user } = await authLogin(email, password);
+      setSession({ user: mapBackendUser(user), isAuthenticated: true, isLoading: false, error: undefined });
     } catch (error) {
+      setAuthToken(null);
       setSession({
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Une erreur est survenue',
+        error: error instanceof Error ? error.message : 'Erreur de connexion',
       });
     }
   }, []);
 
   const logout = useCallback(async () => {
-    try {
-      setSession(prev => ({ ...prev, isLoading: true, error: undefined }));
-      // Simuler un appel API
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setSession({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: undefined,
-      });
-    } catch (error) {
-      setSession(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Une erreur est survenue',
-      }));
-    }
+    setAuthToken(null);
+    setSession({ user: null, isAuthenticated: false, isLoading: false, error: undefined });
   }, []);
 
   const register = useCallback(async (email: string, password: string, name: string) => {
     try {
       setSession(prev => ({ ...prev, isLoading: true, error: undefined }));
-      // Simuler un appel API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newUser: User = {
-        ...mockUser,
-        id: crypto.randomUUID(),
-        email,
-        name,
-      };
-      
-      setSession({
-        user: newUser,
-        isAuthenticated: true,
-        isLoading: false,
-        error: undefined,
-      });
+      const { user } = await authRegister(email, password, name);
+      setSession({ user: mapBackendUser(user), isAuthenticated: true, isLoading: false, error: undefined });
     } catch (error) {
+      setAuthToken(null);
       setSession(prev => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Une erreur est survenue',
+        error: error instanceof Error ? error.message : 'Erreur inscription',
       }));
     }
   }, []);
@@ -137,28 +99,76 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const refreshSession = useCallback(async () => {
     try {
       setSession(prev => ({ ...prev, isLoading: true, error: undefined }));
-      // Simuler un appel API
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Pour la démo, on restaure le mockUser
-      setSession({
-        user: mockUser,
-        isAuthenticated: true,
-        isLoading: false,
-        error: undefined,
-      });
+      const token = loadStoredToken();
+      if (!token) throw new Error('Non authentifié');
+      const { user } = await authRefresh();
+      setSession({ user: mapBackendUser(user), isAuthenticated: true, isLoading: false, error: undefined });
     } catch (error) {
+      setAuthToken(null);
       setSession({
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Une erreur est survenue',
+        error: error instanceof Error ? error.message : 'Session expirée',
       });
     }
   }, []);
 
   const clearError = useCallback(() => {
     setSession(prev => ({ ...prev, error: undefined }));
+  }, []);
+
+  // Mapping backend -> User local (placeholder jusqu’à adaptation backend complète)
+  function mapBackendUser(u: any): User { // eslint-disable-line @typescript-eslint/no-explicit-any
+    return {
+      id: u.id,
+      email: u.email,
+      name: u.name || u.email.split('@')[0],
+      role: 'user',
+      avatar: undefined,
+      preferences: { theme: 'light', language: 'fr' },
+      documents: [],
+      folders: []
+    };
+  }
+
+  // Auto-initialisation au montage
+  useEffect(() => {
+    // handler global 401
+    onAuthError(() => {
+      setSession({ user: null, isAuthenticated: false, isLoading: false, error: 'Session expirée' });
+    });
+    const token = loadStoredToken();
+    if (!token) {
+      setSession(prev => ({ ...prev, isLoading: false }));
+      return;
+    }
+    (async () => {
+      try {
+        // D'abord verify (rapide). Si échec 401 => tenter refresh puis re-verify.
+        let verifiedUser: any | null = null; // eslint-disable-line @typescript-eslint/no-explicit-any
+        try {
+          const { user } = await authVerify();
+          verifiedUser = user;
+        } catch (e) {
+          // tentative refresh
+          try {
+            const { user } = await authRefresh();
+            verifiedUser = user;
+          } catch {
+            setAuthToken(null);
+          }
+        }
+        if (verifiedUser) {
+          setSession({ user: mapBackendUser(verifiedUser), isAuthenticated: true, isLoading: false, error: undefined });
+        } else {
+          setSession(prev => ({ ...prev, isLoading: false }));
+        }
+      } catch (e) {
+        setAuthToken(null);
+        setSession(prev => ({ ...prev, isLoading: false, isAuthenticated: false }));
+      }
+    })();
   }, []);
 
   const value: UserContextType = {

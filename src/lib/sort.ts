@@ -1,4 +1,4 @@
-import type { Document, Folder } from '@/contexts/file/def';
+import type { Document, Folder } from '@/contexts/file';
 import type { SortBy } from '@/contexts/query/def';
 
 export function sortDocuments(docs: Document[], sortBy: SortBy): Document[] {

@@ -1,7 +1,5 @@
 // File context
-export * from './file/context';
-export * from './file/def';
-export * from './file/provider';
+export * from './file';
 
 // Query context
 export * from './query/context';

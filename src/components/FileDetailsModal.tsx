@@ -1,4 +1,4 @@
-import { Document } from '@/contexts/file/def';
+import { Document } from '@/contexts/file';
 import { formatFileSize, formatDate } from '@/lib/format';
 import { TagBadge } from './TagBadge';
 import {

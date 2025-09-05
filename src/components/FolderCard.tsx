@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { FileTreeNode } from '@/logic/FileTreeNode';
-import { Folder } from '@/contexts/file/def';
+import { FileTreeNode } from '@/logic/local/FileTreeNode';
+import { Folder } from '@/contexts/file';
 import { TagBadge } from './TagBadge';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, FolderIcon, FolderOutput, Tags } from 'lucide-react';
@@ -23,12 +23,22 @@ interface FolderCardProps {
 export function FolderCard({ node, onClick }: FolderCardProps) {
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
   const [isTagEditorOpen, setIsTagEditorOpen] = useState(false);
-  const { moveNode, updateNode, getNodeStats } = useFileContext();
+  const { moveNode, updateNode } = useFileContext();
   
   const folderData = node.getData() as Folder;
   // findNodeById n'est pas nécessaire ici, on utilise directement l'id cible
   const tagList = node.tags.map(tag => tag.name);
-  const stats = getNodeStats(node);
+  // Recalcule stats locales minimalistes (évite dépendance contexte supprimé)
+  const stats = {
+    totalItems: (node.children?.length) || 0,
+    totalSize: (node.children as FileTreeNode[] | undefined)?.reduce((acc, c) => {
+      if (c.type === 'file') {
+  const d = c.getData() as Folder | import('@/contexts/file').Document;
+        return acc + ('size' in d ? d.size : 0);
+      }
+      return acc;
+    }, 0) || 0
+  };
 
   const handleAction = (e: React.MouseEvent) => {
     e.stopPropagation();

@@ -11,7 +11,7 @@ import { useQuery } from '@/hooks/useQuery';
 import { useFileContext } from '@/hooks/useFileContext';
 import { useTags } from '@/hooks/useTags';
 import { useFavoriteNodes } from '@/hooks/useFavoriteNodes';
-import type { Document } from '@/contexts/file/def';
+import type { Document } from '@/contexts/file';
 import React from 'react';
 
 const Favorites = () => {

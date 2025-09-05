@@ -1,38 +1,10 @@
 import { useContext } from 'react';
-import { FileContext } from '../contexts/file/context';
+import { FileContext } from '../contexts/file';
 
+// Accès simplifié aux données/méthodes tags exposées par FileContext
 export function useTags() {
-  const {
-    tags,
-    selectedTags,
-    toggleTagSelection,
-    clearTagSelection,
-    getTagById,
-    addTag,
-    updateTag,
-    deleteTag,
-    setSelectedTags,
-    getAllTags,
-    getTagsByIds,
-    getTagCount
-  } = useContext(FileContext);
-
-  if (!tags) {
-    throw new Error('useTags must be used within a FileProvider');
-  }
-
-  return {
-    tags,
-    selectedTags,
-    toggleTagSelection,
-    clearTagSelection,
-    getTagById,
-    addTag,
-    updateTag,
-    deleteTag,
-    setSelectedTags,
-    getAllTags,
-    getTagsByIds,
-    getTagCount
-  };
+  const ctx = useContext(FileContext);
+  if (!ctx) throw new Error('useTags must be used within a FileProvider');
+  const { tags, selectedTags, toggleTagSelection, setSelectedTags, getAllTags, getTagsByIds, getTagCount } = ctx;
+  return { tags, selectedTags, toggleTagSelection, setSelectedTags, getAllTags, getTagsByIds, getTagCount };
 }

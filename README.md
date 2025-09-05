@@ -60,6 +60,63 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Backend (Netlify Functions + Prisma + MEGA)
+
+Le dossier `netlify/functions` contient les fonctions serverless (auth, fichiers, dossiers, tags, etc.). Elles utilisent Prisma (PostgreSQL) et l'API MEGA via `megajs`.
+
+### Variables d'environnement à définir sur Netlify
+
+| Nom | Description |
+|-----|-------------|
+| DATABASE_URL | URL Postgres (format Prisma) |
+| JWT_SECRET | Secret JWT pour la génération des tokens |
+| ENCRYPTION_SECRET_KEY | Clé hex (256 bits recommandé) pour chiffrer les credentials MEGA |
+| MEGA_EMAIL | Email du compte MEGA par défaut |
+| MEGA_PASSWORD | Mot de passe MEGA par défaut |
+
+Générez une clé de chiffrement (64 hex chars):
+```bash
+openssl rand -hex 32
+```
+
+### Développement local (avec Netlify CLI)
+```bash
+npm install
+npx prisma generate
+netlify dev
+```
+Accès API: `http://localhost:8888/.netlify/functions/auth/login` (ou via redirect `/api/...`).
+
+### Déploiement
+1. Connecter le repo à Netlify.
+2. Configurer les variables d'environnement ci-dessus dans Site Settings > Environment Variables.
+3. Déployer (build commande: `npm run build`). `postinstall` exécute `prisma generate` automatiquement sur Netlify.
+
+### Structure importante
+| Dossier/Fichier | Rôle |
+|-----------------|------|
+| `netlify/functions/*.mts` | Endpoints serverless |
+| `netlify/files.core/src/services/` | Logique métier (Prisma, MEGA, encryption) |
+| `prisma/schema.prisma` | Schéma base de données |
+| `netlify.toml` | Configuration build + fonctions + redirects |
+
+### Notes de performance
+- `node_bundler=esbuild` optimise les temps de cold start.
+- Les modules lourds (`@prisma/client`, `megajs`) sont externalisés.
+- Rajouter un pool de connexions n'est pas nécessaire car Prisma gère le pooling côté driver Postgres.
+
+### Migrations
+Exécuter localement:
+```bash
+npx prisma migrate dev --name init
+```
+En production, appliquez les migrations avant ou pendant le premier déploiement (Netlify build + plugin Prisma).
+
+### Sécurité
+- Changez immédiatement le `JWT_SECRET` de développement.
+- Ne commitez jamais les credentials MEGA en clair; ils sont chiffrés via `EncryptionService`.
+- Activez les logs dans Netlify pour monitorer les fonctions.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/47fe2811-8e06-4341-bf73-412f19e5b2eb) and click on Share -> Publish.

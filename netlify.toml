@@ -1,0 +1,21 @@
+# Configuration Netlify pour backend + frontend Vite
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["@prisma/client", "bcryptjs", "jsonwebtoken", "megajs"]
+  included_files = [
+    "prisma/schema.prisma",
+    "prisma/migrations/**",
+    "netlify/files.core/src/services/**"
+  ]
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true

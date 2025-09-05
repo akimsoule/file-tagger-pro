@@ -2,12 +2,22 @@ import React from 'react';
 import { ChevronRight, Home, FolderIcon } from 'lucide-react';
 import { Button } from './ui/button';
 import { useFileContext } from '@/hooks/useFileContext';
-import { FileTreeNode } from '@/logic/FileTreeNode';
+import { FileTreeNode } from '@/logic/local/FileTreeNode';
 
 export function Breadcrumb() {
-  const { currentNode, setCurrentNode, getNodePath } = useFileContext();
+  const { currentNode, setCurrentNode } = useFileContext();
 
-  const fullPathRaw = currentNode ? getNodePath(currentNode) : [];
+  // Recalcule le chemin en remontant les parents
+  const fullPathRaw: FileTreeNode[] = [];
+  if (currentNode) {
+    let cursor: FileTreeNode | null = currentNode;
+    const visited = new Set<string>();
+    while (cursor && !visited.has(cursor.id)) {
+      fullPathRaw.unshift(cursor);
+      visited.add(cursor.id);
+      cursor = cursor.parent as FileTreeNode | null;
+    }
+  }
   // On exclut explicitement le nœud racine interne (id 'root') pour ne pas l'afficher (le bouton Home suffit)
   const fullPath: (FileTreeNode | { id: string; name: string })[] = fullPathRaw.filter(n => (n as FileTreeNode).id !== 'root');
 

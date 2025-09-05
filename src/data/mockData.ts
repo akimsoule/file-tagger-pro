@@ -1,5 +1,5 @@
 import { User } from '../contexts/user/def';
-import { Document, Folder } from '../contexts/file/def';
+import { Document, Folder } from '../contexts/file';
 
 export const mockUser: User = {
   id: '1',
@@ -83,7 +83,7 @@ export const mockFolders: Folder[] = [
 export const mockDocuments: Document[] = [
   // Documents du dossier "Documents Importants"
   createDocument(
-    '1',
+    'doc-1',
     'Contrat de travail.pdf',
     'application/pdf',
     524288,
@@ -93,7 +93,7 @@ export const mockDocuments: Document[] = [
     true
   ),
   createDocument(
-    '2',
+    'doc-2',
     'Passeport.jpg',
     'image/jpeg',
     1048576,
@@ -104,7 +104,7 @@ export const mockDocuments: Document[] = [
 
   // Documents du dossier "Photos"
   createDocument(
-    '3',
+    'doc-3',
     'Photo de profil.jpg',
     'image/jpeg',
     262144,
@@ -116,7 +116,7 @@ export const mockDocuments: Document[] = [
 
   // Documents du dossier "Hiver" (sous-dossier de Photos/Vacances)
   createDocument(
-    '4',
+    'doc-4',
     'Vacances au ski.jpg',
     'image/jpeg',
     2097152,
@@ -127,7 +127,7 @@ export const mockDocuments: Document[] = [
 
   // Documents du dossier "Documentation" (sous-dossier de Projets/Projet A)
   createDocument(
-    '5',
+    'doc-5',
     'Spécifications Techniques v1.pdf',
     'application/pdf',
     1048576,
@@ -137,7 +137,7 @@ export const mockDocuments: Document[] = [
     true
   ),
   createDocument(
-    '6',
+    'doc-6',
     'Design System.fig',
     'application/figma',
     4194304,
@@ -149,7 +149,7 @@ export const mockDocuments: Document[] = [
 
   // Documents du dossier "Archives"
   createDocument(
-    '7',
+    'doc-7',
     'Budget 2023.xlsx',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     524288,
@@ -160,7 +160,7 @@ export const mockDocuments: Document[] = [
   
   // Documents du dossier "Projet A"
   createDocument(
-    '8',
+    'doc-8',
     'Notes de réunion.md',
     'text/markdown',
     8192,
@@ -171,7 +171,7 @@ export const mockDocuments: Document[] = [
 
   // Documents du dossier "Été" (sous-dossier de Photos/Vacances)
   createDocument(
-    '9',
+    'doc-9',
     'Photos plage.jpg',
     'image/jpeg',
     3145728,

@@ -1,0 +1,98 @@
+// Prisma schema for doc-keeper-vault backend
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(uuid())
+  email        String          @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  documents    Document[]
+  folders      Folder[]
+  logs         Log[]           @relation("UserLogs")
+  megaConfig   UserMegaConfig? // Configuration MEGA de l'utilisateur
+}
+
+model UserMegaConfig {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @unique
+  email     String   // Email MEGA de l'utilisateur (chiffré)
+  password  String   // Mot de passe MEGA de l'utilisateur (chiffré)
+  isActive  Boolean  @default(true) // Indique si la configuration est active
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_mega_configs")
+}
+
+model Folder {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  color       String?    @default("#3B82F6") // Couleur du dossier (hex)
+  owner       User       @relation(fields: [ownerId], references: [id])
+  ownerId     String
+  parent      Folder?    @relation("FolderHierarchy", fields: [parentId], references: [id])
+  parentId    String?
+  children    Folder[]   @relation("FolderHierarchy")
+  documents   Document[]
+  logs        Log[]      @relation("FolderLogs")
+  isRoot      Boolean    @default(false) // Drapeau logique: un seul dossier racine virtuel par utilisateur
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("folders")
+}
+
+model Document {
+  id          String     @id @default(uuid())
+  name        String
+  type        String
+  size        Int
+  description String?
+  tags        String     @default("") // Tags séparés par des virgules
+  fileId      String     // MEGA file ID
+  hash        String     @unique
+  owner       User       @relation(fields: [ownerId], references: [id])
+  ownerId     String
+  folder      Folder?    @relation(fields: [folderId], references: [id])
+  folderId    String?    // Le document peut être dans un dossier ou à la racine
+  isFavorite  Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  modifiedAt  DateTime   @updatedAt
+  logs        Log[]      @relation("DocumentLogs")
+
+  @@map("documents")
+  // Index composite pour accélérer les requêtes filtrant par propriétaire + tags + ordre chronologique
+  // NOTE: tags étant une chaîne CSV, l'efficacité reste limitée; à terme envisager une table de jonction DocumentTag.
+  @@index([ownerId, tags, createdAt], map: "idx_doc_owner_tags_created")
+}
+
+model Log {
+  id          String    @id @default(uuid())
+  action      String    // CREATE, UPDATE, DELETE, UPLOAD, DOWNLOAD, etc.
+  entity      String    // USER, DOCUMENT, FOLDER
+  entityId    String    // ID of the affected entity
+  details     String?   // Additional details about the action
+  ipAddress   String?
+  userAgent   String?
+  user        User?     @relation("UserLogs", fields: [userId], references: [id])
+  userId      String?
+  document    Document? @relation("DocumentLogs", fields: [documentId], references: [id])
+  documentId  String?
+  folder      Folder?   @relation("FolderLogs", fields: [folderId], references: [id])
+  folderId    String?
+  createdAt   DateTime  @default(now())
+
+  @@map("logs")
+}
