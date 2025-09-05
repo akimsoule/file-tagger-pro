@@ -5,7 +5,7 @@ export interface TreeDocumentDTO {
 }
 export interface TreeFolderStats { documents: number; folders: number; totalSize: number }
 export interface TreeFolderDTO {
-  id: string; name: string; description?: string; color?: string; parentId?: string | null; isRoot?: boolean; createdAt: string; updatedAt: string; folders: TreeFolderDTO[]; documents: TreeDocumentDTO[]; stats?: TreeFolderStats;
+  id: string; name: string; description?: string; color?: string; parentId?: string | null; isRoot?: boolean; createdAt: string; updatedAt: string; folders: TreeFolderDTO[]; documents: TreeDocumentDTO[]; stats?: TreeFolderStats; tags?: string;
 }
 export interface TreeResponse { tree: TreeFolderDTO | null; stats: TreeFolderStats }
 

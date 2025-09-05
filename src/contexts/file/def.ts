@@ -38,7 +38,6 @@ export interface Tag {
 }
 
 import type { FileTreeNode } from '@/logic/local/FileTreeNode';
-import { FileNodeStats } from "@/logic/local/FileTreeNode";
 
 export interface FileContextType {
   // État principal
@@ -46,11 +45,13 @@ export interface FileContextType {
   selectedNode: FileTreeNode | null;
   tags: Tag[];
   selectedTags: string[];
+  loadingTree?: boolean;
 
   // Setters
   setCurrentNode: (node: FileTreeNode | null) => void;
   setSelectedNode: (node: FileTreeNode | null) => void;
   setSelectedTags: (tags: string[]) => void;
+  reloadTree?: () => Promise<void> | void;
 
   // Opérations sur les nœuds
 

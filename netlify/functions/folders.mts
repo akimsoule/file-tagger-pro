@@ -80,6 +80,7 @@ async function handleCreateFolder(request: Request, user: any) {
       color: body.color,
       parentId: body.parentId,
       ownerId: user.userId,
+      tags: body.tags ? sanitizeString(body.tags) : undefined,
     };
     
     const folder = await folderService.createFolder(folderData);
@@ -110,6 +111,7 @@ async function handleUpdateFolder(request: Request, user: any) {
         (body.description ? sanitizeString(body.description) : undefined) : undefined,
       color: body.color,
       parentId: body.parentId,
+      tags: body.tags !== undefined ? sanitizeString(body.tags) : undefined,
     };
     
     const folder = await folderService.updateFolder(folderId, updateData, user.userId);

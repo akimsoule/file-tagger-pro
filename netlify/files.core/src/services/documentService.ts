@@ -242,6 +242,9 @@ export class DocumentService {
       },
     });
 
+  // Synchroniser les relations Tag <-> Document
+  await this.syncDocumentTags(document.id, document.tags, ownerId);
+
     await this.logService.log({
       action: "DOCUMENT_CREATE",
       entity: "DOCUMENT",
@@ -466,6 +469,13 @@ export class DocumentService {
       },
     });
 
+    if (updateData.tags !== undefined) {
+      // ownerId dans l'entité mise à jour (champ non sélectionné explicitement dans include mais présent sur document)
+      // @ts-expect-error ownerId présent sur l'objet retourné
+      const ownerIdForTags: string = (document as any).ownerId || document.owner?.id; // eslint-disable-line @typescript-eslint/no-explicit-any
+      await this.syncDocumentTags(id, updateData.tags || "", ownerIdForTags);
+    }
+
     await this.logService.log({
       action: "DOCUMENT_UPDATE",
       entity: "DOCUMENT",
@@ -478,6 +488,38 @@ export class DocumentService {
     });
 
     return document;
+  }
+
+  /**
+   * Synchronise la table de jonction DocumentTag avec la chaîne CSV
+   */
+  private async syncDocumentTags(documentId: string, csv: string, ownerId: string) {
+    const tagNames = Array.from(new Set(csv.split(',').map(t => t.trim()).filter(Boolean)));
+    if (tagNames.length === 0) {
+      // Supprimer tous les liens existants si aucun tag
+      await prisma.documentTag.deleteMany({ where: { documentId } });
+      return;
+    }
+    const existingLinks = await prisma.documentTag.findMany({ where: { documentId }, include: { tag: true } });
+    const existingTagMap = new Map<string, (typeof existingLinks)[number]>(existingLinks.map(l => [l.tag.name, l]));
+
+    // Créer les tags manquants et liens
+    for (const name of tagNames) {
+      if (!existingTagMap.has(name)) {
+        const tag = await prisma.tag.upsert({
+          where: { userId_name: { userId: ownerId, name } },
+          update: {},
+          create: { userId: ownerId, name },
+        });
+        await prisma.documentTag.create({ data: { documentId, tagId: tag.id } });
+      }
+    }
+    // Supprimer les liens obsolètes
+    for (const [name, link] of existingTagMap.entries()) {
+      if (!tagNames.includes(name)) {
+        await prisma.documentTag.delete({ where: { documentId_tagId: { documentId, tagId: link.tagId } } });
+      }
+    }
   }
 
   async toggleFavorite(id: string, userId: string) {

@@ -3,8 +3,15 @@ import { useUser } from "@/hooks/useUser";
 import type { Document, Folder, Tag } from "./def";
 import { FileContext } from "./context";
 import { FileTreeNode } from "@/logic/local/FileTreeNode";
+import { FileTreeNodeApi } from "@/logic/miror/FileTreeNodeApi";
 import { mockFolders, mockDocuments } from "@/data/mockData";
-import { parseTags, joinTags } from "@/lib/tags"; // parse/join potentiellement à retirer si plus utilisés
+import { toast } from "@/hooks/useToast";
+import {
+  getFullTree,
+  TreeFolderDTO,
+  TreeDocumentDTO,
+} from "@/lib/api/api-tree";
+import { api } from "@/lib";
 
 // Couleurs par défaut pour les tags
 const defaultColors = [
@@ -23,9 +30,19 @@ const defaultColors = [
 export function FileProvider({ children }: { children: React.ReactNode }) {
   const { session } = useUser();
 
-  const [rootNode] = useState(() =>
-    FileTreeNode.buildRootTree(mockDocuments, mockFolders)
-  );
+  const [rootNode, setRootNode] = useState<FileTreeNode>(() => {
+    // Placeholder initial (mocks) en attendant le fetch
+    const baseRoot = FileTreeNode.buildRootTree(mockDocuments, mockFolders);
+    return new FileTreeNodeApi(
+      baseRoot.id,
+      baseRoot.name,
+      baseRoot.type,
+      baseRoot.getData() as Folder,
+      baseRoot.stats,
+      baseRoot.parentId
+    );
+  });
+  const [loadingTree, setLoadingTree] = useState<boolean>(false);
   const [currentNodeRef, setCurrentNodeRef] = useState<FileTreeNode | null>(
     rootNode
   );
@@ -45,10 +62,14 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
   }, [customTags]);
 
   const updateTags = useCallback(() => {
-  setTags(prev => {
-    const next = rootNode.computeTagStats(prev, customTagsRef.current, defaultColors);
-    return next;
-  });
+    setTags((prev) => {
+      const next = rootNode.computeTagStats(
+        prev,
+        customTagsRef.current,
+        defaultColors
+      );
+      return next;
+    });
   }, [rootNode]);
 
   const bumpTreeVersion = useCallback(() => {
@@ -57,7 +78,189 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     updateTags();
-  }, [updateTags, treeVersion]);
+  }, [updateTags, treeVersion, rootNode]);
+
+  // Chargement initial du tree depuis l'API
+  const reloadTree = useCallback(async () => {
+    // Attendre que l'utilisateur soit authentifié
+    if (
+      !session ||
+      session.isLoading ||
+      !session.isAuthenticated ||
+      !session.user
+    ) {
+      return; // on ne lance pas tant que la session n'est pas prête
+    }
+    setLoadingTree(true);
+    try {
+      const res = await getFullTree();
+      if (!res.tree) {
+        toast({
+          title: "Aucun arbre",
+          description: "Aucun dossier racine en base.",
+          variant: "destructive",
+        });
+        return;
+      }
+      // Si le backend fournit déjà un root réel (isRoot + parentId null), construire directement sans racine synthétique
+      const apiTreeRoot = res.tree;
+      if (apiTreeRoot.isRoot && apiTreeRoot.parentId == null) {
+        const makeFolderData = (f: TreeFolderDTO): Folder => ({
+          id: f.id,
+          name: f.name,
+          description: f.description || "",
+          color: f.color || "#000000",
+          ownerId: session?.user.id || "me",
+          parentId: f.parentId || undefined,
+          children: [],
+          documents: [],
+          tags: f.tags || "",
+          createdAt: new Date(f.createdAt),
+          updatedAt: new Date(f.updatedAt),
+        });
+        // Créer la racine réelle directement en FileTreeNodeApi
+        const rootApi = new FileTreeNodeApi(
+          apiTreeRoot.id,
+          apiTreeRoot.name,
+          "folder",
+          makeFolderData(apiTreeRoot),
+          {
+            totalSize: 0,
+            tagsCount: 0,
+            totalItems: 0,
+            filesCount: 0,
+            foldersCount: 0,
+          },
+          undefined
+        );
+        // Parcours itératif pour attacher sous-dossiers & documents
+        interface StackItem {
+          dto: TreeFolderDTO;
+          node: FileTreeNodeApi;
+        }
+        const stack: StackItem[] = [{ dto: apiTreeRoot, node: rootApi }];
+        while (stack.length) {
+          const { dto, node } = stack.pop()!;
+          // Documents
+          for (const d of dto.documents) {
+            const doc: Document = {
+              id: d.id,
+              name: d.name,
+              type: d.type,
+              size: d.size,
+              description: d.description || "",
+              tags: d.tags || "",
+              fileId: d.id,
+              hash: "",
+              ownerId: session?.user.id || "me",
+              folderId: d.folderId || undefined,
+              isFavorite: d.isFavorite,
+              createdAt: new Date(d.createdAt),
+              modifiedAt: new Date(d.modifiedAt),
+            };
+            node.addChild(FileTreeNode.createDocument(doc));
+          }
+          // Sous-dossiers
+          for (let i = dto.folders.length - 1; i >= 0; i--) {
+            const childDto = dto.folders[i];
+            const folderData = makeFolderData(childDto);
+            const folderNode = FileTreeNode.createFolder(folderData);
+            node.addChild(folderNode);
+            stack.push({ dto: childDto, node: folderNode as FileTreeNodeApi });
+          }
+        }
+        rootApi.updateStats();
+        console.log(rootApi.printTree());
+        setRootNode(rootApi);
+        setCurrentNodeRef(rootApi);
+      } else {
+        // Fallback: reconstruire via méthode générique (rare / autre format)
+        const folders: Folder[] = [];
+        const documents: Document[] = [];
+        const stack: TreeFolderDTO[] = [res.tree];
+        while (stack.length) {
+          const f = stack.pop()!;
+          folders.push({
+            id: f.id,
+            name: f.name,
+            description: f.description || "",
+            color: f.color || "#000000",
+            ownerId: session?.user.id || "me",
+            parentId: f.parentId || undefined,
+            children: [],
+            documents: [],
+            tags: f.tags || "",
+            createdAt: new Date(f.createdAt),
+            updatedAt: new Date(f.updatedAt),
+          });
+          for (const d of f.documents) {
+            documents.push({
+              id: d.id,
+              name: d.name,
+              type: d.type,
+              size: d.size,
+              description: d.description || "",
+              tags: d.tags || "",
+              fileId: d.id,
+              hash: "",
+              ownerId: session?.user.id || "me",
+              folderId: d.folderId || undefined,
+              isFavorite: d.isFavorite,
+              createdAt: new Date(d.createdAt),
+              modifiedAt: new Date(d.modifiedAt),
+            });
+          }
+          for (let i = f.folders.length - 1; i >= 0; i--)
+            stack.push(f.folders[i]);
+        }
+        const syntheticRoot = FileTreeNode.buildRootTree(documents, folders);
+        const apiRoot = new FileTreeNodeApi(
+          syntheticRoot.id,
+          syntheticRoot.name,
+          syntheticRoot.type,
+          syntheticRoot.getData() as Folder,
+          syntheticRoot.stats,
+          syntheticRoot.parentId
+        );
+        for (const child of syntheticRoot.children) apiRoot.addChild(child);
+        apiRoot.updateStats();
+        console.log(apiRoot.printTree());
+        setRootNode(apiRoot);
+        setCurrentNodeRef(apiRoot);
+      }
+      bumpTreeVersion();
+    } catch (e) {
+      console.error("Erreur chargement arbre", e);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger l'arbre distant.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingTree(false);
+    }
+  }, [session, bumpTreeVersion]);
+
+  // Charger l'arbre seulement une fois la session authentifiée et stable
+  useEffect(() => {
+    if (session && !session.isLoading && session.isAuthenticated) {
+      reloadTree();
+    }
+  }, [session, session?.isAuthenticated, session?.isLoading, reloadTree]);
+
+  // Abonnement rollback pour feedback utilisateur
+  useEffect(() => {
+    if (!(rootNode instanceof FileTreeNodeApi)) return;
+    const unsubscribe = rootNode.onRollback(({ nodeId }) => {
+      toast({
+        title: "Synchronisation annulée",
+        description: `Les changements sur le nœud ${nodeId} ont été restaurés (échec serveur).`,
+        variant: "destructive",
+      });
+      bumpTreeVersion();
+    });
+    return unsubscribe;
+  }, [rootNode, bumpTreeVersion]);
 
   const setCurrentNode = useCallback(
     (node: FileTreeNode | null) => {
@@ -122,20 +325,29 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
     [bumpTreeVersion]
   );
 
-  const deleteTag = useCallback(async (tagId: string) => {
-    setCustomTags(prev => prev.filter(t => t.id !== tagId));
-    const tagName = tagId.startsWith('tag-') ? tagId.substring(4) : tagId;
-    rootNode.deleteTagReferences(tagName);
-    bumpTreeVersion();
-  }, [rootNode, bumpTreeVersion]);
+  const deleteTag = useCallback(
+    async (tagId: string) => {
+      setCustomTags((prev) => prev.filter((t) => t.id !== tagId));
+      const tagName = tagId.startsWith("tag-") ? tagId.substring(4) : tagId;
+      rootNode.deleteTagReferences(tagName);
+      bumpTreeVersion();
+    },
+    [rootNode, bumpTreeVersion]
+  );
 
-  const addNodeTag = useCallback((node: FileTreeNode, tagName: string) => {
-    if (rootNode.addTagToNode(node.id, tagName)) bumpTreeVersion();
-  }, [rootNode, bumpTreeVersion]);
+  const addNodeTag = useCallback(
+    (node: FileTreeNode, tagName: string) => {
+      if (rootNode.addTagToNode(node.id, tagName)) bumpTreeVersion();
+    },
+    [rootNode, bumpTreeVersion]
+  );
 
-  const removeNodeTag = useCallback((node: FileTreeNode, tagName: string) => {
-    if (rootNode.removeTagFromNode(node.id, tagName)) bumpTreeVersion();
-  }, [rootNode, bumpTreeVersion]);
+  const removeNodeTag = useCallback(
+    (node: FileTreeNode, tagName: string) => {
+      if (rootNode.removeTagFromNode(node.id, tagName)) bumpTreeVersion();
+    },
+    [rootNode, bumpTreeVersion]
+  );
 
   const moveNode = useCallback(
     async (nodeId: string, targetFolderId: string | null) => {
@@ -144,29 +356,41 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
     [rootNode, bumpTreeVersion]
   );
 
-  const createFolder = useCallback((folder: Folder) => {
-    const created = rootNode.createFolderNode(folder);
-    if (created) bumpTreeVersion();
-  }, [rootNode, bumpTreeVersion]);
+  const createFolder = useCallback(
+    (folder: Folder) => {
+      const created = rootNode.createFolderNode(folder);
+      if (created) bumpTreeVersion();
+    },
+    [rootNode, bumpTreeVersion]
+  );
 
-  const createDocument = useCallback((doc: Document) => {
-    const created = rootNode.createDocumentNode(doc);
-    if (created) bumpTreeVersion();
-  }, [rootNode, bumpTreeVersion]);
+  const createDocument = useCallback(
+    (doc: Document) => {
+      const created = rootNode.createDocumentNode(doc);
+      if (created) bumpTreeVersion();
+    },
+    [rootNode, bumpTreeVersion]
+  );
 
   // ==================== Helpers tags (après actions) ====================
-  const getTagsByIds = useCallback((ids: string[]) => {
-    return ids
-      .map(id => tags.find(tag => tag.id === id))
-      .filter((tag): tag is Tag => tag !== undefined);
-  }, [tags]);
+  const getTagsByIds = useCallback(
+    (ids: string[]) => {
+      return ids
+        .map((id) => tags.find((tag) => tag.id === id))
+        .filter((tag): tag is Tag => tag !== undefined);
+    },
+    [tags]
+  );
 
   const getAllTags = useCallback(() => tags, [tags]);
 
-  const getTagCount = useCallback((tagId: string) => {
-    const tag = tags.find(t => t.id === tagId);
-    return tag?.count ?? 0;
-  }, [tags]);
+  const getTagCount = useCallback(
+    (tagId: string) => {
+      const tag = tags.find((t) => t.id === tagId);
+      return tag?.count ?? 0;
+    },
+    [tags]
+  );
 
   const toggleTagSelection = useCallback((tagId: string) => {
     setSelectedTags((prev) =>
@@ -202,6 +426,8 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
         moveNode,
         createFolder,
         createDocument,
+        loadingTree,
+        reloadTree,
       }}
     >
       {children}

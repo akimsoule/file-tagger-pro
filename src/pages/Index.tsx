@@ -9,12 +9,22 @@ import { useFileContext } from "@/hooks/useFileContext";
 import { useFilteredNodes } from "@/hooks/useFilteredNodes";
 import { useQuery } from "@/hooks/useQuery";
 import { useTags } from "@/hooks/useTags";
-import { Folder as FolderIcon, FileText, ChevronLeft, Plus, Upload } from "lucide-react";
-import { CreateFolderModal } from '@/components/CreateFolderModal';
-import { UploadDocumentModal } from '@/components/UploadDocumentModal';
-import { formatFileSize } from '@/lib/format';
-import { StatsBar } from '@/components/StatsBar';
-import { useTotalSize } from '@/hooks/useTotalSize';
+import {
+  Folder as FolderIcon,
+  FileText,
+  ChevronLeft,
+  Plus,
+  Upload,
+  RefreshCcw,
+} from "lucide-react";
+import { CreateFolderModal } from "@/components/CreateFolderModal";
+import { UploadDocumentModal } from "@/components/UploadDocumentModal";
+import { formatFileSize } from "@/lib/format";
+import { StatsBar } from "@/components/StatsBar";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { FolderCardSkeleton } from "@/components/skeletons/FolderCardSkeleton";
+import { FileCardSkeleton } from "@/components/skeletons/FileCardSkeleton";
+import { useTotalSize } from "@/hooks/useTotalSize";
 import { FolderCard } from "@/components/FolderCard";
 import { FileTreeNode } from "@/logic/local/FileTreeNode";
 import type { Document, Folder } from "@/contexts/file";
@@ -36,8 +46,9 @@ const Index = () => {
     selectedNode,
     setCurrentNode,
     setSelectedNode,
-  // getNodeContent supprimé
     updateNode,
+    loadingTree,
+    reloadTree,
   } = useFileContext();
 
   const { selectedTags, toggleTagSelection: toggleTag, tags } = useTags();
@@ -61,7 +72,8 @@ const Index = () => {
     }
   }, [setSearchQuery, setSortBy, selectedTags, toggleTag]);
 
-  const { documents: documentNodes, folders: folderNodes } = useFilteredNodes(currentNode);
+  const { documents: documentNodes, folders: folderNodes } =
+    useFilteredNodes(currentNode);
   const content = { documents: documentNodes, folders: folderNodes };
 
   const navigateUp = useCallback(() => {
@@ -82,7 +94,7 @@ const Index = () => {
           currentNode={currentNode}
         />
 
-  <main className="flex-1 flex flex-col min-w-0 w-full min-h-0">
+        <main className="flex-1 flex flex-col min-w-0 w-full min-h-0">
           <header className="flex items-center gap-4 p-4 border-b border-border bg-card/50">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="shrink-0" />
@@ -102,8 +114,19 @@ const Index = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2 mb-2">
-                  <FolderIcon className="w-6 h-6" />
                   {currentNode ? currentNode.name : "Root Folder"}
+                  {loadingTree && <LoadingSpinner size={16} />}
+                  <button
+                    onClick={() => reloadTree && reloadTree()}
+                    className="ml-1 p-1 rounded hover:bg-accent text-muted-foreground"
+                    title="Recharger"
+                    aria-label="Recharger"
+                    disabled={loadingTree}
+                  >
+                    <RefreshCcw
+                      className={`h-4 w-4 ${loadingTree ? "opacity-50" : ""}`}
+                    />
+                  </button>
                 </h1>
                 <p className="text-muted-foreground">
                   {(currentNode?.getData() as Folder)?.description ||
@@ -130,73 +153,104 @@ const Index = () => {
             {/* Zone scrollable principale */}
             <div className="flex-1 min-h-0 overflow-y-auto">
               <div className="p-2 sm:p-4 md:p-6 pb-10">
-              <StatsBar
-                folders={content.folders.length}
-                documents={content.documents.length}
-                sizeBytes={totalSize}
-              />
+                <StatsBar
+                  folders={content.folders.length}
+                  documents={content.documents.length}
+                  sizeBytes={totalSize}
+                  loading={loadingTree}
+                />
 
-              {content.folders.length === 0 &&
-              content.documents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center gap-6">
-                  <div className="p-5 rounded-full bg-muted/60 mb-2">
-                    <FileText className="h-10 w-10 text-muted-foreground" />
+                {loadingTree ? (
+                  <div
+                    className={
+                      viewMode === "grid"
+                        ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                        : "space-y-2"
+                    }
+                  >
+                    {Array.from({ length: viewMode === "grid" ? 8 : 5 }).map(
+                      (_, i) =>
+                        viewMode === "grid" ? (
+                          <FolderCardSkeleton key={i} />
+                        ) : (
+                          <div
+                            key={i}
+                            className="rounded-md border border-border p-4 animate-pulse h-16 flex flex-col gap-2"
+                          >
+                            <div className="h-4 w-1/3 bg-muted rounded" />
+                            <div className="h-3 w-1/2 bg-muted rounded" />
+                          </div>
+                        )
+                    )}
                   </div>
-                  <div className="space-y-2 max-w-sm">
-                    <h3 className="text-xl font-semibold text-foreground">Dossier vide</h3>
-                    <p className="text-muted-foreground text-sm leading-relaxed">
-                      Vous n'avez encore ajouté aucun élément ici. Créez un dossier pour organiser vos fichiers ou uploadez directement votre premier document.
+                ) : content.folders.length === 0 &&
+                  content.documents.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center gap-6">
+                    <div className="p-5 rounded-full bg-muted/60 mb-2">
+                      <FileText className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-2 max-w-sm">
+                      <h3 className="text-xl font-semibold text-foreground">
+                        Dossier vide
+                      </h3>
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        Vous n'avez encore ajouté aucun élément ici. Créez un
+                        dossier pour organiser vos fichiers ou uploadez
+                        directement votre premier document.
+                      </p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        onClick={() => setCreateFolderOpen(true)}
+                        className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      >
+                        <Plus className="h-4 w-4" /> Nouveau dossier
+                      </button>
+                      <button
+                        onClick={() => setUploadOpen(true)}
+                        className="inline-flex items-center gap-2 rounded-md border border-border px-5 py-2.5 text-sm font-medium hover:bg-accent focus:outline-none focus:ring-2 focus:ring-accent"
+                      >
+                        <Upload className="h-4 w-4" /> Uploader un fichier
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground max-w-xs">
+                      Astuce: vous pouvez aussi glisser-déposer un fichier ici
+                      (à implémenter).
                     </p>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <button
-                      onClick={() => setCreateFolderOpen(true)}
-                      className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
-                      <Plus className="h-4 w-4" /> Nouveau dossier
-                    </button>
-                    <button
-                      onClick={() => setUploadOpen(true)}
-                      className="inline-flex items-center gap-2 rounded-md border border-border px-5 py-2.5 text-sm font-medium hover:bg-accent focus:outline-none focus:ring-2 focus:ring-accent"
-                    >
-                      <Upload className="h-4 w-4" /> Uploader un fichier
-                    </button>
+                ) : (
+                  <div
+                    className={
+                      viewMode === "grid"
+                        ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                        : "space-y-2"
+                    }
+                  >
+                    {content.folders.map((folderNode) => (
+                      <FolderCard
+                        key={folderNode.id}
+                        node={folderNode}
+                        onClick={() => setCurrentNode(folderNode)}
+                      />
+                    ))}
+
+                    {content.documents.map((docNode) => (
+                      <FileCard
+                        key={docNode.id}
+                        node={docNode}
+                        onClick={() => setSelectedNode(docNode)}
+                        onToggleFavorite={() => {
+                          const doc = docNode.getData() as Document;
+                          const updatedDoc = {
+                            ...doc,
+                            isFavorite: !doc.isFavorite,
+                          };
+                          updateNode(docNode.id, updatedDoc);
+                        }}
+                      />
+                    ))}
                   </div>
-                  <p className="text-xs text-muted-foreground max-w-xs">Astuce: vous pouvez aussi glisser-déposer un fichier ici (à implémenter).</p>
-                </div>
-              ) : (
-                <div
-                  className={
-                    viewMode === "grid"
-                      ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-                      : "space-y-2"
-                  }
-                >
-                  {content.folders.map((folderNode) => (
-                    <FolderCard
-                      key={folderNode.id}
-                      node={folderNode}
-                      onClick={() => setCurrentNode(folderNode)}
-                    />
-                  ))}
-          
-                  {content.documents.map((docNode) => (
-                    <FileCard
-                      key={docNode.id}
-                      node={docNode}
-                      onClick={() => setSelectedNode(docNode)}
-                      onToggleFavorite={() => {
-                        const doc = docNode.getData() as Document;
-                        const updatedDoc = {
-                          ...doc,
-                          isFavorite: !doc.isFavorite,
-                        };
-                        updateNode(docNode.id, updatedDoc);
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
+                )}
               </div>
             </div>
           </div>
@@ -217,8 +271,15 @@ const Index = () => {
           selectedTags={selectedTags}
         />
       </div>
-  <CreateFolderModal open={createFolderOpen} onClose={() => setCreateFolderOpen(false)} parentId={currentNode?.id} />
-  <UploadDocumentModal open={uploadOpen} onClose={() => setUploadOpen(false)} />
+      <CreateFolderModal
+        open={createFolderOpen}
+        onClose={() => setCreateFolderOpen(false)}
+        parentId={currentNode?.id}
+      />
+      <UploadDocumentModal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+      />
     </SidebarProvider>
   );
 };

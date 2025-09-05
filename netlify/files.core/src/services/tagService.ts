@@ -24,57 +24,58 @@ export class TagService {
   /**
    * Récupère tous les tags uniques avec leurs statistiques
    */
-  async getAllTags(): Promise<TagStats[]> {
-    // Récupérer tous les documents avec leurs tags
-    const documents = await prisma.document.findMany({
-      select: {
-        tags: true
-      }
+  async getAllTags(userId: string): Promise<TagStats[]> {
+    // Récupérer les tags relationnels (nouveau modèle)
+    const relationalTags = await prisma.tag.findMany({
+      where: { userId },
+      include: {
+        documents: true,
+        folders: true,
+      },
+      orderBy: { name: 'asc' }
     });
 
-    // Compter les occurrences de chaque tag
+    if (relationalTags.length > 0) {
+      return relationalTags.map(t => ({
+        name: t.name,
+        count: t.documents.length + t.folders.length,
+        color: t.color
+      })).sort((a,b) => b.count - a.count);
+    }
+
+    // Fallback rétro-compat: calculer depuis CSV des documents (avant migration complète)
+    const documents = await prisma.document.findMany({
+      where: { ownerId: userId },
+      select: { tags: true }
+    });
     const tagCounts = new Map<string, number>();
-    
     documents.forEach(doc => {
       if (doc.tags && doc.tags.trim()) {
-        const tags = doc.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-        tags.forEach(tag => {
-          if (!tagCounts.has(tag)) {
-            tagCounts.set(tag, 0);
-          }
-          tagCounts.set(tag, tagCounts.get(tag)! + 1);
-        });
+        const tags = doc.tags.split(',').map(t => t.trim()).filter(Boolean);
+        tags.forEach(t => tagCounts.set(t, (tagCounts.get(t) || 0) + 1));
       }
     });
-
-    // Convertir en tableau avec couleurs
-    const colorPalette = [
-      '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
-      '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
-    ];
-
-    return Array.from(tagCounts.entries())
-      .map(([name, count], index) => ({
-        name,
-        count,
-        color: this.getTagColor(name, colorPalette, index)
-      }))
-      .sort((a, b) => b.count - a.count); // Trier par popularité
+    const colorPalette = [ '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1' ];
+    return Array.from(tagCounts.entries()).map(([name,count], idx) => ({
+      name,
+      count,
+      color: this.getTagColor(name, colorPalette, idx)
+    })).sort((a,b)=> b.count - a.count);
   }
 
   /**
    * Récupère les tags les plus populaires
    */
-  async getPopularTags(limit = 10): Promise<TagStats[]> {
-    const allTags = await this.getAllTags();
+  async getPopularTags(userId: string, limit = 10): Promise<TagStats[]> {
+    const allTags = await this.getAllTags(userId);
     return allTags.slice(0, limit);
   }
 
   /**
    * Cherche des tags par nom
    */
-  async searchTags(query: string): Promise<TagStats[]> {
-    const allTags = await this.getAllTags();
+  async searchTags(query: string, userId: string): Promise<TagStats[]> {
+    const allTags = await this.getAllTags(userId);
     return allTags.filter(tag => 
       tag.name.toLowerCase().includes(query.toLowerCase())
     );
@@ -150,11 +151,11 @@ export class TagService {
   /**
    * Obtient les statistiques des tags
    */
-  async getTagAnalytics(): Promise<TagAnalytics> {
-    const allTags = await this.getAllTags();
+  async getTagAnalytics(userId: string): Promise<TagAnalytics> {
+    const allTags = await this.getAllTags(userId);
     
     // Grouper par type de document
-    const documents = await prisma.document.findMany({
+  const documents = await prisma.document.findMany({
       select: {
         type: true,
         tags: true,
@@ -205,84 +206,35 @@ export class TagService {
   /**
    * Renomme un tag dans tous les documents
    */
-  async renameTag(oldTag: string, newTag: string): Promise<number> {
-    const documents = await prisma.document.findMany({
-      where: {
-        tags: {
-          contains: oldTag
-        }
-      },
-      select: {
-        id: true,
-        tags: true
-      }
+  async renameTag(oldTag: string, newTag: string, userId: string): Promise<number> {
+    // Mise à jour du Tag relationnel
+    const updated = await prisma.tag.updateMany({
+      where: { userId, name: oldTag },
+      data: { name: newTag }
     });
-
-    let updatedCount = 0;
-
-    for (const doc of documents) {
-      if (doc.tags) {
-        const tags = doc.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-        const tagIndex = tags.indexOf(oldTag.trim());
-        
-        if (tagIndex !== -1) {
-          tags[tagIndex] = newTag.trim();
-          await this.updateDocumentTags(doc.id, tags);
-          updatedCount++;
-        }
-      }
-    }
-
     await this.logService.log({
       action: 'TAG_UPDATE',
       entity: 'TAG',
       entityId: oldTag,
-      details: `Tag renommé de "${oldTag}" vers "${newTag}" (${updatedCount} documents affectés)`,
-      userId: ''
+      details: `Tag renommé de "${oldTag}" vers "${newTag}" (${updated.count} entrées)`,
+      userId
     });
-
-    return updatedCount;
+    return updated.count;
   }
 
   /**
    * Supprime un tag de tous les documents
    */
-  async deleteTag(tagToDelete: string): Promise<number> {
-    const documents = await prisma.document.findMany({
-      where: {
-        tags: {
-          contains: tagToDelete
-        }
-      },
-      select: {
-        id: true,
-        tags: true
-      }
-    });
-
-    let updatedCount = 0;
-
-    for (const doc of documents) {
-      if (doc.tags) {
-        const tags = doc.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-        const filteredTags = tags.filter(tag => tag !== tagToDelete.trim());
-        
-        if (filteredTags.length !== tags.length) {
-          await this.updateDocumentTags(doc.id, filteredTags);
-          updatedCount++;
-        }
-      }
-    }
-
+  async deleteTag(tagToDelete: string, userId: string): Promise<number> {
+    const deleted = await prisma.tag.deleteMany({ where: { userId, name: tagToDelete } });
     await this.logService.log({
       action: 'TAG_DELETE',
       entity: 'TAG',
       entityId: tagToDelete,
-      details: `Tag supprimé: "${tagToDelete}" (${updatedCount} documents affectés)`,
-      userId: ''
+      details: `Tag supprimé: "${tagToDelete}" (${deleted.count} enregistrements)` ,
+      userId
     });
-
-    return updatedCount;
+    return deleted.count;
   }
 
   /**

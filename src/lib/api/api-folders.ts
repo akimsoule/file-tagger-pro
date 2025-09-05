@@ -6,6 +6,7 @@ export interface FolderDTO {
   name: string;
   description?: string;
   color?: string;
+  tags?: string;
   ownerId: string;
   parentId?: string | null;
   createdAt: string;
@@ -28,11 +29,11 @@ export function getFolder(id: string) {
   return api<FolderDTO>(`/folders/${id}`, { auth: true });
 }
 
-export function createFolder(data: { name: string; description?: string; color?: string; parentId?: string }) {
+export function createFolder(data: { name: string; description?: string; color?: string; parentId?: string; tags?: string }) {
   return api<FolderDTO>(`/folders`, { method: 'POST', body: JSON.stringify(data), auth: true });
 }
 
-export function updateFolder(id: string, data: Partial<Pick<FolderDTO,'name'|'description'|'color'|'parentId'>>) {
+export function updateFolder(id: string, data: Partial<Pick<FolderDTO,'name'|'description'|'color'|'parentId'|'tags'>>) {
   return api<FolderDTO>(`/folders/${id}`, { method: 'PUT', body: JSON.stringify(data), auth: true });
 }
 

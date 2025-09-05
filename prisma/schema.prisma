@@ -20,6 +20,7 @@ model User {
   folders      Folder[]
   logs         Log[]           @relation("UserLogs")
   megaConfig   UserMegaConfig? // Configuration MEGA de l'utilisateur
+  tags         Tag[]
 }
 
 model UserMegaConfig {
@@ -47,6 +48,10 @@ model Folder {
   children    Folder[]   @relation("FolderHierarchy")
   documents   Document[]
   logs        Log[]      @relation("FolderLogs")
+  // Transition: stockage CSV historique avant passage complet aux relations Tag
+  tags        String     @default("")
+  // Nouvelle relation many-to-many via table de jonction FolderTag
+  tagLinks    FolderTag[]
   isRoot      Boolean    @default(false) // Drapeau logique: un seul dossier racine virtuel par utilisateur
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -60,7 +65,9 @@ model Document {
   type        String
   size        Int
   description String?
-  tags        String     @default("") // Tags séparés par des virgules
+  tags        String     @default("") // Tags séparés par des virgules (transition)
+  // Nouvelle relation many-to-many via table de jonction DocumentTag
+  tagLinks    DocumentTag[]
   fileId      String     // MEGA file ID
   hash        String     @unique
   owner       User       @relation(fields: [ownerId], references: [id])
@@ -76,6 +83,49 @@ model Document {
   // Index composite pour accélérer les requêtes filtrant par propriétaire + tags + ordre chronologique
   // NOTE: tags étant une chaîne CSV, l'efficacité reste limitée; à terme envisager une table de jonction DocumentTag.
   @@index([ownerId, tags, createdAt], map: "idx_doc_owner_tags_created")
+}
+
+// Table des tags normalisés
+model Tag {
+  id         String        @id @default(uuid())
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  name       String
+  color      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  documents  DocumentTag[]
+  folders    FolderTag[]
+
+  @@map("tags")
+  @@unique([userId, name], map: "uniq_user_tag_name")
+  @@index([userId, name], map: "idx_user_tag_name")
+}
+
+// Table de jonction Document <-> Tag
+model DocumentTag {
+  documentId String
+  tagId      String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
+  @@id([documentId, tagId])
+  @@map("document_tags")
+  @@index([tagId], map: "idx_documenttag_tag")
+}
+
+// Table de jonction Folder <-> Tag
+model FolderTag {
+  folderId String
+  tagId    String
+  folder   Folder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  tag      Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
+  @@id([folderId, tagId])
+  @@map("folder_tags")
+  @@index([tagId], map: "idx_foldertag_tag")
 }
 
 model Log {

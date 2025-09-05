@@ -40,10 +40,10 @@ export default handleErrors(async (request: Request, context: Context) => {
   switch (request.method) {
     case 'GET':
       if (tagName) {
-        return await handleTagStats(tagName);
+        return await handleTagStats(tagName, user.userId);
       } else {
         const searchQuery = url.searchParams.get('q') || url.searchParams.get('search');
-        return await handleListTags(searchQuery);
+        return await handleListTags(searchQuery, user.userId);
       }
 
     case 'DELETE':
@@ -60,16 +60,14 @@ export default handleErrors(async (request: Request, context: Context) => {
 
 // Fonctions helper
 
-async function handleListTags(searchQuery?: string | null) {
+async function handleListTags(searchQuery: string | null | undefined, userId: string) {
   try {
     let tags;
     
     if (searchQuery && searchQuery.trim()) {
-      // Recherche de tags spécifiques
-      tags = await tagService.searchTags(searchQuery.trim());
+      tags = await tagService.searchTags(searchQuery.trim(), userId);
     } else {
-      // Récupération de tous les tags
-      tags = await tagService.getAllTags();
+      tags = await tagService.getAllTags(userId);
     }
     
     return createSuccessResponse(tags);
@@ -79,9 +77,9 @@ async function handleListTags(searchQuery?: string | null) {
   }
 }
 
-async function handleTagStats(tagName: string) {
+async function handleTagStats(tagName: string, userId: string) {
   try {
-    const allTags = await tagService.getAllTags();
+  const allTags = await tagService.getAllTags(userId);
     const specificTag = allTags.find(t => t.name === tagName);
     
     if (!specificTag) {
@@ -97,7 +95,7 @@ async function handleTagStats(tagName: string) {
 
 async function handleDeleteTag(tagName: string, user: any) {
   try {
-    const updatedCount = await tagService.deleteTag(tagName);
+  const updatedCount = await tagService.deleteTag(tagName, user.userId);
     
     return createSuccessResponse({
       message: `Tag "${tagName}" supprimé avec succès`,

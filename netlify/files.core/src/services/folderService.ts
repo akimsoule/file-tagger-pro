@@ -7,6 +7,7 @@ export interface CreateFolderData {
   color?: string;
   parentId?: string; // ID du dossier parent (optionnel pour les dossiers racine)
   ownerId: string;
+  tags?: string;
 }
 
 export interface UpdateFolderData {
@@ -14,6 +15,7 @@ export interface UpdateFolderData {
   description?: string;
   color?: string;
   parentId?: string;
+  tags?: string;
 }
 
 export interface FolderWithCounts {
@@ -86,6 +88,7 @@ export class FolderService {
         color: data.color || '#3B82F6',
         parentId: data.parentId,
         ownerId: data.ownerId,
+        tags: data.tags || '',
       },
       include: {
         parent: {
@@ -112,6 +115,10 @@ export class FolderService {
       details: `Dossier créé: "${folder.name}"${data.parentId ? ` dans "${folder.parent?.name}"` : ' à la racine'}`,
     });
 
+    // Sync tags relationnels si fournis
+    if ((data.tags || '').trim()) {
+      await this.syncFolderTags(folder.id, data.tags || '', data.ownerId);
+    }
     return folder;
   }
 
@@ -303,13 +310,14 @@ export class FolderService {
       }
     }
 
-    const updatedFolder = await prisma.folder.update({
+  const updatedFolder = await prisma.folder.update({
       where: { id },
       data: {
         ...(data.name && { name: data.name.trim() }),
         ...(data.description !== undefined && { description: data.description?.trim() }),
         ...(data.color && { color: data.color }),
         ...(data.parentId !== undefined && { parentId: data.parentId }),
+    ...(data.tags !== undefined && { tags: (data.tags || '').split(',').map(t=>t.trim()).filter(Boolean).join(',') }),
       },
       include: {
         parent: {
@@ -336,6 +344,9 @@ export class FolderService {
       details: `Dossier mis à jour: "${updatedFolder.name}"`,
     });
 
+    if (data.tags !== undefined) {
+      await this.syncFolderTags(id, data.tags || '', userId);
+    }
     return updatedFolder;
   }
 
@@ -473,5 +484,36 @@ export class FolderService {
     }
 
     return this.isDescendant(ancestorId, descendant.parentId);
+  }
+
+  /**
+   * Synchronise la table de jonction FolderTag avec la chaîne CSV pour un dossier
+   */
+  private async syncFolderTags(folderId: string, csv: string, ownerId: string) {
+    const tagNames = Array.from(new Set(csv.split(',').map(t => t.trim()).filter(Boolean)));
+    if (tagNames.length === 0) {
+      await (prisma as any).folderTag.deleteMany({ where: { folderId } }); // eslint-disable-line @typescript-eslint/no-explicit-any
+      return;
+    }
+    const existingLinks = await (prisma as any).folderTag.findMany({ // eslint-disable-line @typescript-eslint/no-explicit-any
+      where: { folderId },
+      include: { tag: true }
+    });
+    const existingMap = new Map<string, any>(existingLinks.map((l: any) => [l.tag.name, l])); // eslint-disable-line @typescript-eslint/no-explicit-any
+    for (const name of tagNames) {
+      if (!existingMap.has(name)) {
+        const tag = await (prisma as any).tag.upsert({ // eslint-disable-line @typescript-eslint/no-explicit-any
+          where: { userId_name: { userId: ownerId, name } },
+            update: {},
+            create: { userId: ownerId, name },
+        });
+        await (prisma as any).folderTag.create({ data: { folderId, tagId: tag.id } }); // eslint-disable-line @typescript-eslint/no-explicit-any
+      }
+    }
+    for (const [name, link] of existingMap.entries()) {
+      if (!tagNames.includes(name)) {
+        await (prisma as any).folderTag.delete({ where: { folderId_tagId: { folderId, tagId: link.tagId } } }); // eslint-disable-line @typescript-eslint/no-explicit-any
+      }
+    }
   }
 }
