@@ -1,7 +1,7 @@
 # Configuration Netlify pour backend + frontend Vite
 
 [build]
-  command = "npm run build"
+  command = "npm install && npm run build && npx prisma migrate deploy && npx prisma generate"
   publish = "dist"
   functions = "netlify/functions"
 
