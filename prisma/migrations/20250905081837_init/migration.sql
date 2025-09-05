@@ -31,6 +31,8 @@ CREATE TABLE "folders" (
     "color" TEXT DEFAULT '#3B82F6',
     "ownerId" TEXT NOT NULL,
     "parentId" TEXT,
+    "tags" TEXT NOT NULL DEFAULT '',
+    "isRoot" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -54,6 +56,36 @@ CREATE TABLE "documents" (
     "modifiedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "documents_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "tags" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "color" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "tags_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "document_tags" (
+    "documentId" TEXT NOT NULL,
+    "tagId" TEXT NOT NULL,
+    "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "document_tags_pkey" PRIMARY KEY ("documentId","tagId")
+);
+
+-- CreateTable
+CREATE TABLE "folder_tags" (
+    "folderId" TEXT NOT NULL,
+    "tagId" TEXT NOT NULL,
+    "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "folder_tags_pkey" PRIMARY KEY ("folderId","tagId")
 );
 
 -- CreateTable
@@ -85,6 +117,18 @@ CREATE UNIQUE INDEX "documents_hash_key" ON "documents"("hash");
 -- CreateIndex
 CREATE INDEX "idx_doc_owner_tags_created" ON "documents"("ownerId", "tags", "createdAt");
 
+-- CreateIndex
+CREATE INDEX "idx_user_tag_name" ON "tags"("userId", "name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "uniq_user_tag_name" ON "tags"("userId", "name");
+
+-- CreateIndex
+CREATE INDEX "idx_documenttag_tag" ON "document_tags"("tagId");
+
+-- CreateIndex
+CREATE INDEX "idx_foldertag_tag" ON "folder_tags"("tagId");
+
 -- AddForeignKey
 ALTER TABLE "user_mega_configs" ADD CONSTRAINT "user_mega_configs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -99,6 +143,21 @@ ALTER TABLE "documents" ADD CONSTRAINT "documents_ownerId_fkey" FOREIGN KEY ("ow
 
 -- AddForeignKey
 ALTER TABLE "documents" ADD CONSTRAINT "documents_folderId_fkey" FOREIGN KEY ("folderId") REFERENCES "folders"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "tags" ADD CONSTRAINT "tags_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_tags" ADD CONSTRAINT "document_tags_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "documents"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_tags" ADD CONSTRAINT "document_tags_tagId_fkey" FOREIGN KEY ("tagId") REFERENCES "tags"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "folder_tags" ADD CONSTRAINT "folder_tags_folderId_fkey" FOREIGN KEY ("folderId") REFERENCES "folders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "folder_tags" ADD CONSTRAINT "folder_tags_tagId_fkey" FOREIGN KEY ("tagId") REFERENCES "tags"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "logs" ADD CONSTRAINT "logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
