@@ -35,7 +35,7 @@ const backupHandler = handleErrors(async (request: Request, context: Context) =>
     return authResult.response!;
   }
 
-  const user = authResult.context!.user!;
+  const user = authResult.context!.user! as AuthUser;
   const url = new URL(request.url);
   const pathSegments = url.pathname.split('/').filter(segment => segment !== '');
   const action = pathSegments[pathSegments.length - 1];
@@ -75,7 +75,8 @@ const backupHandler = handleErrors(async (request: Request, context: Context) =>
 
 // Fonctions helper
 
-async function handleBackupStatus(user: any) {
+interface AuthUser { userId: string }
+async function handleBackupStatus(_user: AuthUser) {
   try {
     // Statut des sauvegardes (simplifié)
     return createSuccessResponse({
@@ -89,7 +90,7 @@ async function handleBackupStatus(user: any) {
   }
 }
 
-async function handleBackupHistory(user: any) {
+async function handleBackupHistory(_user: AuthUser) {
   try {
     // Historique des sauvegardes (à implémenter)
     return createSuccessResponse({
@@ -102,7 +103,7 @@ async function handleBackupHistory(user: any) {
   }
 }
 
-async function handleBackupDownload(user: any) {
+async function handleBackupDownload(_user: AuthUser) {
   try {
     // Télécharger une sauvegarde (à implémenter)
     return createErrorResponse('Téléchargement de sauvegarde non implémenté', 501);
@@ -112,13 +113,17 @@ async function handleBackupDownload(user: any) {
   }
 }
 
-async function handleCreateBackup(request: Request, user: any) {
+async function handleCreateBackup(request: Request, user: AuthUser) {
   const parseResult = await safeJsonParse(request);
   if (!parseResult.success) {
     return createErrorResponse(parseResult.error!, 400);
   }
-
-  const { type = 'full', description } = parseResult.data;
+  // Validation basique du payload
+  if (typeof parseResult.data !== 'object' || parseResult.data === null) {
+    return createErrorResponse('Payload invalide', 400);
+  }
+  interface CreateBackupPayload { type?: string; description?: string }
+  const { type = 'full', description } = parseResult.data as CreateBackupPayload;
 
   if (!['full', 'incremental', 'documents-only'].includes(type)) {
     return createErrorResponse('Type de sauvegarde invalide. Valeurs autorisées: full, incremental, documents-only', 400);
@@ -142,13 +147,16 @@ async function handleCreateBackup(request: Request, user: any) {
   }
 }
 
-async function handleRestoreBackup(request: Request, user: any) {
+async function handleRestoreBackup(request: Request, user: AuthUser) {
   const parseResult = await safeJsonParse(request);
   if (!parseResult.success) {
     return createErrorResponse(parseResult.error!, 400);
   }
-
-  const { backupId, replaceExisting = false } = parseResult.data;
+  if (typeof parseResult.data !== 'object' || parseResult.data === null) {
+    return createErrorResponse('Payload invalide', 400);
+  }
+  interface RestoreBackupPayload { backupId?: string; replaceExisting?: boolean }
+  const { backupId, replaceExisting = false } = parseResult.data as RestoreBackupPayload;
 
   if (!backupId) {
     return createErrorResponse('ID de sauvegarde requis', 400);

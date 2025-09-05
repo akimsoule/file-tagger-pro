@@ -85,7 +85,7 @@ const bulkSyncHandler = handleErrors(async (request: Request, _context: Context)
       continue;
     }
     // Construire payload sécurisé
-    const updateData: Record<string, any> = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const updateData: Record<string, unknown> = {};
     for (const [k,v] of Object.entries(item.data)) {
       if (!ALLOWED_FIELDS.has(k)) continue;
       if (k === 'tags' && typeof v === 'string') {

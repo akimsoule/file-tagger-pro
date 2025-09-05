@@ -1,6 +1,7 @@
 import { Context } from '@netlify/functions';
 import { FolderService } from '../files.core/src/services/folderService';
 import { LogService } from '../files.core/src/services/logService';
+import prisma from '../files.core/src/services/database';
 import {
   handleCorsOptions,
   requireAuth,
@@ -14,7 +15,10 @@ import {
 const logService = new LogService();
 const folderService = new FolderService(logService);
 
-async function handleGetFolders(request: Request, user: any) {
+interface AuthUser { userId: string }
+// Prisma déjà importé statiquement pour éviter le dynamic import
+
+async function handleGetFolders(request: Request, user: AuthUser) {
   try {
     const url = new URL(request.url);
     const parentId = url.searchParams.get('parentId');
@@ -22,7 +26,6 @@ async function handleGetFolders(request: Request, user: any) {
 
     if (isRootFlag === '1') {
       // Récupérer le dossier root logique (isRoot true)
-      const prisma = (await import('../files.core/src/services/database')).default as any; // eslint-disable-line @typescript-eslint/no-explicit-any
       const root = await prisma.folder.findFirst({ where: { ownerId: user.userId, isRoot: true } });
       if (!root) return createSuccessResponse(null);
       return createSuccessResponse(root);
@@ -45,7 +48,7 @@ async function handleGetFolders(request: Request, user: any) {
   }
 }
 
-async function handleGetFolder(request: Request, user: any) {
+async function handleGetFolder(request: Request, user: AuthUser) {
   try {
     const url = new URL(request.url);
     const pathSegments = url.pathname.split('/').filter(segment => segment !== '');
@@ -66,7 +69,7 @@ async function handleGetFolder(request: Request, user: any) {
   }
 }
 
-async function handleCreateFolder(request: Request, user: any) {
+async function handleCreateFolder(request: Request, user: AuthUser) {
   try {
     const body = await request.json();
     
@@ -94,7 +97,7 @@ async function handleCreateFolder(request: Request, user: any) {
   }
 }
 
-async function handleUpdateFolder(request: Request, user: any) {
+async function handleUpdateFolder(request: Request, user: AuthUser) {
   try {
     const url = new URL(request.url);
     const pathSegments = url.pathname.split('/').filter(segment => segment !== '');
@@ -125,7 +128,7 @@ async function handleUpdateFolder(request: Request, user: any) {
   }
 }
 
-async function handleDeleteFolder(request: Request, user: any) {
+async function handleDeleteFolder(request: Request, user: AuthUser) {
   try {
     const url = new URL(request.url);
     const pathSegments = url.pathname.split('/').filter(segment => segment !== '');
@@ -146,7 +149,7 @@ async function handleDeleteFolder(request: Request, user: any) {
   }
 }
 
-async function handleMoveDocument(request: Request, user: any) {
+async function handleMoveDocument(request: Request, user: AuthUser) {
   try {
     const body = await request.json();
     
@@ -170,7 +173,7 @@ async function handleMoveDocument(request: Request, user: any) {
   }
 }
 
-async function handleGetFolderPath(request: Request, user: any) {
+async function handleGetFolderPath(request: Request, user: AuthUser) {
   try {
     const url = new URL(request.url);
     const pathSegments = url.pathname.split('/').filter(segment => segment !== '');
@@ -201,17 +204,17 @@ const folderHandler = handleErrors(async (request: Request, context: Context) =>
   // Validation des méthodes HTTP autorisées
   const methodValidation = validateHttpMethod(request, ['GET', 'POST', 'PUT', 'DELETE']);
   if (!methodValidation.success) {
-    return methodValidation.response;
+    return methodValidation.response!;
   }
 
   // Authentification requise
   const authResult = requireAuth(request);
 
   if (!authResult.success) {
-    return authResult.response;
+    return authResult.response!;
   }
 
-  const user = authResult.context?.user;
+  const user = authResult.context?.user as AuthUser | undefined;
   const url = new URL(request.url);
 
   try {
@@ -220,23 +223,23 @@ const folderHandler = handleErrors(async (request: Request, context: Context) =>
       switch (request.method) {
         case 'GET':
           if (url.pathname.endsWith('/folders')) {
-            return await handleGetFolders(request, user);
+            return user ? await handleGetFolders(request, user) : createErrorResponse('Utilisateur requis', 401);
           } else if (url.pathname.includes('/path')) {
-            return await handleGetFolderPath(request, user);
+            return user ? await handleGetFolderPath(request, user) : createErrorResponse('Utilisateur requis', 401);
           } else {
-            return await handleGetFolder(request, user);
+            return user ? await handleGetFolder(request, user) : createErrorResponse('Utilisateur requis', 401);
           }
         case 'POST':
           if (url.pathname.endsWith('/folders')) {
-            return await handleCreateFolder(request, user);
+            return user ? await handleCreateFolder(request, user) : createErrorResponse('Utilisateur requis', 401);
           } else if (url.pathname.includes('/move-document')) {
-            return await handleMoveDocument(request, user);
+            return user ? await handleMoveDocument(request, user) : createErrorResponse('Utilisateur requis', 401);
           }
           break;
         case 'PUT':
-          return await handleUpdateFolder(request, user);
+          return user ? await handleUpdateFolder(request, user) : createErrorResponse('Utilisateur requis', 401);
         case 'DELETE':
-          return await handleDeleteFolder(request, user);
+          return user ? await handleDeleteFolder(request, user) : createErrorResponse('Utilisateur requis', 401);
       }
     }
 

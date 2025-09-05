@@ -1,5 +1,5 @@
-import prisma from './database';
-import { LogService } from './logService';
+import prisma from "./database";
+import { LogService } from "./logService";
 
 export interface CreateFolderData {
   name: string;
@@ -51,7 +51,7 @@ export class FolderService {
   async createFolder(data: CreateFolderData) {
     // Vérifier que le nom n'est pas vide
     if (!data.name.trim()) {
-      throw new Error('Le nom du dossier est requis');
+      throw new Error("Le nom du dossier est requis");
     }
 
     // Vérifier que le dossier parent existe (si spécifié)
@@ -64,7 +64,7 @@ export class FolderService {
       });
 
       if (!parentFolder) {
-        throw new Error('Dossier parent non trouvé ou accès non autorisé');
+        throw new Error("Dossier parent non trouvé ou accès non autorisé");
       }
     }
 
@@ -78,17 +78,17 @@ export class FolderService {
     });
 
     if (existingFolder) {
-      throw new Error('Un dossier avec ce nom existe déjà dans ce répertoire');
+      throw new Error("Un dossier avec ce nom existe déjà dans ce répertoire");
     }
 
-  const folder = await prisma.folder.create({
+    const folder = await prisma.folder.create({
       data: {
         name: data.name.trim(),
         description: data.description?.trim(),
-        color: data.color || '#3B82F6',
+        color: data.color || "#3B82F6",
         parentId: data.parentId,
         ownerId: data.ownerId,
-        tags: data.tags || '',
+        tags: data.tags || "",
       },
       include: {
         parent: {
@@ -108,16 +108,18 @@ export class FolderService {
 
     // Log de la création
     await this.logService.log({
-      action: 'CREATE',
-      entity: 'FOLDER',
+      action: "CREATE",
+      entity: "FOLDER",
       entityId: folder.id,
       userId: data.ownerId,
-      details: `Dossier créé: "${folder.name}"${data.parentId ? ` dans "${folder.parent?.name}"` : ' à la racine'}`,
+      details: `Dossier créé: "${folder.name}"${
+        data.parentId ? ` dans "${folder.parent?.name}"` : " à la racine"
+      }`,
     });
 
     // Sync tags relationnels si fournis
-    if ((data.tags || '').trim()) {
-      await this.syncFolderTags(folder.id, data.tags || '', data.ownerId);
+    if ((data.tags || "").trim()) {
+      await this.syncFolderTags(folder.id, data.tags || "", data.ownerId);
     }
     return folder;
   }
@@ -167,7 +169,7 @@ export class FolderService {
     });
 
     if (!folder) {
-      throw new Error('Dossier non trouvé');
+      throw new Error("Dossier non trouvé");
     }
 
     return folder;
@@ -177,7 +179,7 @@ export class FolderService {
    * Récupère tous les dossiers racine d'un utilisateur
    */
   async getRootFolders(userId: string): Promise<FolderWithCounts[]> {
-    const folders = await (prisma as any).folder.findMany({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    const folders = await prisma.folder.findMany({
       where: {
         ownerId: userId,
         parentId: null,
@@ -185,16 +187,15 @@ export class FolderService {
       },
       include: {
         _count: {
-          select: { children: true, documents: true }
+          select: { children: true, documents: true },
         },
-        documents: { select: { size: true } }
+        documents: { select: { size: true } },
       },
       orderBy: {
-        name: 'asc',
+        name: "asc",
       },
     });
-
-    return folders.map((folder: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    return folders.map((folder) => ({
       id: folder.id,
       name: folder.name,
       description: folder.description || undefined,
@@ -205,16 +206,21 @@ export class FolderService {
       updatedAt: folder.updatedAt,
       documentCount: folder._count?.documents || 0,
       folderCount: folder._count?.children || 0,
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  totalSize: (folder.documents || []).reduce((sum: number, doc: { size: number }) => sum + (doc.size || 0), 0),
-      isRoot: folder.isRoot
+      totalSize: (folder.documents || []).reduce(
+        (sum: number, doc: { size: number }) => sum + (doc.size || 0),
+        0
+      ),
+      isRoot: folder.isRoot,
     }));
   }
 
   /**
    * Récupère les sous-dossiers d'un dossier
    */
-  async getSubfolders(parentId: string, userId: string): Promise<FolderWithCounts[]> {
+  async getSubfolders(
+    parentId: string,
+    userId: string
+  ): Promise<FolderWithCounts[]> {
     const folders = await prisma.folder.findMany({
       where: {
         parentId,
@@ -234,11 +240,11 @@ export class FolderService {
         },
       },
       orderBy: {
-        name: 'asc',
+        name: "asc",
       },
     });
 
-    return folders.map(folder => ({
+    return folders.map((folder) => ({
       id: folder.id,
       name: folder.name,
       description: folder.description || undefined,
@@ -265,12 +271,12 @@ export class FolderService {
     });
 
     if (!folder) {
-      throw new Error('Dossier non trouvé');
+      throw new Error("Dossier non trouvé");
     }
 
     // Vérifier que le nom n'est pas vide si fourni
     if (data.name !== undefined && !data.name.trim()) {
-      throw new Error('Le nom du dossier ne peut pas être vide');
+      throw new Error("Le nom du dossier ne peut pas être vide");
     }
 
     // Vérifier que le dossier parent existe (si changé)
@@ -284,12 +290,14 @@ export class FolderService {
         });
 
         if (!parentFolder) {
-          throw new Error('Dossier parent non trouvé');
+          throw new Error("Dossier parent non trouvé");
         }
 
         // Vérifier qu'on ne crée pas une boucle (le parent ne peut pas être un descendant)
         if (await this.isDescendant(id, data.parentId)) {
-          throw new Error('Impossible de déplacer un dossier dans un de ses sous-dossiers');
+          throw new Error(
+            "Impossible de déplacer un dossier dans un de ses sous-dossiers"
+          );
         }
       }
 
@@ -305,19 +313,29 @@ export class FolderService {
         });
 
         if (existingFolder) {
-          throw new Error('Un dossier avec ce nom existe déjà dans ce répertoire');
+          throw new Error(
+            "Un dossier avec ce nom existe déjà dans ce répertoire"
+          );
         }
       }
     }
 
-  const updatedFolder = await prisma.folder.update({
+    const updatedFolder = await prisma.folder.update({
       where: { id },
       data: {
         ...(data.name && { name: data.name.trim() }),
-        ...(data.description !== undefined && { description: data.description?.trim() }),
+        ...(data.description !== undefined && {
+          description: data.description?.trim(),
+        }),
         ...(data.color && { color: data.color }),
         ...(data.parentId !== undefined && { parentId: data.parentId }),
-    ...(data.tags !== undefined && { tags: (data.tags || '').split(',').map(t=>t.trim()).filter(Boolean).join(',') }),
+        ...(data.tags !== undefined && {
+          tags: (data.tags || "")
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
+            .join(","),
+        }),
       },
       include: {
         parent: {
@@ -337,15 +355,15 @@ export class FolderService {
 
     // Log de la mise à jour
     await this.logService.log({
-      action: 'UPDATE',
-      entity: 'FOLDER',
+      action: "UPDATE",
+      entity: "FOLDER",
       entityId: id,
       userId,
       details: `Dossier mis à jour: "${updatedFolder.name}"`,
     });
 
     if (data.tags !== undefined) {
-      await this.syncFolderTags(id, data.tags || '', userId);
+      await this.syncFolderTags(id, data.tags || "", userId);
     }
     return updatedFolder;
   }
@@ -370,12 +388,12 @@ export class FolderService {
     });
 
     if (!folder) {
-      throw new Error('Dossier non trouvé');
+      throw new Error("Dossier non trouvé");
     }
 
     // Vérifier que le dossier est vide
     if (folder._count.children > 0 || folder._count.documents > 0) {
-      throw new Error('Impossible de supprimer un dossier non vide');
+      throw new Error("Impossible de supprimer un dossier non vide");
     }
 
     await prisma.folder.delete({
@@ -384,8 +402,8 @@ export class FolderService {
 
     // Log de la suppression
     await this.logService.log({
-      action: 'DELETE',
-      entity: 'FOLDER',
+      action: "DELETE",
+      entity: "FOLDER",
       entityId: id,
       userId,
       details: `Dossier supprimé: "${folder.name}"`,
@@ -397,7 +415,11 @@ export class FolderService {
   /**
    * Déplace un document vers un dossier
    */
-  async moveDocumentToFolder(documentId: string, folderId: string | null, userId: string) {
+  async moveDocumentToFolder(
+    documentId: string,
+    folderId: string | null,
+    userId: string
+  ) {
     const document = await prisma.document.findFirst({
       where: {
         id: documentId,
@@ -406,7 +428,7 @@ export class FolderService {
     });
 
     if (!document) {
-      throw new Error('Document non trouvé');
+      throw new Error("Document non trouvé");
     }
 
     // Vérifier que le dossier de destination existe (si spécifié)
@@ -419,7 +441,7 @@ export class FolderService {
       });
 
       if (!folder) {
-        throw new Error('Dossier de destination non trouvé');
+        throw new Error("Dossier de destination non trouvé");
       }
     }
 
@@ -430,11 +452,13 @@ export class FolderService {
 
     // Log du déplacement
     await this.logService.log({
-      action: 'MOVE',
-      entity: 'DOCUMENT',
+      action: "MOVE",
+      entity: "DOCUMENT",
       entityId: documentId,
       userId,
-      details: `Document "${document.name}" déplacé ${folderId ? `vers le dossier` : 'vers la racine'}`,
+      details: `Document "${document.name}" déplacé ${
+        folderId ? `vers le dossier` : "vers la racine"
+      }`,
     });
 
     return updatedDocument;
@@ -455,7 +479,7 @@ export class FolderService {
     });
 
     if (!folder) {
-      throw new Error('Dossier non trouvé');
+      throw new Error("Dossier non trouvé");
     }
 
     if (!folder.parent) {
@@ -469,7 +493,10 @@ export class FolderService {
   /**
    * Vérifie si un dossier est un descendant d'un autre
    */
-  private async isDescendant(ancestorId: string, descendantId: string): Promise<boolean> {
+  private async isDescendant(
+    ancestorId: string,
+    descendantId: string
+  ): Promise<boolean> {
     if (ancestorId === descendantId) {
       return true;
     }
@@ -490,29 +517,40 @@ export class FolderService {
    * Synchronise la table de jonction FolderTag avec la chaîne CSV pour un dossier
    */
   private async syncFolderTags(folderId: string, csv: string, ownerId: string) {
-    const tagNames = Array.from(new Set(csv.split(',').map(t => t.trim()).filter(Boolean)));
+    const tagNames = Array.from(
+      new Set(
+        csv
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      )
+    );
     if (tagNames.length === 0) {
-      await (prisma as any).folderTag.deleteMany({ where: { folderId } }); // eslint-disable-line @typescript-eslint/no-explicit-any
+      await prisma.folderTag.deleteMany({ where: { folderId } });
       return;
     }
-    const existingLinks = await (prisma as any).folderTag.findMany({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    const existingLinks = await prisma.folderTag.findMany({
       where: { folderId },
-      include: { tag: true }
+      include: { tag: true },
     });
-    const existingMap = new Map<string, any>(existingLinks.map((l: any) => [l.tag.name, l])); // eslint-disable-line @typescript-eslint/no-explicit-any
+    const existingMap = new Map<string, (typeof existingLinks)[number]>(
+      existingLinks.map((l) => [l.tag.name, l])
+    );
     for (const name of tagNames) {
       if (!existingMap.has(name)) {
-        const tag = await (prisma as any).tag.upsert({ // eslint-disable-line @typescript-eslint/no-explicit-any
+        const tag = await prisma.tag.upsert({
           where: { userId_name: { userId: ownerId, name } },
-            update: {},
-            create: { userId: ownerId, name },
+          update: {},
+          create: { userId: ownerId, name },
         });
-        await (prisma as any).folderTag.create({ data: { folderId, tagId: tag.id } }); // eslint-disable-line @typescript-eslint/no-explicit-any
+        await prisma.folderTag.create({ data: { folderId, tagId: tag.id } });
       }
     }
     for (const [name, link] of existingMap.entries()) {
       if (!tagNames.includes(name)) {
-        await (prisma as any).folderTag.delete({ where: { folderId_tagId: { folderId, tagId: link.tagId } } }); // eslint-disable-line @typescript-eslint/no-explicit-any
+        await prisma.folderTag.delete({
+          where: { folderId_tagId: { folderId, tagId: link.tagId } },
+        });
       }
     }
   }

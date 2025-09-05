@@ -60,17 +60,20 @@ async function buildTree(userId: string): Promise<TreeFolderDTO | null> {
 
   if (folders.length === 0 && documents.length === 0) return null;
 
-  const folderChildrenMap = new Map<string | null, any[]>(); // eslint-disable-line @typescript-eslint/no-explicit-any
+  type FolderEntity = typeof folders[number];
+  type DocumentEntity = typeof documents[number];
+
+  const folderChildrenMap = new Map<string | null, FolderEntity[]>();
   for (const f of folders) {
     const key = f.parentId || null;
-    if (!folderChildrenMap.has(key)) folderChildrenMap.set(key, []);
-    folderChildrenMap.get(key)!.push(f);
+    const arr = folderChildrenMap.get(key);
+    if (arr) arr.push(f); else folderChildrenMap.set(key, [f]);
   }
-  const docsByFolder = new Map<string | null, any[]>(); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const docsByFolder = new Map<string | null, DocumentEntity[]>();
   for (const d of documents) {
     const key = d.folderId || null;
-    if (!docsByFolder.has(key)) docsByFolder.set(key, []);
-    docsByFolder.get(key)!.push(d);
+    const arr = docsByFolder.get(key);
+    if (arr) arr.push(d); else docsByFolder.set(key, [d]);
   }
 
   const rootFolder = folders.find((f) => f.isRoot);
@@ -107,8 +110,7 @@ async function buildTree(userId: string): Promise<TreeFolderDTO | null> {
     }
   }
 
-  function buildFolder(f: any): TreeFolderDTO {
-    // eslint-disable-line @typescript-eslint/no-explicit-any
+  function buildFolder(f: FolderEntity): TreeFolderDTO {
     const childFolders = folderChildrenMap.get(f.id) || [];
     return {
       id: f.id,
@@ -120,8 +122,7 @@ async function buildTree(userId: string): Promise<TreeFolderDTO | null> {
       createdAt: f.createdAt,
       updatedAt: f.updatedAt,
       folders: childFolders.map(buildFolder),
-      documents: (docsByFolder.get(f.id) || []).map((d: any) => ({
-        // eslint-disable-line @typescript-eslint/no-explicit-any
+      documents: (docsByFolder.get(f.id) || []).map((d: DocumentEntity) => ({
         id: d.id,
         name: d.name,
         type: d.type,
@@ -153,8 +154,7 @@ async function buildTree(userId: string): Promise<TreeFolderDTO | null> {
       createdAt: new Date(),
       updatedAt: new Date(),
       folders: topFolders.map(buildFolder),
-      documents: (docsByFolder.get(null) || []).map((d: any) => ({
-        // eslint-disable-line @typescript-eslint/no-explicit-any
+  documents: (docsByFolder.get(null) || []).map((d: DocumentEntity) => ({
         id: d.id,
         name: d.name,
         type: d.type,
@@ -202,7 +202,7 @@ const treeHandler = handleErrors(
         : { documents: 0, folders: 0, totalSize: 0 };
       return createSuccessResponse({ tree, stats: globalStats });
     } catch (e) {
-      console.error("Erreur build tree", e);
+      console.error("[tree] Erreur build tree:", e);
       return createErrorResponse(
         "Erreur lors de la construction de l'arbre",
         500

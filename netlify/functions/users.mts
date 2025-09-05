@@ -34,7 +34,7 @@ export default handleErrors(async (request: Request, context: Context) => {
     return authResult.response!;
   }
 
-  const user = authResult.context!.user!;
+  const user = authResult.context!.user! as AuthUser;
   const url = new URL(request.url);
   const pathSegments = url.pathname.split('/').filter(segment => segment !== '');
   const action = pathSegments[pathSegments.length - 1];
@@ -76,7 +76,9 @@ export default handleErrors(async (request: Request, context: Context) => {
   }
 });
 
-async function handleGetProfile(user: any) {
+interface AuthUser { userId: string }
+
+async function handleGetProfile(user: AuthUser) {
   try {
     const userProfile = await userService.getUserById(user.userId);
     if (!userProfile) {
@@ -84,12 +86,12 @@ async function handleGetProfile(user: any) {
     }
     return createSuccessResponse(userProfile);
   } catch (error) {
-    console.error('Erreur lors de la récupération du profil:', error);
+  console.error('[users] Erreur profil:', error);
     return createErrorResponse('Erreur lors de la récupération du profil', 500);
   }
 }
 
-async function handleGetPreferences(user: any) {
+async function handleGetPreferences(_user: AuthUser) {
   try {
     // Récupérer les préférences de l'utilisateur (à implémenter dans UserService)
     const defaultPreferences = {
@@ -104,20 +106,20 @@ async function handleGetPreferences(user: any) {
       preferences: defaultPreferences
     });
   } catch (error) {
-    console.error('Erreur lors de la récupération des préférences:', error);
+  console.error('[users] Erreur préférences get:', error);
     return createErrorResponse('Erreur lors de la récupération des préférences', 500);
   }
 }
 
-async function handleUpdateProfile(request: Request, user: any) {
+async function handleUpdateProfile(request: Request, user: AuthUser) {
   const parseResult = await safeJsonParse(request);
   if (!parseResult.success) {
     return createErrorResponse(parseResult.error!, 400);
   }
 
-  const { name, email, password } = parseResult.data;
+  const { name, email, password } = parseResult.data as { name?: string; email?: string; password?: string };
 
-  const updateData: any = {};
+  const updateData: Record<string, unknown> = {};
   if (name) updateData.name = sanitizeString(name);
   if (email) updateData.email = sanitizeString(email);
   if (password) updateData.password = password;
@@ -130,13 +132,13 @@ async function handleUpdateProfile(request: Request, user: any) {
     const updatedUser = await userService.updateUser(user.userId, updateData);
     return createSuccessResponse(updatedUser);
   } catch (error) {
-    console.error('Erreur lors de la mise à jour du profil:', error);
+  console.error('[users] Erreur update profil:', error);
     const message = error instanceof Error ? error.message : 'Erreur lors de la mise à jour';
     return createErrorResponse(message, 400);
   }
 }
 
-async function handleUpdatePreferences(request: Request, user: any) {
+async function handleUpdatePreferences(request: Request, _user: AuthUser) {
   const parseResult = await safeJsonParse(request);
   if (!parseResult.success) {
     return createErrorResponse(parseResult.error!, 400);
@@ -149,19 +151,19 @@ async function handleUpdatePreferences(request: Request, user: any) {
       preferences: parseResult.data
     });
   } catch (error) {
-    console.error('Erreur lors de la mise à jour des préférences:', error);
+  console.error('[users] Erreur update préférences:', error);
     return createErrorResponse('Erreur lors de la mise à jour des préférences', 500);
   }
 }
 
-async function handleDeleteAccount(user: any) {
+async function handleDeleteAccount(user: AuthUser) {
   try {
     await userService.deleteUser(user.userId);
     return createSuccessResponse({
       message: 'Compte supprimé avec succès'
     });
   } catch (error) {
-    console.error('Erreur lors de la suppression du compte:', error);
+  console.error('[users] Erreur suppression compte:', error);
     const message = error instanceof Error ? error.message : 'Erreur lors de la suppression';
     return createErrorResponse(message, 400);
   }

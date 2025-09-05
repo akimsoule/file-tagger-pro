@@ -169,8 +169,7 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
             stack.push({ dto: childDto, node: folderNode as FileTreeNodeApi });
           }
         }
-        rootApi.updateStats();
-        console.log(rootApi.printTree());
+  rootApi.updateStats();
         setRootNode(rootApi);
         setCurrentNodeRef(rootApi);
       } else {
@@ -223,8 +222,7 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
           syntheticRoot.parentId
         );
         for (const child of syntheticRoot.children) apiRoot.addChild(child);
-        apiRoot.updateStats();
-        console.log(apiRoot.printTree());
+  apiRoot.updateStats();
         setRootNode(apiRoot);
         setCurrentNodeRef(apiRoot);
       }

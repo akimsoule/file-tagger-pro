@@ -33,7 +33,7 @@ export default handleErrors(async (request: Request, context: Context) => {
     return authResult.response!;
   }
 
-  const user = authResult.context!.user!;
+  const user = authResult.context!.user! as AuthUser;
   const url = new URL(request.url);
   const tagName = extractResourceId(url, 'tags');
 
@@ -93,7 +93,9 @@ async function handleTagStats(tagName: string, userId: string) {
   }
 }
 
-async function handleDeleteTag(tagName: string, user: any) {
+interface AuthUser { userId: string }
+
+async function handleDeleteTag(tagName: string, user: AuthUser) {
   try {
   const updatedCount = await tagService.deleteTag(tagName, user.userId);
     
@@ -102,7 +104,7 @@ async function handleDeleteTag(tagName: string, user: any) {
       updatedDocuments: updatedCount
     });
   } catch (error) {
-    console.error('Erreur lors de la suppression du tag:', error);
+  console.error('[tags] Erreur suppression tag:', error);
     return createErrorResponse('Erreur lors de la suppression du tag', 500);
   }
 }

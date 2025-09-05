@@ -471,7 +471,6 @@ export class DocumentService {
 
     if (updateData.tags !== undefined) {
       // ownerId dans l'entité mise à jour (champ non sélectionné explicitement dans include mais présent sur document)
-      // @ts-expect-error ownerId présent sur l'objet retourné
       const ownerIdForTags: string = (document as any).ownerId || document.owner?.id; // eslint-disable-line @typescript-eslint/no-explicit-any
       await this.syncDocumentTags(id, updateData.tags || "", ownerIdForTags);
     }
@@ -691,9 +690,9 @@ export class DocumentService {
    * @param folderId - ID du dossier MEGA à synchroniser (optionnel, par défaut tout le compte)
    */
   async synchronizeMegaFiles(defaultOwnerId: string, folderId?: string) {
-    console.log(`🔄 Démarrage de la synchronisation des fichiers MEGA${folderId ? ' (dossier spécifique)' : ' (compte complet)'}...`);
+  if (process.env.NODE_ENV !== 'production') console.debug(`🔄 Sync MEGA start${folderId ? ' (scope dossier)' : ''}`);
     const megaFiles = await this.megaStorageService.getAllFilesWithContent(defaultOwnerId, folderId);
-    console.log(`🔍 ${megaFiles.length} fichiers trouvés sur MEGA.`);
+  if (process.env.NODE_ENV !== 'production') console.debug(`🔍 MEGA fichiers: ${megaFiles.length}`);
 
     const allDocuments = await prisma.document.findMany({ 
       select: { 
@@ -703,7 +702,7 @@ export class DocumentService {
         tags: true 
       } 
     });
-    console.log(`📄 ${allDocuments.length} documents trouvés dans la base de données.`);
+  if (process.env.NODE_ENV !== 'production') console.debug(`📄 DB documents: ${allDocuments.length}`);
     
     const newDocuments: Array<{
       id: string;
@@ -736,13 +735,13 @@ export class DocumentService {
 
     for (const megaFile of megaFiles) {
       const hash = crypto.createHash('sha256').update(megaFile.buffer).digest('hex');
-      console.log(`   - Traitement du fichier: ${megaFile.name} (hash: ${hash.substring(0, 12)}...)`);
+  if (process.env.NODE_ENV !== 'production') console.debug(`   • Fichier ${megaFile.name} (${hash.substring(0,12)}...)`);
 
       // Chercher si un document avec ce hash existe déjà
       const existingDocument = allDocuments.find(doc => doc.hash === hash);
 
       if (existingDocument) {
-        console.log(`   🔄 Document existant trouvé: ${existingDocument.name}. Mise à jour...`);
+  if (process.env.NODE_ENV !== 'production') console.debug(`   ↺ Update ${existingDocument.name}`);
         
         // Mise à jour du document existant avec détection de type
         const detectedType = this.getDocumentTypeFromFile(megaFile.name, megaFile.mimeType);
@@ -769,7 +768,7 @@ export class DocumentService {
 
         updatedDocuments.push(updatedDocument);
       } else {
-        console.log(`   ✨ Nouveau fichier détecté: ${megaFile.name}. Ajout à la base de données...`);
+  if (process.env.NODE_ENV !== 'production') console.debug(`   ✨ Nouveau ${megaFile.name}`);
         
         // Création d'un nouveau document avec détection de type appropriée
         const detectedType = this.getDocumentTypeFromFile(megaFile.name, megaFile.mimeType);
@@ -799,7 +798,7 @@ export class DocumentService {
       }
     }
 
-    console.log(`🎉 Synchronisation terminée. ${newDocuments.length} nouveau(x) document(s) ajouté(s), ${updatedDocuments.length} document(s) mis à jour.`);
+  if (process.env.NODE_ENV !== 'production') console.debug(`🎉 Sync ok +${newDocuments.length} / ~${updatedDocuments.length}`);
     return {
       syncedCount: newDocuments.length,
       updatedCount: updatedDocuments.length,

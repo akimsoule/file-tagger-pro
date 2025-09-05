@@ -36,7 +36,7 @@ const filesHandler = handleErrors(async (request: Request, context: Context) => 
     return authResult.response!;
   }
 
-  const user = authResult.context!.user!;
+  const user = authResult.context!.user! as AuthUser;
   const url = new URL(request.url);
   const documentId = extractResourceId(url, 'files');
   const downloadType = sanitizeString(url.searchParams.get('type') || 'url'); // 'url' ou 'base64'
@@ -50,7 +50,8 @@ const filesHandler = handleErrors(async (request: Request, context: Context) => 
 
 // Fonction helper
 
-async function handleFileDownload(documentId: string, downloadType: string, user: any) {
+interface AuthUser { userId: string }
+async function handleFileDownload(documentId: string, downloadType: string, user: AuthUser) {
   try {
     // Récupérer les informations du document
     const document = await documentService.getDocumentById(documentId);

@@ -198,7 +198,9 @@ const documentsHandler = handleErrors(
 
 // Fonctions helper
 
-async function handleGetDocument(documentId: string, user: any) {
+interface AuthUser { userId: string }
+
+async function handleGetDocument(documentId: string, _user: AuthUser | null) {
   try {
     const document = await documentService.getDocumentById(documentId);
     if (!document) {
@@ -214,7 +216,7 @@ async function handleGetDocument(documentId: string, user: any) {
   }
 }
 
-async function handleGetDocuments(url: URL, user: any) {
+async function handleGetDocuments(url: URL, _user: AuthUser | null) {
   try {
     const category = sanitizeString(url.searchParams.get("category") || "");
     const search = sanitizeString(url.searchParams.get("search") || "");
@@ -223,7 +225,7 @@ async function handleGetDocuments(url: URL, user: any) {
 
     const pagination = validatePagination(url);
 
-    const filters: any = {};
+  const filters: Record<string, unknown> = {};
     // Compatibilité: convertir category en tag
     if (category) filters.tag = category;
     if (search) filters.search = search;
@@ -257,7 +259,7 @@ async function handleGetDocuments(url: URL, user: any) {
   }
 }
 
-async function handleCreateDocument(request: Request, user: any) {
+async function handleCreateDocument(request: Request, user: AuthUser) {
   try {
     const contentType = request.headers.get("content-type") || "";
 
@@ -274,7 +276,7 @@ async function handleCreateDocument(request: Request, user: any) {
       // Déterminer le type de document basé sur le fichier
       const documentType = getDocumentTypeFromFile(file.name, file.mimeType);
 
-      const createData = {
+  const createData = {
         name: sanitizeString(data.name || file.name),
         type: sanitizeString(data.type || documentType),
         description: sanitizeString(data.description || ""),
@@ -293,7 +295,7 @@ async function handleCreateDocument(request: Request, user: any) {
     } else {
       // Données JSON
       const body = await request.json();
-      const createData = {
+  const createData = {
         name: sanitizeString(body.name),
         type: sanitizeString(body.type),
         description: sanitizeString(body.description || ""),
@@ -314,13 +316,13 @@ async function handleCreateDocument(request: Request, user: any) {
 async function handleUpdateDocument(
   documentId: string,
   request: Request,
-  user: any
+  user: AuthUser
 ) {
   try {
     const body = await request.json();
 
     // Sanitiser les données d'entrée
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (body.name) updateData.name = sanitizeString(body.name);
     if (body.type) updateData.type = sanitizeString(body.type);
     // Note: category est maintenant géré via tags
@@ -351,7 +353,7 @@ async function handleUpdateDocument(
   }
 }
 
-async function handleDeleteDocument(documentId: string, user: any) {
+async function handleDeleteDocument(documentId: string, user: AuthUser) {
   try {
     await documentService.deleteDocument(documentId, user.userId);
     return createSuccessResponse({ message: "Document supprimé avec succès" });
@@ -364,7 +366,7 @@ async function handleDeleteDocument(documentId: string, user: any) {
   }
 }
 
-async function handleSyncMegaFiles(request: Request, user: any) {
+async function handleSyncMegaFiles(request: Request, user: AuthUser) {
   try {
     const body = await request.json().catch(() => ({}));
     const folderId = body.folderId || undefined; // Optionnel: ID du dossier MEGA à synchroniser
