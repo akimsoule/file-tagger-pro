@@ -13,6 +13,7 @@ export interface CreateDocumentData {
   tags?: string; // Tags séparés par des virgules
   ownerId?: string;
   ownerEmail?: string;
+  folderId?: string; // Dossier cible (optionnel)
   filePath?: string;
   testFolderId?: string; // ID du dossier MEGA pour les tests
   file?: {
@@ -46,121 +47,125 @@ export class DocumentService {
    * @returns Type de document standardisé
    */
   private getDocumentTypeFromFile(fileName: string, mimeType?: string): string {
-    const extension = fileName.split('.').pop()?.toLowerCase() || '';
-    
+    const extension = fileName.split(".").pop()?.toLowerCase() || "";
+
     // Types basés sur l'extension du fichier
     const typeMapping: Record<string, string> = {
       // Documents
-      'pdf': 'document',
-      'doc': 'document',
-      'docx': 'document',
-      'txt': 'document',
-      'rtf': 'document',
-      'odt': 'document',
-      
+      pdf: "document",
+      doc: "document",
+      docx: "document",
+      txt: "document",
+      rtf: "document",
+      odt: "document",
+
       // Feuilles de calcul
-      'xls': 'spreadsheet',
-      'xlsx': 'spreadsheet',
-      'csv': 'spreadsheet',
-      'ods': 'spreadsheet',
-      
+      xls: "spreadsheet",
+      xlsx: "spreadsheet",
+      csv: "spreadsheet",
+      ods: "spreadsheet",
+
       // Présentations
-      'ppt': 'presentation',
-      'pptx': 'presentation',
-      'odp': 'presentation',
-      
+      ppt: "presentation",
+      pptx: "presentation",
+      odp: "presentation",
+
       // Images
-      'jpg': 'image',
-      'jpeg': 'image',
-      'png': 'image',
-      'gif': 'image',
-      'bmp': 'image',
-      'svg': 'image',
-      'webp': 'image',
-      
+      jpg: "image",
+      jpeg: "image",
+      png: "image",
+      gif: "image",
+      bmp: "image",
+      svg: "image",
+      webp: "image",
+
       // Vidéos
-      'mp4': 'video',
-      'avi': 'video',
-      'mov': 'video',
-      'wmv': 'video',
-      'webm': 'video',
-      'mkv': 'video',
-      
+      mp4: "video",
+      avi: "video",
+      mov: "video",
+      wmv: "video",
+      webm: "video",
+      mkv: "video",
+
       // Audio
-      'mp3': 'audio',
-      'wav': 'audio',
-      'ogg': 'audio',
-      'flac': 'audio',
-      'aac': 'audio',
-      
+      mp3: "audio",
+      wav: "audio",
+      ogg: "audio",
+      flac: "audio",
+      aac: "audio",
+
       // Archives
-      'zip': 'archive',
-      'rar': 'archive',
-      '7z': 'archive',
-      'tar': 'archive',
-      'gz': 'archive',
-      
+      zip: "archive",
+      rar: "archive",
+      "7z": "archive",
+      tar: "archive",
+      gz: "archive",
+
       // Code
-      'js': 'code',
-      'ts': 'code',
-      'html': 'code',
-      'css': 'code',
-      'json': 'code',
-      'xml': 'code',
-      'py': 'code',
-      'java': 'code',
-      'cpp': 'code',
-      'c': 'code',
+      js: "code",
+      ts: "code",
+      html: "code",
+      css: "code",
+      json: "code",
+      xml: "code",
+      py: "code",
+      java: "code",
+      cpp: "code",
+      c: "code",
     };
-    
+
     // Vérifier d'abord par extension
     if (typeMapping[extension]) {
       return typeMapping[extension];
     }
-    
+
     // Fallback sur le MIME type si disponible
     if (mimeType) {
-      if (mimeType.startsWith('image/')) return 'image';
-      if (mimeType.startsWith('video/')) return 'video';
-      if (mimeType.startsWith('audio/')) return 'audio';
-      if (mimeType.startsWith('text/')) return 'document';
-      if (mimeType.includes('pdf')) return 'document';
-      if (mimeType.includes('word')) return 'document';
-      if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'spreadsheet';
-      if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return 'presentation';
+      if (mimeType.startsWith("image/")) return "image";
+      if (mimeType.startsWith("video/")) return "video";
+      if (mimeType.startsWith("audio/")) return "audio";
+      if (mimeType.startsWith("text/")) return "document";
+      if (mimeType.includes("pdf")) return "document";
+      if (mimeType.includes("word")) return "document";
+      if (mimeType.includes("excel") || mimeType.includes("spreadsheet"))
+        return "spreadsheet";
+      if (mimeType.includes("powerpoint") || mimeType.includes("presentation"))
+        return "presentation";
     }
-    
+
     // Par défaut
-    return 'document';
+    return "document";
   }
 
-    /**
+  /**
    * Ajoute un tag basé sur le type de document
    * @param type - Type de document détecté
    * @param existingTags - Tags existants
    * @returns Tags mis à jour
    */
-  private addTagFromType(type: string, existingTags: string = ''): string {
+  private addTagFromType(type: string, existingTags: string = ""): string {
     const typeTagMapping: Record<string, string> = {
-      'document': 'documents',
-      'spreadsheet': 'documents',
-      'presentation': 'documents',
-      'image': 'images',
-      'video': 'vidéos',
-      'audio': 'audio',
-      'archive': 'archives',
-      'code': 'code',
-      'other': 'autres'
+      document: "documents",
+      spreadsheet: "documents",
+      presentation: "documents",
+      image: "images",
+      video: "vidéos",
+      audio: "audio",
+      archive: "archives",
+      code: "code",
+      other: "autres",
     };
-    
-    const typeTag = typeTagMapping[type] || 'autres';
-    const tags = existingTags ? existingTags.split(',').map(t => t.trim()) : [];
-    
+
+    const typeTag = typeTagMapping[type] || "autres";
+    const tags = existingTags
+      ? existingTags.split(",").map((t) => t.trim())
+      : [];
+
     if (!tags.includes(typeTag)) {
       tags.push(typeTag);
     }
-    
-    return tags.join(',');
+
+    return tags.join(",");
   }
 
   async createDocument(data: CreateDocumentData) {
@@ -214,7 +219,9 @@ export class DocumentService {
     }
 
     if (!fileBuffer) {
-      throw new Error("Aucun contenu de fichier fourni pour créer le document.");
+      throw new Error(
+        "Aucun contenu de fichier fourni pour créer le document."
+      );
     }
 
     // Calculer le hash du fichier
@@ -230,6 +237,8 @@ export class DocumentService {
         fileId,
         hash, // Ajout du hash
         ownerId: ownerId,
+        // Placer le document dans le dossier cible si fourni
+        folderId: data.folderId,
       },
       include: {
         owner: {
@@ -242,8 +251,8 @@ export class DocumentService {
       },
     });
 
-  // Synchroniser les relations Tag <-> Document
-  await this.syncDocumentTags(document.id, document.tags, ownerId);
+    // Synchroniser les relations Tag <-> Document
+    await this.syncDocumentTags(document.id, document.tags, ownerId);
 
     await this.logService.log({
       action: "DOCUMENT_CREATE",
@@ -330,7 +339,7 @@ export class DocumentService {
 
     if (filters?.type) where.type = filters.type;
     if (filters?.ownerId) where.ownerId = filters.ownerId;
-    
+
     // Gérer les tags multiples ou un tag unique
     if (filters?.tags && filters.tags.length > 0) {
       where.tags = { hasSome: filters.tags };
@@ -340,10 +349,10 @@ export class DocumentService {
     } else {
       // PAR DÉFAUT : exclure les documents archivés si aucun tag spécifique n'est demandé
       where.NOT = {
-        tags: { contains: "archived" }
+        tags: { contains: "archived" },
       };
     }
-    
+
     if (filters?.search) {
       where.OR = [
         { name: { contains: filters.search, mode: "insensitive" } },
@@ -379,7 +388,7 @@ export class DocumentService {
 
     if (filters?.type) where.type = filters.type;
     if (filters?.ownerId) where.ownerId = filters.ownerId;
-    
+
     // Gérer les tags multiples ou un tag unique
     if (filters?.tags && filters.tags.length > 0) {
       where.tags = { hasSome: filters.tags };
@@ -389,10 +398,10 @@ export class DocumentService {
     } else {
       // PAR DÉFAUT : exclure les documents archivés si aucun tag spécifique n'est demandé
       where.NOT = {
-        tags: { contains: "archived" }
+        tags: { contains: "archived" },
       };
     }
-    
+
     if (filters?.search) {
       where.OR = [
         { name: { contains: filters.search, mode: "insensitive" } },
@@ -471,7 +480,8 @@ export class DocumentService {
 
     if (updateData.tags !== undefined) {
       // ownerId dans l'entité mise à jour (champ non sélectionné explicitement dans include mais présent sur document)
-      const ownerIdForTags: string = (document as any).ownerId || document.owner?.id; // eslint-disable-line @typescript-eslint/no-explicit-any
+      const ownerIdForTags: string =
+        (document as any).ownerId || document.owner?.id; // eslint-disable-line @typescript-eslint/no-explicit-any
       await this.syncDocumentTags(id, updateData.tags || "", ownerIdForTags);
     }
 
@@ -492,15 +502,31 @@ export class DocumentService {
   /**
    * Synchronise la table de jonction DocumentTag avec la chaîne CSV
    */
-  private async syncDocumentTags(documentId: string, csv: string, ownerId: string) {
-    const tagNames = Array.from(new Set(csv.split(',').map(t => t.trim()).filter(Boolean)));
+  private async syncDocumentTags(
+    documentId: string,
+    csv: string,
+    ownerId: string
+  ) {
+    const tagNames = Array.from(
+      new Set(
+        csv
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      )
+    );
     if (tagNames.length === 0) {
       // Supprimer tous les liens existants si aucun tag
       await prisma.documentTag.deleteMany({ where: { documentId } });
       return;
     }
-    const existingLinks = await prisma.documentTag.findMany({ where: { documentId }, include: { tag: true } });
-    const existingTagMap = new Map<string, (typeof existingLinks)[number]>(existingLinks.map(l => [l.tag.name, l]));
+    const existingLinks = await prisma.documentTag.findMany({
+      where: { documentId },
+      include: { tag: true },
+    });
+    const existingTagMap = new Map<string, (typeof existingLinks)[number]>(
+      existingLinks.map((l) => [l.tag.name, l])
+    );
 
     // Créer les tags manquants et liens
     for (const name of tagNames) {
@@ -510,13 +536,17 @@ export class DocumentService {
           update: {},
           create: { userId: ownerId, name },
         });
-        await prisma.documentTag.create({ data: { documentId, tagId: tag.id } });
+        await prisma.documentTag.create({
+          data: { documentId, tagId: tag.id },
+        });
       }
     }
     // Supprimer les liens obsolètes
     for (const [name, link] of existingTagMap.entries()) {
       if (!tagNames.includes(name)) {
-        await prisma.documentTag.delete({ where: { documentId_tagId: { documentId, tagId: link.tagId } } });
+        await prisma.documentTag.delete({
+          where: { documentId_tagId: { documentId, tagId: link.tagId } },
+        });
       }
     }
   }
@@ -583,11 +613,21 @@ export class DocumentService {
     // Suppression du fichier sur MEGA
     if (document.fileId) {
       try {
-        await this.megaStorageService.deleteFile(document.fileId, document.ownerId, folderId);
+        await this.megaStorageService.deleteFile(
+          document.fileId,
+          document.ownerId,
+          folderId
+        );
         console.log(`🗑️ Fichier MEGA supprimé: ${document.fileId}`);
       } catch (error) {
-        console.warn(`⚠️ Impossible de supprimer le fichier MEGA (${document.fileId}): ${error instanceof Error ? error.message : error}`);
-        console.warn(`💡 Le document sera supprimé de la base de données même si le fichier MEGA est inaccessible.`);
+        console.warn(
+          `⚠️ Impossible de supprimer le fichier MEGA (${document.fileId}): ${
+            error instanceof Error ? error.message : error
+          }`
+        );
+        console.warn(
+          `💡 Le document sera supprimé de la base de données même si le fichier MEGA est inaccessible.`
+        );
       }
     }
 
@@ -646,7 +686,10 @@ export class DocumentService {
       throw new Error("Aucun fichier associé à ce document");
     }
 
-    const url = await this.megaStorageService.getFileUrl(document.fileId, document.ownerId);
+    const url = await this.megaStorageService.getFileUrl(
+      document.fileId,
+      document.ownerId
+    );
 
     await this.logService.log({
       action: "DOCUMENT_DOWNLOAD",
@@ -690,20 +733,26 @@ export class DocumentService {
    * @param folderId - ID du dossier MEGA à synchroniser (optionnel, par défaut tout le compte)
    */
   async synchronizeMegaFiles(defaultOwnerId: string, folderId?: string) {
-  if (process.env.NODE_ENV !== 'production') console.debug(`🔄 Sync MEGA start${folderId ? ' (scope dossier)' : ''}`);
-    const megaFiles = await this.megaStorageService.getAllFilesWithContent(defaultOwnerId, folderId);
-  if (process.env.NODE_ENV !== 'production') console.debug(`🔍 MEGA fichiers: ${megaFiles.length}`);
+    if (process.env.NODE_ENV !== "production")
+      console.debug(`🔄 Sync MEGA start${folderId ? " (scope dossier)" : ""}`);
+    const megaFiles = await this.megaStorageService.getAllFilesWithContent(
+      defaultOwnerId,
+      folderId
+    );
+    if (process.env.NODE_ENV !== "production")
+      console.debug(`🔍 MEGA fichiers: ${megaFiles.length}`);
 
-    const allDocuments = await prisma.document.findMany({ 
-      select: { 
-        id: true, 
-        hash: true, 
-        name: true, 
-        tags: true 
-      } 
+    const allDocuments = await prisma.document.findMany({
+      select: {
+        id: true,
+        hash: true,
+        name: true,
+        tags: true,
+      },
     });
-  if (process.env.NODE_ENV !== 'production') console.debug(`📄 DB documents: ${allDocuments.length}`);
-    
+    if (process.env.NODE_ENV !== "production")
+      console.debug(`📄 DB documents: ${allDocuments.length}`);
+
     const newDocuments: Array<{
       id: string;
       name: string;
@@ -734,18 +783,28 @@ export class DocumentService {
     }> = [];
 
     for (const megaFile of megaFiles) {
-      const hash = crypto.createHash('sha256').update(megaFile.buffer).digest('hex');
-  if (process.env.NODE_ENV !== 'production') console.debug(`   • Fichier ${megaFile.name} (${hash.substring(0,12)}...)`);
+      const hash = crypto
+        .createHash("sha256")
+        .update(megaFile.buffer)
+        .digest("hex");
+      if (process.env.NODE_ENV !== "production")
+        console.debug(
+          `   • Fichier ${megaFile.name} (${hash.substring(0, 12)}...)`
+        );
 
       // Chercher si un document avec ce hash existe déjà
-      const existingDocument = allDocuments.find(doc => doc.hash === hash);
+      const existingDocument = allDocuments.find((doc) => doc.hash === hash);
 
       if (existingDocument) {
-  if (process.env.NODE_ENV !== 'production') console.debug(`   ↺ Update ${existingDocument.name}`);
-        
+        if (process.env.NODE_ENV !== "production")
+          console.debug(`   ↺ Update ${existingDocument.name}`);
+
         // Mise à jour du document existant avec détection de type
-        const detectedType = this.getDocumentTypeFromFile(megaFile.name, megaFile.mimeType);
-        
+        const detectedType = this.getDocumentTypeFromFile(
+          megaFile.name,
+          megaFile.mimeType
+        );
+
         const updatedDocument = await prisma.document.update({
           where: { id: existingDocument.id },
           data: {
@@ -759,8 +818,8 @@ export class DocumentService {
         });
 
         await this.logService.log({
-          action: 'DOCUMENT_SYNC',
-          entity: 'DOCUMENT',
+          action: "DOCUMENT_SYNC",
+          entity: "DOCUMENT",
           entityId: existingDocument.id,
           userId: defaultOwnerId,
           details: `Document mis à jour lors de la synchronisation MEGA: ${megaFile.name}`,
@@ -768,18 +827,22 @@ export class DocumentService {
 
         updatedDocuments.push(updatedDocument);
       } else {
-  if (process.env.NODE_ENV !== 'production') console.debug(`   ✨ Nouveau ${megaFile.name}`);
-        
+        if (process.env.NODE_ENV !== "production")
+          console.debug(`   ✨ Nouveau ${megaFile.name}`);
+
         // Création d'un nouveau document avec détection de type appropriée
-        const detectedType = this.getDocumentTypeFromFile(megaFile.name, megaFile.mimeType);
-        
+        const detectedType = this.getDocumentTypeFromFile(
+          megaFile.name,
+          megaFile.mimeType
+        );
+
         const document = await prisma.document.create({
           data: {
             name: megaFile.name,
             type: detectedType,
             size: megaFile.size, // Utiliser la taille du buffer retournée par MEGA
-            description: 'Document synchronisé depuis MEGA',
-            tags: this.addTagFromType(detectedType, 'synced'),
+            description: "Document synchronisé depuis MEGA",
+            tags: this.addTagFromType(detectedType, "synced"),
             fileId: megaFile.fileId,
             hash: hash,
             ownerId: defaultOwnerId,
@@ -787,8 +850,8 @@ export class DocumentService {
         });
 
         await this.logService.log({
-          action: 'DOCUMENT_SYNC',
-          entity: 'DOCUMENT',
+          action: "DOCUMENT_SYNC",
+          entity: "DOCUMENT",
           entityId: document.id,
           userId: defaultOwnerId,
           details: `Nouveau document synchronisé depuis MEGA: ${document.name}`,
@@ -798,7 +861,10 @@ export class DocumentService {
       }
     }
 
-  if (process.env.NODE_ENV !== 'production') console.debug(`🎉 Sync ok +${newDocuments.length} / ~${updatedDocuments.length}`);
+    if (process.env.NODE_ENV !== "production")
+      console.debug(
+        `🎉 Sync ok +${newDocuments.length} / ~${updatedDocuments.length}`
+      );
     return {
       syncedCount: newDocuments.length,
       updatedCount: updatedDocuments.length,
@@ -833,5 +899,4 @@ export class DocumentService {
 
     return mimeTypes[type.toLowerCase()] || "application/octet-stream";
   }
-
 }

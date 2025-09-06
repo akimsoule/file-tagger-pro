@@ -18,14 +18,21 @@ export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumen
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  // On capture le dossier cible à l'ouverture du modal pour éviter les déplacements ultérieurs
+  const [capturedFolderId, setCapturedFolderId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!open) {
       setFile(null);
       setName('');
       setDescription('');
+      setCapturedFolderId(undefined);
+    } else {
+      // A l'ouverture, mémoriser le dossier courant (sauf racine)
+      const id = currentNode?.id && currentNode.id !== 'root' ? currentNode.id : undefined;
+      setCapturedFolderId(id);
     }
-  }, [open]);
+  }, [open, currentNode?.id]);
 
   const disabled = uploadMut.isPending || !file;
 
@@ -33,7 +40,8 @@ export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumen
     e.preventDefault();
     if (disabled || !file) return;
     try {
-      const res = await uploadMut.mutateAsync({ file, extra: { name: name || file.name, description: description || undefined, folderId: currentNode?.id && currentNode.id !== 'root' ? currentNode.id : undefined } as any }); // eslint-disable-line @typescript-eslint/no-explicit-any
+    const targetFolderId = capturedFolderId;
+    const res = await uploadMut.mutateAsync({ file, extra: { name: name || file.name, description: description || undefined, folderId: targetFolderId } as any }); // eslint-disable-line @typescript-eslint/no-explicit-any
       if (createDocument) {
         createDocument({
           id: res.id,
@@ -45,7 +53,8 @@ export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumen
           fileId: res.fileId || '',
           hash: res.hash || '',
           ownerId: res.ownerId,
-          folderId: res.folderId || undefined,
+      // Fallback local si l'API ne renvoie pas folderId: utiliser le dossier capturé
+      folderId: res.folderId || targetFolderId || undefined,
           isFavorite: res.isFavorite || false,
           createdAt: new Date(res.createdAt),
           modifiedAt: new Date(res.modifiedAt)

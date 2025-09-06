@@ -60,6 +60,7 @@ export interface FileContextType {
   updateNode: (nodeId: string, data: Partial<Document | Folder>) => Promise<void>;
   addToFavorites: (nodeId: string) => Promise<void>;
   removeFromFavorites: (nodeId: string) => Promise<void>;
+  deleteNode?: (nodeId: string) => Promise<void>;
 
   // Gestion des tags
   getTagsByIds: (ids: string[]) => Tag[];

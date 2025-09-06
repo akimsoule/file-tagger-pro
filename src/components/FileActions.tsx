@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Heart, MoreHorizontal, FolderOutput, Tags } from "lucide-react";
+import { Heart, MoreHorizontal, FolderOutput, Tags, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import React from "react";
@@ -8,7 +8,8 @@ interface FileActionsProps {
   isFavorite: boolean;
   onToggleFavorite: () => void;
   onOpenMove: () => void;
-  onOpenTagEditor: () => void;
+  onOpenTagEditor: () => void; // kept for compatibility, now no-op in callers
+  onDelete: () => void;
 }
 
 export const FileActions: React.FC<FileActionsProps> = ({
@@ -16,6 +17,7 @@ export const FileActions: React.FC<FileActionsProps> = ({
   onToggleFavorite,
   onOpenMove,
   onOpenTagEditor,
+  onDelete,
 }) => {
   const stop = (e: React.MouseEvent) => e.stopPropagation();
   return (
@@ -49,6 +51,17 @@ export const FileActions: React.FC<FileActionsProps> = ({
             <Tags className="h-4 w-4 mr-2" />
             Modifier les tags
           </DropdownMenuItem>
+          {onDelete && (
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-700"
+              onClick={(e) => {
+                stop(e);
+                onDelete?.();
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" /> Supprimer
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

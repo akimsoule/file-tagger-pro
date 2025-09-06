@@ -15,4 +15,20 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Évite le warning pour des apps SPA un peu lourdes
+    chunkSizeWarningLimit: 1024,
+    rollupOptions: {
+      output: {
+        // Découpage vendor simple pour mieux répartir le poids
+        manualChunks: {
+          react: ["react", "react-dom"],
+          router: ["react-router-dom"],
+          query: ["@tanstack/react-query"],
+          charts: ["recharts"],
+          cmdk: ["cmdk"],
+        },
+      },
+    },
+  },
 }));

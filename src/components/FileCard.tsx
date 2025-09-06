@@ -2,13 +2,12 @@ import { useState } from "react";
 import { Document } from "@/contexts/file";
 import { TagBadge } from "./TagBadge";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import { FileActions } from "./FileActions";
 import { cn } from "@/lib/utils";
 import { FolderPicker } from "./FolderPicker";
-import { TagEditor } from "./TagEditor";
 import { useFileContext } from "@/hooks/useFileContext";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 import { FileTreeNode } from "@/logic/local/FileTreeNode";
 import { formatFileSize, formatDate } from "@/lib/format";
@@ -23,8 +22,8 @@ const getFileIcon = () => <FileText className="h-8 w-8 text-muted-foreground" />
 
 export function FileCard({ node, onClick, onToggleFavorite }: FileCardProps) {
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
-  const [isTagEditorOpen, setIsTagEditorOpen] = useState(false);
-  const { moveNode, updateNode } = useFileContext();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const { moveNode, updateNode, deleteNode } = useFileContext();
 
   if (!node || node.type !== "file") {
     return null;
@@ -57,6 +56,8 @@ export function FileCard({ node, onClick, onToggleFavorite }: FileCardProps) {
     updateNode(document.id, { tags: newTags });
   };
 
+  const handleDelete = () => setConfirmOpen(true);
+
   return (
     <>
       <Card
@@ -86,7 +87,8 @@ export function FileCard({ node, onClick, onToggleFavorite }: FileCardProps) {
             isFavorite={document.isFavorite}
             onToggleFavorite={() => onToggleFavorite?.()}
             onOpenMove={() => setIsFolderPickerOpen(true)}
-            onOpenTagEditor={() => setIsTagEditorOpen(true)}
+            onOpenTagEditor={() => { /* TagEditor supprimé */ }}
+            onDelete={handleDelete}
           />
         </div>
 
@@ -125,12 +127,18 @@ export function FileCard({ node, onClick, onToggleFavorite }: FileCardProps) {
         title="Déplacer le fichier vers"
       />
 
-      <TagEditor
-        isOpen={isTagEditorOpen}
-        onClose={() => setIsTagEditorOpen(false)}
-        currentTags={document.tags}
-        onSave={handleUpdateTags}
-        title="Modifier les tags du fichier"
+  {/* TagEditor supprimé */}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Supprimer le document ?"
+        description={`Cette action est définitive. Le document "${document.name}" sera supprimé.`}
+        confirmLabel="Supprimer"
+        onConfirm={() => {
+          setConfirmOpen(false);
+          deleteNode?.(document.id);
+        }}
       />
     </>
   );

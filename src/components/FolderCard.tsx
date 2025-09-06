@@ -3,7 +3,7 @@ import { FileTreeNode } from '@/logic/local/FileTreeNode';
 import { Folder } from '@/contexts/file';
 import { TagBadge } from './TagBadge';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, FolderIcon, FolderOutput, Tags } from 'lucide-react';
+import { MoreHorizontal, FolderIcon, FolderOutput, Tags, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,8 +12,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { FolderPicker } from './FolderPicker';
-import { TagEditor } from './TagEditor';
 import { useFileContext } from '@/hooks/useFileContext';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface FolderCardProps {
   node: FileTreeNode;
@@ -22,8 +22,8 @@ interface FolderCardProps {
 
 export function FolderCard({ node, onClick }: FolderCardProps) {
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
-  const [isTagEditorOpen, setIsTagEditorOpen] = useState(false);
-  const { moveNode, updateNode } = useFileContext();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const { moveNode, updateNode, deleteNode } = useFileContext();
   
   const folderData = node.getData() as Folder;
   // findNodeById n'est pas nécessaire ici, on utilise directement l'id cible
@@ -50,9 +50,11 @@ export function FolderCard({ node, onClick }: FolderCardProps) {
     }
   }, [node, moveNode]);
 
-  const handleUpdateTags = useCallback((newTags: string) => {
-    updateNode(node.id, { tags: newTags });
-  }, [node, updateNode]);
+  // L’édition des tags de dossier n’est pas supportée
+
+  const handleDelete = useCallback(() => {
+    setConfirmOpen(true);
+  }, []);
 
   if (!node || node.type !== 'folder') {
     return null;
@@ -107,14 +109,15 @@ export function FolderCard({ node, onClick }: FolderCardProps) {
                     <FolderOutput className="h-4 w-4 mr-2" />
                     Déplacer
                   </DropdownMenuItem>
+                  {/* Pas d'éditeur de tags pour les dossiers */}
                   <DropdownMenuItem
+                    className="text-red-600 focus:text-red-700"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setIsTagEditorOpen(true);
+                      handleDelete();
                     }}
                   >
-                    <Tags className="h-4 w-4 mr-2" />
-                    Modifier les tags
+                    <Trash2 className="h-4 w-4 mr-2" /> Supprimer
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -150,12 +153,18 @@ export function FolderCard({ node, onClick }: FolderCardProps) {
         title="Déplacer le dossier vers"
       />
 
-      <TagEditor
-        isOpen={isTagEditorOpen}
-        onClose={() => setIsTagEditorOpen(false)}
-        currentTags={node.tags.map(t => t.name).join(',')}
-        onSave={handleUpdateTags}
-        title="Modifier les tags du dossier"
+  {/* TagEditor supprimé pour les dossiers */}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Supprimer le dossier ?"
+        description={`Cette action est définitive. Le dossier "${node.name}" sera supprimé. Le dossier doit être vide.`}
+        confirmLabel="Supprimer"
+        onConfirm={() => {
+          setConfirmOpen(false);
+          deleteNode?.(node.id);
+        }}
       />
     </>
   );

@@ -39,7 +39,7 @@ export class TagService {
       return relationalTags.map(t => ({
         name: t.name,
         count: t.documents.length + t.folders.length,
-        color: t.color
+        color: t.color ?? undefined
       })).sort((a,b) => b.count - a.count);
     }
 

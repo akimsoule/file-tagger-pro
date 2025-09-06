@@ -151,6 +151,11 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 
   const updateNode = useCallback(
     async (nodeId: string, updates: Partial<Document | Folder>) => {
+      // Interdit de renommer ou modifier les tags du root
+      if (nodeId === 'root' && ('name' in updates || 'tags' in updates)) {
+        toast({ title: 'Action interdite', description: 'Le dossier racine ne peut pas être renommé ni taggé.', variant: 'destructive' });
+        return;
+      }
       if (rootNode.updateNodeFields(nodeId, updates)) bumpTreeVersion();
     },
     [rootNode, bumpTreeVersion]
@@ -213,6 +218,10 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 
   const addNodeTag = useCallback(
     (node: FileTreeNode, tagName: string) => {
+      if (node.id === 'root') {
+        toast({ title: 'Action interdite', description: 'Le dossier racine ne peut pas être taggé.', variant: 'destructive' });
+        return;
+      }
       if (rootNode.addTagToNode(node.id, tagName)) bumpTreeVersion();
     },
     [rootNode, bumpTreeVersion]
@@ -220,6 +229,10 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 
   const removeNodeTag = useCallback(
     (node: FileTreeNode, tagName: string) => {
+      if (node.id === 'root') {
+        toast({ title: 'Action interdite', description: 'Le dossier racine ne peut pas être taggé.', variant: 'destructive' });
+        return;
+      }
       if (rootNode.removeTagFromNode(node.id, tagName)) bumpTreeVersion();
     },
     [rootNode, bumpTreeVersion]
@@ -246,6 +259,23 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
       if (created) bumpTreeVersion();
     },
     [rootNode, bumpTreeVersion]
+  );
+
+  const deleteNode = useCallback(
+    async (nodeId: string) => {
+      if (nodeId === 'root') {
+        toast({ title: 'Action interdite', description: 'Le dossier racine ne peut pas être supprimé.', variant: 'destructive' });
+        return;
+      }
+      if (!(rootNode instanceof FileTreeNodeApi)) return;
+      // Si on supprime le node sélectionné, le désélectionner
+      if (selectedNode && selectedNode.id === nodeId) setSelectedNodeRef(null);
+      // Si on supprime le dossier courant, remonter à la racine
+      if (currentNode && currentNode.id === nodeId) setCurrentNodeRef(rootNode);
+      const ok = rootNode.deleteNode(nodeId);
+      if (ok) bumpTreeVersion();
+    },
+    [rootNode, bumpTreeVersion, selectedNode, currentNode]
   );
 
   // ==================== Helpers tags (après actions) ====================
@@ -302,6 +332,7 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
         moveNode,
         createFolder,
         createDocument,
+  deleteNode,
         loadingTree,
         reloadTree,
       }}
