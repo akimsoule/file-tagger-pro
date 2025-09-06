@@ -71,6 +71,13 @@ export default function GlobalCommand() {
   // Global hotkeys
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = (target?.tagName || '').toLowerCase();
+      const isEditable =
+        tag === 'input' ||
+        tag === 'textarea' ||
+        (target && (target as HTMLElement).isContentEditable);
+
       // Cmd/Ctrl+K -> open command menu
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -108,10 +115,27 @@ export default function GlobalCommand() {
         setCmdOpen(true);
         return;
       }
+
+      // Backspace -> go to parent folder (or close preview if a document is selected)
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === 'Backspace') {
+        if (isEditable) return; // ne pas interférer avec la saisie
+        e.preventDefault(); // empêcher le retour navigateur
+        // Si un document est ouvert, fermer d'abord le modal
+        if (selectedNode) {
+          setSelectedNode(null as unknown as FileTreeNode);
+          return;
+        }
+        // Sinon, remonter au dossier parent si possible
+        if (currentNode && (currentNode as FileTreeNode).parent) {
+          const parent = (currentNode as FileTreeNode).parent as FileTreeNode;
+          setCurrentNode(parent);
+        }
+        return;
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [reloadTree, setViewMode, selectedNode, currentNode]);
+  }, [reloadTree, setViewMode, selectedNode, currentNode, setCurrentNode, setSelectedNode]);
 
   // (TagEditor supprimé)
 

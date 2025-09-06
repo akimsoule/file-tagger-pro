@@ -52,6 +52,8 @@ export function FileDetailsModal({
   const [previewType, setPreviewType] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  // Fallback pour PDF lourds: créer une Blob URL à partir du data URL pour éviter les limites navigateur
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -146,6 +148,35 @@ export function FileDetailsModal({
   const [isSaving, setIsSaving] = useState(false);
 
   const extension = doc?.name.split(".").pop()?.toUpperCase();
+
+  // Générer une Blob URL pour les PDF si nécessaire (Safari/limites data URL)
+  useEffect(() => {
+    // Un seul cycle par changement de previewUrl/isPdf; crée une Blob URL si besoin et la nettoie au cleanup
+    let createdUrl: string | null = null;
+    if (isPdf && previewUrl?.startsWith("data:")) {
+      const approxLen = previewUrl.length;
+      const SHOULD_BLOB = approxLen > 1_000_000; // ~1MB de texte base64 (~750KB binaire)
+      if (SHOULD_BLOB) {
+        fetch(previewUrl)
+          .then((r) => r.blob())
+          .then((blob) => {
+            const url = URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+            createdUrl = url;
+            setObjectUrl(url);
+          })
+          .catch(() => {
+            setObjectUrl(null);
+          });
+      } else {
+        setObjectUrl(null);
+      }
+    } else {
+      setObjectUrl(null);
+    }
+    return () => {
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [isPdf, previewUrl]);
 
   const addTag = (value: string) => {
     const v = value.trim();
@@ -255,7 +286,12 @@ export function FileDetailsModal({
                       <img src={previewUrl} alt={doc.name} className="w-full h-full object-contain" />
                     )}
                     {isPdf && (
-                      <iframe title="aperçu-pdf" src={previewUrl} className="w-full h-full" />
+                      <iframe
+                        title="aperçu-pdf"
+                        src={objectUrl || previewUrl || undefined}
+                        className="w-full h-full"
+                        loading="lazy"
+                      />
                     )}
                     {isText && (
                       <iframe title="aperçu-texte" src={previewUrl} className="w-full h-full bg-background" />
