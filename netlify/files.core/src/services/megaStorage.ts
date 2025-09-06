@@ -72,6 +72,9 @@ export class MegaStorageService {
       | undefined;
     if (!file && userId) {
       try {
+        console.warn(
+          `[mega] ID ${fileId} introuvable dans le storage utilisateur ${userId}. Tentative sur le storage par défaut.`
+        );
         const defaultStorage = await this.getStorage();
         file = defaultStorage.find((f) => f.nodeId === fileId) as unknown as
           | (NodeLike & {
@@ -80,7 +83,9 @@ export class MegaStorageService {
             })
           | undefined;
       } catch {
-        /* ignore */
+        console.warn(
+          `[mega] Fallback vers le storage par défaut impossible (identifiants MEGA non configurés ?)`
+        );
       }
     }
     return file;
@@ -422,7 +427,12 @@ export class MegaStorageService {
    */
   async getBase64FileUrl(fileId: string, userId?: string): Promise<string> {
     const file = await this.findNodeById(fileId, userId);
-    if (!file) throw new Error("Fichier non trouvé");
+    if (!file) {
+      console.warn(
+        `[mega] getBase64FileUrl: fichier non trouvé (id=${fileId}, userId=${userId ?? "default"})`
+      );
+      throw new Error("Fichier non trouvé");
+    }
 
     // Déterminer le type MIME en fonction de l'extension du fichier
     const ext = (file as unknown as { name?: string }).name
