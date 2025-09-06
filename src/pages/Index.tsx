@@ -110,25 +110,25 @@ const Index = () => {
           />
 
           <main className="flex-1 flex flex-col min-w-0 w-full min-h-0">
-            <header className="flex items-center gap-4 p-4 border-b border-border bg-card/50">
+            <header className="flex items-center gap-1 sm:gap-4 p-1 sm:p-4 border-b border-border bg-card/50">
               <div className="flex items-center gap-2">
                 <SidebarTrigger className="shrink-0" />
                 {currentNode?.parent && (
                   <button
                     onClick={navigateUp}
-                    className="p-2 hover:bg-accent rounded-lg"
+                    className="p-1 sm:p-2 hover:bg-accent rounded-lg"
                     aria-label="Back"
                   >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                   </button>
                 )}
               </div>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary-gradient">
-                  <FolderIcon className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-1.5 sm:gap-3">
+                <div className="p-1 sm:p-2 rounded-lg bg-primary-gradient">
+                  <FolderIcon className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold flex items-center gap-2 mb-2">
+                  <h1 className="text-base sm:text-2xl font-bold flex items-center gap-1.5 sm:gap-2 mb-0 sm:mb-2 leading-none">
                     {currentNode ? currentNode.name : "Root Folder"}
                     {loadingTree && <LoadingSpinner size={16} />}
                     <button
@@ -143,7 +143,7 @@ const Index = () => {
                       />
                     </button>
                   </h1>
-                  <p className="text-muted-foreground">
+                  <p className="hidden sm:block text-muted-foreground text-sm">
                     {(currentNode?.getData() as Folder)?.description ||
                       "This is the root folder of your files."}
                   </p>

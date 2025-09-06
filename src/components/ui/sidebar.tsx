@@ -38,12 +38,12 @@ type SidebarContext = {
 
 const SidebarContext = React.createContext<SidebarContext | null>(null)
 
-function useSidebar() {
+// eslint-disable-next-line react-refresh/only-export-components
+export const useSidebar = () => {
   const context = React.useContext(SidebarContext)
   if (!context) {
     throw new Error("useSidebar must be used within a SidebarProvider.")
   }
-
   return context
 }
 
@@ -69,6 +69,52 @@ const SidebarProvider = React.forwardRef<
   ) => {
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
+
+    // Gestes: ouvrir/fermer sur mobile avec un swipe horizontal
+    const touchStart = React.useRef<{ x: number; y: number } | null>(null)
+    const lastTouch = React.useRef<{ x: number; y: number } | null>(null)
+
+    const onTouchStart = React.useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+      if (!isMobile) return
+      const t = e.touches[0]
+      touchStart.current = { x: t.clientX, y: t.clientY }
+      lastTouch.current = { x: t.clientX, y: t.clientY }
+    }, [isMobile])
+
+    const onTouchMove = React.useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+      if (!isMobile || !touchStart.current) return
+      const t = e.touches[0]
+      lastTouch.current = { x: t.clientX, y: t.clientY }
+    }, [isMobile])
+
+    const onTouchEnd = React.useCallback(() => {
+      if (!isMobile || !touchStart.current || !lastTouch.current) return
+      const start = touchStart.current
+      const end = lastTouch.current
+      const dx = end.x - start.x
+      const dy = Math.abs(end.y - start.y)
+      const EDGE = 24 // px depuis le bord gauche pour ouverture
+      const THRESH = 50 // distance minimale pour valider le swipe
+
+      // Réinitialiser
+      touchStart.current = null
+      lastTouch.current = null
+
+      // Ignorer les scrolls verticaux
+      if (dy > 40) return
+
+      // Ouvrir: swipe de gauche -> droite depuis le bord gauche
+      if (dx > THRESH && start.x <= EDGE && !openMobile) {
+        setOpenMobile(true)
+        return
+      }
+
+      // Fermer: swipe de droite -> gauche lorsque déjà ouvert
+      if (dx < -THRESH && openMobile) {
+        setOpenMobile(false)
+        return
+      }
+    }, [isMobile, openMobile])
 
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
@@ -145,6 +191,9 @@ const SidebarProvider = React.forwardRef<
               className
             )}
             ref={ref}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
             {...props}
           >
             {children}
@@ -762,5 +811,5 @@ export {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
-  useSidebar,
 }
+

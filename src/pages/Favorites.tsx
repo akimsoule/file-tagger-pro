@@ -77,19 +77,17 @@ const Favorites = () => {
         
         <main className="flex-1 flex flex-col">
           {/* Header avec trigger de sidebar et titre */}
-          <header className="flex items-center gap-4 p-4 border-b border-border bg-card/50">
+          <header className="flex items-center gap-1 sm:gap-4 p-1 sm:p-4 border-b border-border bg-card/50">
             <SidebarTrigger className="shrink-0" />
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-red-500 to-pink-600">
-                <Heart className="h-5 w-5 text-white" />
+            <div className="flex items-center gap-1.5 sm:gap-3">
+              <div className="p-1 sm:p-2 rounded-lg bg-gradient-to-br from-red-500 to-pink-600">
+                <Heart className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-foreground">
+                <h1 className="text-base sm:text-xl font-semibold text-foreground leading-none">
                   Favoris
                 </h1>
-                <p className="text-sm text-muted-foreground">
-                  Vos fichiers favoris
-                </p>
+                <p className="hidden sm:block text-sm text-muted-foreground">Vos fichiers favoris</p>
               </div>
             </div>
           </header>
