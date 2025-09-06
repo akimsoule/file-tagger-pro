@@ -19,3 +19,9 @@
   to = "/.netlify/functions/:splat"
   status = 200
   force = true
+
+# Catch-all redirect for SPA routes -> serve index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

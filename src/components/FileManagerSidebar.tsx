@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
@@ -12,11 +12,11 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Files, Heart, Hash, Settings, LogOut } from 'lucide-react';
+import { Files, Heart, Hash } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { useTags } from '@/hooks/useTags';
 import { useFileContext } from '@/hooks/useFileContext';
-import { useUiCommands } from '@/contexts/ui/useUiCommands';
+// import { useUiCommands } from '@/contexts/ui/useUiCommands';
 
 import { FileTreeNode } from "@/logic/local/FileTreeNode";
 
@@ -35,8 +35,7 @@ export function FileManagerSidebar({ onNavigateToFolder, currentNode }: FileMana
   const location = useLocation();
   const { toggleTagSelection: toggleTag, selectedTags, tags: allTags } = useTags();
   const { currentNode: activeNode, getTagCount, setCurrentNode } = useFileContext();
-  const { logout, session } = useUser();
-  const { openSettings } = useUiCommands();
+  const { session } = useUser();
 
   const rootNodes: FileTreeNode[] = activeNode
     ? ((activeNode.parent ? (activeNode.parent as FileTreeNode) : activeNode).children as FileTreeNode[])
@@ -123,36 +122,8 @@ export function FileManagerSidebar({ onNavigateToFolder, currentNode }: FileMana
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Footer: Paramètres + Déconnexion */}
+  {/* Footer */}
         <div className="mt-auto">
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <button
-                      onClick={() => openSettings?.()}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    >
-                      <Settings className="h-4 w-4 flex-shrink-0" />
-                      {open && <span>Paramètres</span>}
-                    </button>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <button
-                      onClick={async () => { await logout(); }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    >
-                      <LogOut className="h-4 w-4 flex-shrink-0" />
-                      {open && <span>Déconnexion</span>}
-                    </button>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
           {open && session.user && (
             <div className="px-3 py-2 text-xs text-muted-foreground truncate">{session.user.email}</div>
           )}

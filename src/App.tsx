@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Favorites from "./pages/Favorites";
 import LoginPage from "./pages/Login";
@@ -34,15 +34,34 @@ function RouteExtras() {
 function GlobalModals() {
   const { setOpenSettings } = useUiCommands();
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     setOpenSettings(() => () => setSettingsOpen(true));
     return () => setOpenSettings(undefined);
   }, [setOpenSettings]);
 
+  // Ouvrir automatiquement si l'URL contient ?modal=settings
+  React.useEffect(() => {
+    const sp = new URLSearchParams(location.search);
+    const wantSettings = sp.get('modal') === 'settings';
+    if (wantSettings) setSettingsOpen(true);
+  }, [location.search]);
+
   return (
     <>
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => {
+          setSettingsOpen(false);
+          const sp = new URLSearchParams(location.search);
+          if (sp.get('modal') === 'settings') {
+            sp.delete('modal');
+            navigate({ pathname: location.pathname, search: sp.toString() ? `?${sp.toString()}` : '' }, { replace: true });
+          }
+        }}
+      />
     </>
   );
 }

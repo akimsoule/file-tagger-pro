@@ -269,6 +269,7 @@ export default function GlobalCommand() {
           setCurrentNode(null as unknown as FileTreeNode);
           if (location.pathname !== "/") navigate("/");
         }}
+  onOpenSettings={() => openWithRetry(() => uiRef.current.openSettings)}
         filterTags={tags.map((t) => ({
           id: t.id,
           name: t.name,

@@ -16,6 +16,7 @@ import {
   Plus,
   Upload,
   RefreshCcw,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { CreateFolderModal } from "@/components/CreateFolderModal";
 import { UploadDocumentModal } from "@/components/UploadDocumentModal";
@@ -27,6 +28,7 @@ import { FolderCard } from "@/components/FolderCard";
 import { FileTreeNode } from "@/logic/local/FileTreeNode";
 import type { Document, Folder } from "@/contexts/file";
 import { useUiCommands } from "@/contexts/ui/useUiCommands";
+import { SettingsModal } from "@/components/SettingsModal";
 // Command palette is now global
 
 const Index = () => {
@@ -91,6 +93,7 @@ const Index = () => {
 
   // Register global UI command triggers
   const { setOpenCreateFolder, setOpenUpload } = useUiCommands();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   useEffect(() => {
     setOpenCreateFolder(() => setCreateFolderOpen(true));
     setOpenUpload(() => setUploadOpen(true));
@@ -149,7 +152,19 @@ const Index = () => {
                   </p>
                 </div>
               </div>
+                <div className="ml-auto flex items-center gap-2">
+                  <button
+                    onClick={() => setSettingsOpen(true)}
+                    className="p-1.5 sm:p-2 rounded-lg hover:bg-accent text-muted-foreground"
+                    title="Paramètres"
+                    aria-label="Paramètres"
+                  >
+                    <SettingsIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+                </div>
             </header>
+            {/* Modal simple Paramètres */}
+            <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
             <div className="flex flex-1 flex-col min-h-0 p-3 gap-2 sm:gap-4 md:gap-6">
               <Breadcrumb />

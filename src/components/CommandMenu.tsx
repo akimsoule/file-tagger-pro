@@ -39,6 +39,7 @@ interface CommandMenuProps {
   onUpload: () => void;
   onReload: () => void;
   onGoRoot: () => void;
+  onOpenSettings: () => void;
   // Filtres globaux de tags (pour la recherche)
   filterTags?: Array<{ id: string; name: string; selected: boolean }>;
   onToggleFilterTag?: (id: string) => void;
@@ -83,9 +84,9 @@ export function CommandMenu({
   autoScrollToTags = false,
   quickItems = [],
   selectedContext = null,
+  onOpenSettings,
 }: CommandMenuProps) {
   const navigate = useNavigate();
-  const { openSettings } = useUiCommands();
   const tagsGroupRef = useMemo(() => ({ current: null as null | HTMLDivElement }), []);
   // Amener la section Tags en vue si demandé
   // NB: on utilise un ref sur un wrapper autour du groupe Tags
@@ -169,7 +170,7 @@ export function CommandMenu({
           </CommandItem>
           <CommandItem
             onSelect={() => {
-              openSettings?.();
+              onOpenSettings();
               onOpenChange(false);
             }}
           >

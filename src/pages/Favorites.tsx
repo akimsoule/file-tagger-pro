@@ -3,18 +3,18 @@ import { FileManagerSidebar } from '@/components/FileManagerSidebar';
 import { SearchBar } from '@/components/SearchBar';
 import { FileCard } from '@/components/FileCard';
 import { FileDetailsModal } from '@/components/FileDetailsModal';
-import { Heart } from 'lucide-react';
-import { formatFileSize } from '@/lib/format';
+import { Heart, Settings as SettingsIcon } from 'lucide-react';
 import { StatsBar } from '@/components/StatsBar';
-import { useTotalSize } from '@/hooks/useTotalSize';
 import { useQuery } from '@/hooks/useQuery';
 import { useFileContext } from '@/hooks/useFileContext';
 import { useTags } from '@/hooks/useTags';
 import { useFavoriteNodes } from '@/hooks/useFavoriteNodes';
 import type { Document } from '@/contexts/file';
 import React from 'react';
+import { SettingsModal } from '@/components/SettingsModal';
 
 const Favorites = () => {
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
   const {
     searchQuery,
     setSearchQuery,
@@ -90,7 +90,19 @@ const Favorites = () => {
                 <p className="hidden sm:block text-sm text-muted-foreground">Vos fichiers favoris</p>
               </div>
             </div>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-accent text-muted-foreground"
+                title="Paramètres"
+                aria-label="Paramètres"
+              >
+                <SettingsIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            </div>
           </header>
+          {/* Modal simple Paramètres */}
+          <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
           {/* Barre de recherche et filtres */}
           <SearchBar
