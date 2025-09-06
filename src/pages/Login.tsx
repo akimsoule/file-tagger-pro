@@ -28,7 +28,7 @@ export default function LoginPage() {
           <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md">
             <FileText size={28} />
           </div>
-          <h1 className="text-center text-2xl font-semibold bg-gradient-to-br from-indigo-600 to-violet-600 bg-clip-text text-transparent">DocManager</h1>
+          <h1 className="text-center text-2xl font-semibold bg-gradient-to-br from-indigo-600 to-violet-600 bg-clip-text text-transparent">FileTaggerPro</h1>
           <p className="mt-2 text-center text-sm text-slate-500">Gérez vos documents en toute simplicité</p>
 
           {/* Tabs */}
@@ -84,7 +84,7 @@ export default function LoginPage() {
                 <span>Déjà un compte ? <button type="button" className="text-indigo-600 underline-offset-2 hover:underline" onClick={()=>setMode('login')}>Connexion</button></span>
               )}
             </div>
-            <div className="text-center text-[10px] text-slate-400">© {new Date().getFullYear()} DocManager</div>
+            <div className="text-center text-[10px] text-slate-400">© {new Date().getFullYear()} FileTaggerPro</div>
             <div className="text-center text-[10px] text-slate-400">
               <Link to="/" className="hover:underline">Retour accueil</Link>
             </div>
