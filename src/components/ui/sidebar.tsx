@@ -87,13 +87,12 @@ const SidebarProvider = React.forwardRef<
       lastTouch.current = { x: t.clientX, y: t.clientY }
     }, [isMobile])
 
-    const onTouchEnd = React.useCallback(() => {
+  const onTouchEnd = React.useCallback(() => {
       if (!isMobile || !touchStart.current || !lastTouch.current) return
       const start = touchStart.current
       const end = lastTouch.current
       const dx = end.x - start.x
       const dy = Math.abs(end.y - start.y)
-      const EDGE = 24 // px depuis le bord gauche pour ouverture
       const THRESH = 50 // distance minimale pour valider le swipe
 
       // Réinitialiser
@@ -103,8 +102,8 @@ const SidebarProvider = React.forwardRef<
       // Ignorer les scrolls verticaux
       if (dy > 40) return
 
-      // Ouvrir: swipe de gauche -> droite depuis le bord gauche
-      if (dx > THRESH && start.x <= EDGE && !openMobile) {
+  // Ouvrir: swipe de gauche -> droite (peu importe la position de départ)
+  if (dx > THRESH && !openMobile) {
         setOpenMobile(true)
         return
       }
