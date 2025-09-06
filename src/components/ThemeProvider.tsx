@@ -1,22 +1,29 @@
-import { ThemeProvider as NextThemeProvider } from 'next-themes';
+import { ThemeProvider as NextThemeProvider, useTheme } from 'next-themes';
 import { useSettings } from '@/hooks/useSettings';
 import { useEffect } from 'react';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { settings } = useSettings();
 
-  useEffect(() => {
-    // Mettre à jour le thème lorsque le paramètre change
-    document.documentElement.setAttribute('data-theme', settings.theme);
-  }, [settings.theme]);
-
   return (
     <NextThemeProvider
-      attribute="data-theme"
+      attribute="class"
       defaultTheme={settings.theme}
       enableSystem
+      disableTransitionOnChange
     >
+      <ThemeSync />
       {children}
     </NextThemeProvider>
   );
+}
+
+function ThemeSync() {
+  const { settings } = useSettings();
+  const { setTheme } = useTheme();
+  useEffect(() => {
+    // Synchronise next-themes avec les paramètres app (light | dark | system)
+    setTheme(settings.theme);
+  }, [settings.theme, setTheme]);
+  return null;
 }
