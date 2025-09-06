@@ -1,4 +1,5 @@
 import { api, loadStoredToken } from "./api";
+import { createResourceCache, type CacheOptions } from "./resource-cache";
 
 
 export interface DocumentDTO {
@@ -20,6 +21,14 @@ export interface PaginatedDocuments {
   total: number;
   page: number;
   limit: number;
+}
+
+export interface FilePreviewDTO {
+  documentId: string;
+  name: string;
+  type: string;
+  dataUrl: string;
+  size: number;
 }
 
 export function listDocuments(params: { page?: number; limit?: number; search?: string; tag?: string; userId?: string } = {}) {
@@ -59,6 +68,53 @@ export function deleteDocument(id: string) {
 
 export function syncMega(folderId?: string) {
   return api<{ message: string; syncedCount: number; updatedCount: number }>(`/documents/sync-mega`, { method: 'POST', body: JSON.stringify({ folderId }), auth: true });
+}
+
+// Cache mémoire pour les aperçus (base64 potentiellement volumineux)
+const previewCache = createResourceCache<FilePreviewDTO>(10 * 60 * 1000);
+
+/**
+ * Récupère l'aperçu base64 d'un document, avec cache mémoire.
+ * @param id ID du document
+ * @param opts.force si true, ignore le cache
+ * @param opts.ttlMs durée de vie du cache en ms (par défaut 10 min)
+ */
+export function getDocumentPreview(id: string, opts?: CacheOptions) {
+  return previewCache.get(
+    id,
+    () => api<FilePreviewDTO>(`/files/${id}`, { auth: true, query: { type: "base64" } }),
+    opts
+  );
+}
+
+/**
+ * Invalide le cache des aperçus (tout ou par id)
+ */
+export function invalidateDocumentPreviewCache(id?: string) {
+  previewCache.invalidate(id);
+}
+
+// --- Similarité & embeddings (endpoints exposés par la fonction `search`) ---
+
+export interface SimilarDocumentsResponse {
+  documentId: string;
+  results: DocumentDTO[];
+}
+
+export function getSimilarDocuments(documentId: string, limit = 5) {
+  return api<SimilarDocumentsResponse>(`/search/similar`, {
+    auth: true,
+    query: { documentId, limit }
+  });
+}
+
+export function reindexDocumentEmbeddings(documentId: string) {
+  // Implémentation côté serveur non bloquante (stub) qui renvoie un message de succès
+  return api<{ message: string }>(`/search/reindex-document`, {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify({ documentId })
+  });
 }
 
 function authHeaders() {

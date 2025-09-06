@@ -112,6 +112,9 @@ export default handleErrors(async (request: Request, context: Context) => {
         case 'search':
           return await handleSearch(url, user);
         
+        case 'similar':
+          return await handleSimilar(url, user);
+        
         case 'stats':
           return await handleStats(url, user);
         
@@ -129,6 +132,9 @@ export default handleErrors(async (request: Request, context: Context) => {
       switch (action) {
         case 'advanced-search':
           return await handleAdvancedSearch(request, user);
+        
+        case 'reindex-document':
+          return await handleReindexDocument(request, user);
         
         default:
           return createErrorResponse('Action non trouvée', 404);
@@ -184,6 +190,46 @@ async function handleAdvancedSearch(request: Request, user: AuthUser) {
   } catch (error) {
     console.error('[search] Erreur recherche avancée:', error);
     return createErrorResponse('Erreur lors de la recherche avancée', 500);
+  }
+}
+
+async function handleSimilar(url: URL, user: AuthUser) {
+  const documentId = (url.searchParams.get('documentId') || '').trim();
+  if (!documentId) return createErrorResponse('Paramètre documentId requis', 400);
+  const limit = parseLimit(url.searchParams.get('limit'));
+
+  try {
+    const results = await searchService.findSimilarDocuments(documentId, limit);
+    return createSuccessResponse({ documentId, results });
+  } catch (error) {
+    console.error('[search] Erreur similar documents:', error);
+    return createErrorResponse('Erreur lors de la recherche de documents similaires', 500);
+  }
+}
+
+async function handleReindexDocument(request: Request, user: AuthUser) {
+  const parseResult = await safeJsonParse(request);
+  if (!parseResult.success) {
+    return createErrorResponse(parseResult.error!, 400);
+  }
+  const { documentId } = (parseResult.data || {}) as { documentId?: string };
+  if (!documentId) return createErrorResponse('documentId requis', 400);
+
+  try {
+    // Placeholder: Pas d’indexation d’embeddings implémentée pour le moment.
+    // On journalise l’intention et on répond succès immédiat.
+    await logService.log({
+      action: 'UPDATE',
+      entity: 'SYSTEM',
+      entityId: 'reindex-document',
+      details: `Réindexation demandée pour le document ${documentId}`,
+      userId: user.userId,
+      documentId
+    });
+    return createSuccessResponse({ message: 'Réindexation demandée' });
+  } catch (error) {
+    console.error('[search] Erreur reindex document:', error);
+    return createErrorResponse('Erreur lors de la réindexation du document', 500);
   }
 }
 

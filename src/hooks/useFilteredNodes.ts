@@ -3,7 +3,6 @@ import { useFileContext } from '@/hooks/useFileContext';
 import { useQuery } from '@/hooks/useQuery';
 import { FileTreeNode } from '@/logic/local/FileTreeNode';
 import type { Document, Folder } from '@/contexts/file';
-import type { FileNodeStats } from '@/logic/local/FileTreeNode';
 import { useSelectedTagNames } from '@/hooks/useSelectedTagNames';
 import { sortFolders } from '@/lib/sort';
 import { resolveFolderSize } from '@/lib/size';
