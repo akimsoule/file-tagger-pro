@@ -23,7 +23,7 @@ const getFileIcon = () => <FileText className="h-8 w-8 text-muted-foreground" />
 export function FileCard({ node, onClick, onToggleFavorite }: FileCardProps) {
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const { moveNode, updateNode, deleteNode } = useFileContext();
+  const { moveNode, deleteNode } = useFileContext();
 
   if (!node || node.type !== "file") {
     return null;
