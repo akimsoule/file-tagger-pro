@@ -131,6 +131,27 @@ async function handleFileDownload(
             });
           }
         }
+        // Fallback final: par taille + extension (pour anciens documents sans hash)
+        if (document.size) {
+          const ext = document.name.split(".").pop()?.toLowerCase();
+          const bySizeExt =
+            await megaStorageService.getBase64FileUrlBySizeAndExtUnderAppRoot(
+              { size: document.size, ext },
+              document.ownerId
+            );
+          if (bySizeExt) {
+            console.warn(
+              `Fallback taille+extension activé pour le document ${document.id}.`
+            );
+            return createSuccessResponse({
+              documentId: document.id,
+              name: document.name,
+              type: document.type,
+              dataUrl: bySizeExt,
+              size: document.size,
+            });
+          }
+        }
       } catch {}
       return createErrorResponse(
         "Fichier non accessible",

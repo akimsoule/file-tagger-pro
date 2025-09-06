@@ -210,6 +210,55 @@ export class MegaStorageService {
   }
 
   /**
+   * Trouve un fichier sous appRoot par taille et extension uniquement (pour anciens docs sans hash)
+   * Retourne le premier match si trouvé. Utiliser avec prudence.
+   */
+  private async findFileBySizeAndExtUnderAppRoot(
+    expected: { size: number; ext?: string },
+    userId?: string
+  ): Promise<{ nodeId: string; name?: string } | null> {
+    const tryFind = async (forUserId?: string) => {
+      const storage = await this.getStorage(forUserId);
+      const appRef = await this.getAppRootFolder(forUserId);
+      const appRoot = (storage.find((f) => f.nodeId === appRef.nodeId) || storage.root) as unknown as NodeLike;
+      const appRootId = appRef.nodeId;
+
+      const isDescendantOfAppRoot = (
+        node: NodeLike | null | undefined
+      ): boolean => {
+        let cur = node?.parent as NodeLike | null | undefined;
+        while (cur) {
+          if (cur.nodeId && cur.nodeId === appRootId) return true;
+          cur = cur.parent as NodeLike | null | undefined;
+        }
+        return node?.parent === appRoot;
+      };
+
+      const candidates = (Object.values(storage.files) as unknown as Array<
+        NodeLike & { nodeId?: string; size?: number }
+      >).filter((f) => {
+        if (f.directory || !f.nodeId) return false;
+        if (!isDescendantOfAppRoot(f)) return false;
+        if (typeof f.size === "number" && f.size !== expected.size) return false;
+        if (expected.ext && typeof f.name === "string") {
+          const fe = f.name.split(".").pop()?.toLowerCase();
+          if (fe && fe !== expected.ext.toLowerCase()) return false;
+        }
+        return true;
+      });
+
+      const first = candidates[0];
+      return first?.nodeId ? { nodeId: first.nodeId, name: first.name } : null;
+    };
+
+    const fromUser = await tryFind(userId);
+    if (fromUser) return fromUser;
+    const fromDefault = await tryFind(undefined);
+    if (fromDefault) return fromDefault;
+    return null;
+  }
+
+  /**
    * Génère une URL de téléchargement temporaire pour un fichier
    * @param fileId - L'ID du fichier sur MEGA
    * @param userId - ID de l'utilisateur (optionnel, utilise la config par défaut si non fourni)
@@ -292,6 +341,22 @@ export class MegaStorageService {
     userId?: string
   ): Promise<string | null> {
     const found = await this.findFileByHashUnderAppRoot(expected, userId);
+    if (!found) return null;
+    try {
+      return await this.getBase64FileUrl(found.nodeId, userId);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Génère une data URL base64 par fallback taille+extension (sans hash) sous appRoot
+   */
+  async getBase64FileUrlBySizeAndExtUnderAppRoot(
+    expected: { size: number; ext?: string },
+    userId?: string
+  ): Promise<string | null> {
+    const found = await this.findFileBySizeAndExtUnderAppRoot(expected, userId);
     if (!found) return null;
     try {
       return await this.getBase64FileUrl(found.nodeId, userId);
