@@ -519,6 +519,35 @@ export class DocumentService {
   }
 
   /**
+   * Met à jour uniquement le fileId d'un document et journalise l'opération
+   */
+  async updateDocumentFileId(
+    id: string,
+    newFileId: string,
+    userId: string,
+    reason?: string
+  ) {
+    const updated = await prisma.document.update({
+      where: { id },
+      data: { fileId: newFileId, modifiedAt: new Date() },
+      include: {
+        owner: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    await this.logService.log({
+      action: "DOCUMENT_UPDATE",
+      entity: "DOCUMENT",
+      entityId: id,
+      userId,
+      documentId: id,
+      details: `fileId réconcilié -> ${newFileId}${reason ? ` (${reason})` : ""}`,
+    });
+
+    return updated;
+  }
+
+  /**
    * Synchronise la table de jonction DocumentTag avec la chaîne CSV
    */
   private async syncDocumentTags(

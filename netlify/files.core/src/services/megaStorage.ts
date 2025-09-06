@@ -93,7 +93,7 @@ export class MegaStorageService {
   /**
    * Trouve un fichier par nom sous le dossier appRoot (recherche récursive via chaîne de parents)
    */
-  private async findFileByNameUnderAppRoot(
+  async findFileByNameUnderAppRoot(
     name: string,
     userId?: string
   ): Promise<{ nodeId: string; name?: string } | null> {
@@ -145,7 +145,7 @@ export class MegaStorageService {
    * Trouve un fichier sous appRoot par taille et hash (SHA-256), indépendamment du nom
    * Meilleure garantie d’unicité lorsque le nom a changé.
    */
-  private async findFileByHashUnderAppRoot(
+  async findFileByHashUnderAppRoot(
     expected: { size: number; hash: string; ext?: string },
     userId?: string
   ): Promise<{ nodeId: string; name?: string } | null> {
@@ -210,10 +210,125 @@ export class MegaStorageService {
   }
 
   /**
+   * Recherche globale par nom (dans tout le storage). Essaie exact puis insensible à la casse.
+   */
+  async findFileByNameAnywhere(
+    name: string,
+    userId?: string
+  ): Promise<{ nodeId: string; name?: string } | null> {
+    const tryFind = async (forUserId?: string) => {
+      const storage = await this.getStorage(forUserId);
+      const all = Object.values(storage.files) as Array<{
+        nodeId?: string;
+        name?: string;
+        directory?: boolean;
+      }>;
+      let match = all.find(
+        (f) => !f.directory && f.nodeId && typeof f.name === "string" && f.name === name
+      );
+      if (!match) {
+        const lower = name.toLowerCase();
+        match = all.find(
+          (f) =>
+            !f.directory &&
+            f.nodeId &&
+            typeof f.name === "string" &&
+            f.name.toLowerCase() === lower
+        );
+      }
+      return match?.nodeId ? { nodeId: match.nodeId, name: match.name } : null;
+    };
+  const fromUser = await tryFind(userId);
+  if (fromUser) return { nodeId: fromUser.nodeId, name: fromUser.name ?? undefined };
+  const fromDefault = await tryFind(undefined);
+  if (fromDefault) return { nodeId: fromDefault.nodeId, name: fromDefault.name ?? undefined };
+    return null;
+  }
+
+  /**
+   * Recherche globale par taille+hash (dans tout le storage), indépendante du nom
+   */
+  async findFileByHashAnywhere(
+    expected: { size: number; hash: string; ext?: string },
+    userId?: string
+  ): Promise<{ nodeId: string; name?: string } | null> {
+    const tryFind = async (forUserId?: string) => {
+      const storage = await this.getStorage(forUserId);
+      const all = Object.values(storage.files) as Array<{
+        nodeId?: string;
+        name?: string;
+        directory?: boolean;
+        size?: number;
+      }>;
+      const candidates = all.filter((f) => {
+        if (f.directory || !f.nodeId) return false;
+        if (typeof f.size === "number" && f.size !== expected.size) return false;
+        if (expected.ext && typeof f.name === "string") {
+          const fe = f.name.split(".").pop()?.toLowerCase();
+          if (fe && fe !== expected.ext.toLowerCase()) return false;
+        }
+        return true;
+      });
+      for (const c of candidates) {
+        try {
+          const node = storage.find((n) => n.nodeId === c.nodeId);
+          if (!node) continue;
+          const buf = await node.downloadBuffer({});
+          const hash = crypto.createHash("sha256").update(buf).digest("hex");
+          if (hash === expected.hash) {
+            return { nodeId: node.nodeId as string, name: node.name };
+          }
+        } catch {
+          // ignore
+        }
+      }
+      return null;
+    };
+    const fromUser = await tryFind(userId);
+  if (fromUser) return { nodeId: fromUser.nodeId, name: fromUser.name ?? undefined };
+    const fromDefault = await tryFind(undefined);
+  if (fromDefault) return { nodeId: fromDefault.nodeId, name: fromDefault.name ?? undefined };
+    return null;
+  }
+
+  /**
+   * Recherche globale par taille+extension (sans hash). Retourne le premier match.
+   */
+  async findFileBySizeAndExtAnywhere(
+    expected: { size: number; ext?: string },
+    userId?: string
+  ): Promise<{ nodeId: string; name?: string } | null> {
+    const tryFind = async (forUserId?: string) => {
+      const storage = await this.getStorage(forUserId);
+      const all = Object.values(storage.files) as Array<{
+        nodeId?: string;
+        name?: string;
+        directory?: boolean;
+        size?: number;
+      }>;
+      const match = all.find((f) => {
+        if (f.directory || !f.nodeId) return false;
+        if (typeof f.size === "number" && f.size !== expected.size) return false;
+        if (expected.ext && typeof f.name === "string") {
+          const fe = f.name.split(".").pop()?.toLowerCase();
+          if (fe && fe !== expected.ext.toLowerCase()) return false;
+        }
+        return true;
+      });
+      return match?.nodeId ? { nodeId: match.nodeId, name: match.name ?? undefined } : null;
+    };
+    const fromUser = await tryFind(userId);
+    if (fromUser) return { nodeId: fromUser.nodeId, name: fromUser.name ?? undefined };
+    const fromDefault = await tryFind(undefined);
+    if (fromDefault) return { nodeId: fromDefault.nodeId, name: fromDefault.name ?? undefined };
+    return null;
+  }
+
+  /**
    * Trouve un fichier sous appRoot par taille et extension uniquement (pour anciens docs sans hash)
    * Retourne le premier match si trouvé. Utiliser avec prudence.
    */
-  private async findFileBySizeAndExtUnderAppRoot(
+  async findFileBySizeAndExtUnderAppRoot(
     expected: { size: number; ext?: string },
     userId?: string
   ): Promise<{ nodeId: string; name?: string } | null> {
@@ -341,6 +456,45 @@ export class MegaStorageService {
     userId?: string
   ): Promise<string | null> {
     const found = await this.findFileByHashUnderAppRoot(expected, userId);
+    if (!found) return null;
+    try {
+      return await this.getBase64FileUrl(found.nodeId, userId);
+    } catch {
+      return null;
+    }
+  }
+
+  async getBase64FileUrlByNameAnywhere(
+    name: string,
+    userId?: string
+  ): Promise<string | null> {
+    const found = await this.findFileByNameAnywhere(name, userId);
+    if (!found) return null;
+    try {
+      return await this.getBase64FileUrl(found.nodeId, userId);
+    } catch {
+      return null;
+    }
+  }
+
+  async getBase64FileUrlByHashAnywhere(
+    expected: { size: number; hash: string; ext?: string },
+    userId?: string
+  ): Promise<string | null> {
+    const found = await this.findFileByHashAnywhere(expected, userId);
+    if (!found) return null;
+    try {
+      return await this.getBase64FileUrl(found.nodeId, userId);
+    } catch {
+      return null;
+    }
+  }
+
+  async getBase64FileUrlBySizeAndExtAnywhere(
+    expected: { size: number; ext?: string },
+    userId?: string
+  ): Promise<string | null> {
+    const found = await this.findFileBySizeAndExtAnywhere(expected, userId);
     if (!found) return null;
     try {
       return await this.getBase64FileUrl(found.nodeId, userId);

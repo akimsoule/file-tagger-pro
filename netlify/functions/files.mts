@@ -99,6 +99,22 @@ async function handleFileDownload(
             document.ownerId
           );
         if (byName) {
+          // Réconciliation clean via DocumentService
+          try {
+            const found = await megaStorageService.findFileByNameUnderAppRoot(
+              document.name,
+              document.ownerId
+            );
+            if (found?.nodeId && found.nodeId !== document.fileId) {
+              await documentService.updateDocumentFileId(
+                document.id,
+                found.nodeId,
+                user.userId,
+                "fallback:name:appRoot"
+              );
+              console.warn(`fileId réconcilié pour ${document.id}`);
+            }
+          } catch {}
           console.warn(
             `Fallback par nom activé sous appRoot pour le document ${document.id} (${document.name}). Pensez à réconcilier fileId en base de données si nécessaire.`
           );
@@ -107,6 +123,23 @@ async function handleFileDownload(
             name: document.name,
             type: document.type,
             dataUrl: byName,
+            size: document.size,
+          });
+        }
+        // Fallback global par nom (dans tout le storage)
+        const byNameAny = await megaStorageService.getBase64FileUrlByNameAnywhere(
+          document.name,
+          document.ownerId
+        );
+        if (byNameAny) {
+          console.warn(
+            `Fallback global par nom activé pour le document ${document.id}.`
+          );
+          return createSuccessResponse({
+            documentId: document.id,
+            name: document.name,
+            type: document.type,
+            dataUrl: byNameAny,
             size: document.size,
           });
         }
@@ -119,6 +152,22 @@ async function handleFileDownload(
               document.ownerId
             );
           if (byHash) {
+            // Réconciliation: fileId
+            try {
+              const found = await megaStorageService.findFileByHashUnderAppRoot(
+                { size: document.size, hash: document.hash, ext },
+                document.ownerId
+              );
+              if (found?.nodeId && found.nodeId !== document.fileId) {
+                await documentService.updateDocumentFileId(
+                  document.id,
+                  found.nodeId,
+                  user.userId,
+                  "fallback:hash:appRoot"
+                );
+                console.warn(`fileId réconcilié (hash/appRoot) pour ${document.id}`);
+              }
+            } catch {}
             console.warn(
               `Fallback par hash/size activé sous appRoot pour le document ${document.id}.`
             );
@@ -127,6 +176,41 @@ async function handleFileDownload(
               name: document.name,
               type: document.type,
               dataUrl: byHash,
+              size: document.size,
+            });
+          }
+
+          // Fallback global par hash/size (dans tout le storage)
+          const byHashAny =
+            await megaStorageService.getBase64FileUrlByHashAnywhere(
+              { size: document.size, hash: document.hash, ext },
+              document.ownerId
+            );
+          if (byHashAny) {
+            // Réconciliation: fileId
+            try {
+              const found = await megaStorageService.findFileByHashAnywhere(
+                { size: document.size, hash: document.hash, ext },
+                document.ownerId
+              );
+              if (found?.nodeId && found.nodeId !== document.fileId) {
+                await documentService.updateDocumentFileId(
+                  document.id,
+                  found.nodeId,
+                  user.userId,
+                  "fallback:hash:anywhere"
+                );
+                console.warn(`fileId réconcilié (hash/anywhere) pour ${document.id}`);
+              }
+            } catch {}
+            console.warn(
+              `Fallback global par hash/size activé pour le document ${document.id}.`
+            );
+            return createSuccessResponse({
+              documentId: document.id,
+              name: document.name,
+              type: document.type,
+              dataUrl: byHashAny,
               size: document.size,
             });
           }
@@ -140,6 +224,22 @@ async function handleFileDownload(
               document.ownerId
             );
           if (bySizeExt) {
+            // Réconciliation: tentative prudente (taille+ext non unique)
+            try {
+              const found = await megaStorageService.findFileBySizeAndExtUnderAppRoot(
+                { size: document.size, ext },
+                document.ownerId
+              );
+              if (found?.nodeId && found.nodeId !== document.fileId) {
+                await documentService.updateDocumentFileId(
+                  document.id,
+                  found.nodeId,
+                  user.userId,
+                  "fallback:sizeExt:appRoot"
+                );
+                console.warn(`fileId réconcilié (sizeExt/appRoot) pour ${document.id}`);
+              }
+            } catch {}
             console.warn(
               `Fallback taille+extension activé pour le document ${document.id}.`
             );
@@ -148,6 +248,41 @@ async function handleFileDownload(
               name: document.name,
               type: document.type,
               dataUrl: bySizeExt,
+              size: document.size,
+            });
+          }
+
+          // Fallback global taille+extension (dans tout le storage)
+          const bySizeExtAny =
+            await megaStorageService.getBase64FileUrlBySizeAndExtAnywhere(
+              { size: document.size, ext },
+              document.ownerId
+            );
+          if (bySizeExtAny) {
+            // Réconciliation: très prudente
+            try {
+              const found = await megaStorageService.findFileBySizeAndExtAnywhere(
+                { size: document.size, ext },
+                document.ownerId
+              );
+              if (found?.nodeId && found.nodeId !== document.fileId) {
+                await documentService.updateDocumentFileId(
+                  document.id,
+                  found.nodeId,
+                  user.userId,
+                  "fallback:sizeExt:anywhere"
+                );
+                console.warn(`fileId réconcilié (sizeExt/anywhere) pour ${document.id}`);
+              }
+            } catch {}
+            console.warn(
+              `Fallback global taille+extension activé pour le document ${document.id}.`
+            );
+            return createSuccessResponse({
+              documentId: document.id,
+              name: document.name,
+              type: document.type,
+              dataUrl: bySizeExtAny,
               size: document.size,
             });
           }
