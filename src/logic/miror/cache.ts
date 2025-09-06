@@ -7,7 +7,14 @@ import type { Document, Folder } from "@/contexts/file";
 export interface Snapshot {
   id: string;
   data: Document | Folder; // Snapshot des données métier
-  tags: { id: string; name: string; color: string; count: number; createdAt: Date; updatedAt: Date }[];
+  tags: {
+    id: string;
+    name: string;
+    color: string;
+    count: number;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
   parentId?: string;
 }
 
@@ -18,7 +25,7 @@ class NodeCache {
     this.map.set(node.id, {
       id: node.id,
       data: { ...node.getData() },
-      tags: node.tags.map(t => ({ ...t })),
+      tags: node.tags.map((t) => ({ ...t })),
       parentId: node.parentId,
     });
   }
@@ -31,6 +38,10 @@ class NodeCache {
     const snap = this.map.get(id);
     if (snap) this.map.delete(id);
     return snap;
+  }
+
+  clear() {
+    this.map.clear();
   }
 }
 

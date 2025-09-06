@@ -43,11 +43,16 @@ export class FileTreeNodeApi extends FileTreeNode {
     if (node) nodeCache.take(node);
     const result = localMutate();
     if (remote) {
-      remote().catch((err) => {
-        console.error("[FileTreeNodeApi] remote op failed -> rollback", err);
-        this.rollback(nodeId);
-        this.rollbackListeners.forEach((l) => l({ nodeId, reason: err }));
-      });
+      remote()
+        .then(() => {
+          // Opération distante OK: on n'a plus besoin du snapshot
+          nodeCache.pop(nodeId);
+        })
+        .catch((err) => {
+          console.error("[FileTreeNodeApi] remote op failed -> rollback", err);
+          this.rollback(nodeId);
+          this.rollbackListeners.forEach((l) => l({ nodeId, reason: err }));
+        });
     }
     return result;
   }
@@ -220,6 +225,8 @@ export class FileTreeNodeApi extends FileTreeNode {
           if (node.type === "file") await updateDocument(id, { tags: newCsv });
           else await updateFolder(id, { tags: newCsv } as Partial<FolderDTO>);
         }
+        // Succès: nettoyer les snapshots pris
+        impacted.forEach((id) => nodeCache.pop(id));
       } catch (e) {
         console.error(
           "[FileTreeNodeApi] deleteTagReferences failed -> rollback",
@@ -246,6 +253,8 @@ export class FileTreeNodeApi extends FileTreeNode {
       try {
         if (node.type === "file") await deleteDocument(nodeId);
         else await deleteFolder(nodeId);
+        // Succès suppression: retirer le snapshot associé
+        nodeCache.pop(nodeId);
       } catch (e) {
         console.error("[FileTreeNodeApi] deleteNode failed -> rollback", e);
         if (parent) parent.addChild(node);
@@ -259,6 +268,8 @@ export class FileTreeNodeApi extends FileTreeNode {
   public static async buildFromRemoteTree(
     ownerId: string
   ): Promise<FileTreeNodeApi | null> {
+    // Réinitialiser le cache de snapshots sur rechargement complet
+    nodeCache.clear();
     const res = await getFullTree();
     if (!res.tree) return null;
 
