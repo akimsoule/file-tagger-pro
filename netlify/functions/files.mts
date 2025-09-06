@@ -99,6 +99,9 @@ async function handleFileDownload(
             document.ownerId
           );
         if (byName) {
+          console.warn(
+            `Fallback par nom activé sous appRoot pour le document ${document.id} (${document.name}). Pensez à réconcilier fileId en base de données si nécessaire.`
+          );
           return createSuccessResponse({
             documentId: document.id,
             name: document.name,

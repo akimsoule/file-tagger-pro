@@ -1,6 +1,13 @@
 import { Storage, verify } from "megajs";
 import { userMegaConfigService } from "./userMegaConfigService";
 
+type NodeLike = {
+  nodeId?: string;
+  name?: string;
+  directory?: boolean;
+  parent?: NodeLike | null | undefined;
+};
+
 /**
  * Service de gestion des fichiers sur MEGA avec support multi-utilisateur
  */
@@ -89,33 +96,48 @@ export class MegaStorageService {
     name: string,
     userId?: string
   ): Promise<{ nodeId: string; name?: string } | null> {
-    const storage = await this.getStorage(userId);
-    const appRef = await this.getAppRootFolder(userId);
-    const appRoot =
-      storage.find((f) => f.nodeId === appRef.nodeId) || storage.root;
+    const tryFind = async (forUserId?: string) => {
+      const storage = await this.getStorage(forUserId);
+      const appRef = await this.getAppRootFolder(forUserId);
+      const appRoot = (storage.find((f) => f.nodeId === appRef.nodeId) ||
+        storage.root) as unknown as NodeLike;
+      const appRootId = appRef.nodeId;
 
-    const isDescendantOfAppRoot = (node: any): boolean => {
-      // eslint-disable-line @typescript-eslint/no-explicit-any
-      let cur = node?.parent;
-      while (cur) {
-        if (cur === appRoot) return true;
-        cur = cur.parent;
-      }
-      return false;
+      const isDescendantOfAppRoot = (
+        node: NodeLike | null | undefined
+      ): boolean => {
+        let cur = node?.parent as NodeLike | null | undefined;
+        while (cur) {
+          if (cur.nodeId && cur.nodeId === appRootId) return true;
+          cur = cur.parent as NodeLike | null | undefined;
+        }
+        // Si aucun parent n'est disponible, dernier recours: vérifier l'égalité stricte (cas où les objets parent sont identiques)
+        return node?.parent === appRoot;
+      };
+
+      const candidates = (
+        Object.values(storage.files) as unknown as NodeLike[]
+      ).filter(
+        (f) =>
+          !f.directory &&
+          typeof f.name === "string" &&
+          f.name === name &&
+          isDescendantOfAppRoot(f)
+      );
+
+      const first = candidates.find((c) => !!c.nodeId);
+      return first?.nodeId ? { nodeId: first.nodeId, name: first.name } : null;
     };
 
-    const candidates = Object.values(storage.files).filter(
-      (
-        f: any // eslint-disable-line @typescript-eslint/no-explicit-any
-      ) =>
-        !f.directory &&
-        typeof f.name === "string" &&
-        f.name === name &&
-        isDescendantOfAppRoot(f)
-    ) as Array<{ nodeId?: string; name?: string }>;
+    // 1) Chercher côté utilisateur (si fourni)
+    const fromUser = await tryFind(userId);
+    if (fromUser) return fromUser;
 
-    const first = candidates.find((c) => !!c.nodeId);
-    return first?.nodeId ? { nodeId: first.nodeId!, name: first.name } : null;
+    // 2) Fallback: chercher sur le stockage par défaut
+    const fromDefault = await tryFind(undefined);
+    if (fromDefault) return fromDefault;
+
+    return null;
   }
 
   /**
@@ -280,14 +302,16 @@ export class MegaStorageService {
         nodeId?: string;
         name?: string;
         directory?: boolean;
-        parent?: unknown;
+        parent?: { nodeId?: string } | unknown;
       }>
     ).find(
       (f) =>
         !!f.directory &&
         typeof f.name === "string" &&
         f.name.toLowerCase() === "embeddings" &&
-        f.parent === appRoot
+        ((f.parent as { nodeId?: string } | undefined)?.nodeId ===
+          appRef.nodeId ||
+          f.parent === appRoot)
     );
     if (existingNode?.nodeId) return existingNode.nodeId as string;
 
@@ -530,9 +554,15 @@ export class MegaStorageService {
         storage.find((f) => f.nodeId === appRef.nodeId) || storage.root;
     }
 
-    const files = Object.values(storage.files).filter(
-      (file) => file.parent === targetFolder && !file.directory
-    );
+    const targetFolderId = (targetFolder as unknown as { nodeId?: string })
+      .nodeId;
+    const files = Object.values(storage.files).filter((file) => {
+      const p = file.parent as { nodeId?: string } | undefined;
+      const parentMatches =
+        (p?.nodeId && targetFolderId && p.nodeId === targetFolderId) ||
+        file.parent === targetFolder;
+      return parentMatches && !file.directory;
+    });
 
     console.log(
       `📁 Scanning ${folderId ? "dossier spécifique" : "dossier racine"}: ${
