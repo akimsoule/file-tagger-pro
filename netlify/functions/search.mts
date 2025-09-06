@@ -3,6 +3,7 @@ import { SearchService } from '../files.core/src/services/searchService';
 import { StatsService } from '../files.core/src/services/statsService';
 import { LogService } from '../files.core/src/services/logService';
 import { activityService } from '../files.core/src/services/activityService';
+import { EmbeddingGenerator } from '../files.core/src/services/embeddingGenerator';
 import {
   handleCorsOptions,
   requireAuth,
@@ -216,17 +217,20 @@ async function handleReindexDocument(request: Request, user: AuthUser) {
   if (!documentId) return createErrorResponse('documentId requis', 400);
 
   try {
-    // Placeholder: Pas d’indexation d’embeddings implémentée pour le moment.
-    // On journalise l’intention et on répond succès immédiat.
+    // Lancer la (ré)génération de l'embedding et stockage sur MEGA
+    const generator = new EmbeddingGenerator();
+    const result = await generator.generateForDocument(documentId);
+
+    // Journaliser l'action avec quelques métadonnées utiles
     await logService.log({
       action: 'UPDATE',
-      entity: 'SYSTEM',
-      entityId: 'reindex-document',
-      details: `Réindexation demandée pour le document ${documentId}`,
+      entity: 'DOCUMENT',
+      entityId: documentId,
+      details: `Réindexation effectuée (dim=${result.dim}, tokens=${result.tokens})`,
       userId: user.userId,
       documentId
     });
-    return createSuccessResponse({ message: 'Réindexation demandée' });
+    return createSuccessResponse({ message: 'Réindexation effectuée', ...result });
   } catch (error) {
     console.error('[search] Erreur reindex document:', error);
     return createErrorResponse('Erreur lors de la réindexation du document', 500);

@@ -98,7 +98,7 @@ export class EmbeddingService {
     // Vérifier existence du document
     const doc = await prisma.document.findUnique({
       where: { id: documentId },
-      select: { id: true },
+      select: { id: true, ownerId: true },
     });
     if (!doc) throw new Error("Document non trouvé");
 
@@ -113,12 +113,37 @@ export class EmbeddingService {
       "utf8"
     );
     const mime = "application/json";
+    // Stratégie “replace”: jamais d'update direct (non fiable). On nettoie puis on ré-upload.
+    const existing = await prisma.documentEmbedding.findUnique({
+      where: { documentId },
+      select: { megaFileId: true },
+    });
+    const embeddingsFolderId = await this.mega.ensureEmbeddingsFolder(
+      doc.ownerId
+    );
+    // 1) Tenter de supprimer l'ancien fichier par ID si on l'a
+    if (existing?.megaFileId) {
+      await this.mega
+        .deleteFile(existing.megaFileId, doc.ownerId)
+        .catch(() => undefined);
+    }
+    // 2) Purger tout doublon homonyme résiduel dans le dossier embeddings
+    await this.mega
+      .deleteFilesInFolderByName(embeddingsFolderId, filename, doc.ownerId)
+      .catch(() => undefined);
+    // 3) Upload unique du nouveau contenu
+    console.log(
+      `[embeddings] Uploading embedding for doc ${documentId} (owner ${doc.ownerId}) to MEGA folder ${embeddingsFolderId}`
+    );
     megaFileId = await this.mega.uploadFile(
       filename,
       mime,
       buffer,
-      undefined,
-      doc.id
+      embeddingsFolderId,
+      doc.ownerId
+    );
+    console.log(
+      `[embeddings] Uploaded embedding file ${filename} -> MEGA fileId ${megaFileId}`
     );
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

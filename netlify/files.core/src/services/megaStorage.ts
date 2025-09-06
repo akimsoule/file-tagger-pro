@@ -146,6 +146,24 @@ export class MegaStorageService {
   }
 
   /**
+   * Retourne l'ID du dossier "embeddings" (créé s'il n'existe pas) à la racine du compte MEGA de l'utilisateur
+   */
+  async ensureEmbeddingsFolder(userId?: string): Promise<string> {
+    const storage = await this.getStorage(userId);
+    // Tenter de trouver un dossier existant nommé "embeddings" (insensible à la casse)
+    type MegaNode = { nodeId?: string; name?: string; directory?: boolean };
+    const existingNode = (Object.values(storage.files) as MegaNode[]).find(
+      (f) => !!f.directory && typeof f.name === 'string' && f.name.toLowerCase() === 'embeddings'
+    );
+    if (existingNode && existingNode.nodeId) return existingNode.nodeId;
+
+    // Créer le dossier sous la racine
+    const folder = await storage.root.mkdir('embeddings');
+  if (!folder?.nodeId) throw new Error('Impossible de créer le dossier embeddings');
+  return folder.nodeId;
+  }
+
+  /**
    * Suppression d'un fichier
    * @param fileId - ID du fichier à supprimer
    * @param userId - ID de l'utilisateur
@@ -241,6 +259,45 @@ export class MegaStorageService {
       });
       uploadStream.on('error', reject);
     });
+  }
+
+  /**
+   * Trouve un fichier par nom dans un dossier spécifique
+   */
+  async findFileInFolderByName(folderId: string, name: string, userId?: string): Promise<{ nodeId: string; name?: string } | null> {
+    const storage = await this.getStorage(userId);
+    const folder = storage.find(f => f.nodeId === folderId);
+    if (!folder) throw new Error(`Dossier avec ID ${folderId} non trouvé`);
+    const children = Object.values(folder.children || {}) as Array<{ nodeId?: string; name?: string; directory?: boolean }>;
+    const match = children.find(c => !c.directory && typeof c.name === 'string' && c.name === name);
+    return match && match.nodeId ? { nodeId: match.nodeId, name: match.name } : null;
+  }
+
+  /**
+   * Supprime tous les fichiers portant un nom donné dans un dossier (utile pour éviter les doublons)
+   * Retourne le nombre supprimé
+   */
+  async deleteFilesInFolderByName(folderId: string, name: string, userId?: string): Promise<number> {
+    const storage = await this.getStorage(userId);
+    const folder = storage.find(f => f.nodeId === folderId);
+    if (!folder) throw new Error(`Dossier avec ID ${folderId} non trouvé`);
+    const children = Object.values(folder.children || {}) as Array<{ nodeId?: string; name?: string; directory?: boolean; delete?: () => Promise<void> }>;
+    const matches = children.filter(c => !c.directory && typeof c.name === 'string' && c.name === name && c.nodeId);
+    let deleted = 0;
+    for (const m of matches) {
+      try {
+        if (typeof m.delete === 'function') {
+          await m.delete();
+          deleted++;
+        }
+      } catch (e) {
+        console.warn(`⚠️ Échec de suppression pour ${m.name} (${m.nodeId}):`, e);
+      }
+    }
+    if (deleted > 0) {
+      console.log(`🧹 Suppression de ${deleted} doublon(s) pour "${name}" dans le dossier ${folderId}`);
+    }
+    return deleted;
   }
 
   /**
