@@ -632,7 +632,7 @@ export function FileDetailsModal({
                 </div>
 
                 <>
-                  <Separator className="my-4 mx-6" />
+                  <Separator className="my-4" />
                   <div className="px-6 pb-2">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="text-sm text-muted-foreground">Tags</h4>

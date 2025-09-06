@@ -288,6 +288,9 @@ const Index = () => {
             selectedTags={selectedTags}
           />
         </div>
+
+  {/* FAB global géré dans App via GlobalFab */}
+
         <CreateFolderModal
           open={createFolderOpen}
           onClose={() => setCreateFolderOpen(false)}

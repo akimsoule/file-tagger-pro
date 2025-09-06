@@ -14,6 +14,7 @@ import { AppProviders } from "./contexts/AppProviders";
 import { ThemeProvider } from "./components/ThemeProvider";
 import GlobalCommand from "./components/GlobalCommand";
 import { UiCommandProvider } from "./contexts/ui/UiCommandContext";
+import GlobalFab from "./components/GlobalFab";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <GlobalCommand />
+              <GlobalFab />
             </UiCommandProvider>
           </BrowserRouter>
         </ThemeProvider>
