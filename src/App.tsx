@@ -16,6 +16,7 @@ import GlobalFab from "./components/GlobalFab";
 import React from "react";
 import { SettingsModal } from "./components/SettingsModal";
 import { useUiCommands } from "./contexts/ui/useUiCommands";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 function RouteExtras() {
   const { pathname } = useLocation();
@@ -76,6 +77,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <UiCommandProvider>
+              <ErrorBoundary>
               <Routes>
                 <Route
                   path="/login"
@@ -98,6 +100,7 @@ const App = () => (
               </Routes>
               <RouteExtras />
               <GlobalModals />
+              </ErrorBoundary>
             </UiCommandProvider>
           </BrowserRouter>
         </ThemeProvider>
