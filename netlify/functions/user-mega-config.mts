@@ -1,6 +1,6 @@
 import { Context } from '@netlify/functions';
 import { userMegaConfigService } from '../files.core/src/services/userMegaConfigService';
-import { verifyToken } from './shared/middleware.mts';
+import { verifyToken, handleCorsOptions, createErrorResponse, createSuccessResponse } from './shared/middleware.mts';
 
 /**
  * Netlify Function pour gérer les configurations MEGA des utilisateurs
@@ -10,6 +10,10 @@ export default async function handler(request: Request, context: Context): Promi
   const urlPath = new URL(url);
   const segments = urlPath.pathname.split('/').filter(Boolean);
 
+  // CORS preflight
+  if (method === 'OPTIONS') {
+    return handleCorsOptions();
+  }
   // Authentification requise pour toutes les routes
   let userId: string;
   try {
@@ -44,19 +48,14 @@ export default async function handler(request: Request, context: Context): Promi
         return await deleteUserMegaConfig(userId);
 
       default:
-        return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
-          status: 405,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return createErrorResponse('Méthode non autorisée', 405);
     }
   } catch (error) {
     console.error('Erreur dans user-mega-config API:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Erreur interne du serveur',
-        details: error instanceof Error ? error.message : 'Erreur inconnue'
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    return createErrorResponse(
+      'Erreur interne du serveur',
+      500,
+      error instanceof Error ? error.message : 'Erreur inconnue'
     );
   }
 }
@@ -68,16 +67,10 @@ async function getUserMegaConfig(userId: string): Promise<Response> {
   const config = await userMegaConfigService.getUserMegaConfig(userId);
   
   if (!config) {
-    return new Response(JSON.stringify({ 
-      hasConfig: false,
-      message: 'Aucune configuration MEGA trouvée' 
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return createSuccessResponse({ hasConfig: false, message: 'Aucune configuration MEGA trouvée' });
   }
 
-  return new Response(JSON.stringify({
+  return createSuccessResponse({
     hasConfig: true,
     config: {
       id: config.id,
@@ -86,9 +79,6 @@ async function getUserMegaConfig(userId: string): Promise<Response> {
       createdAt: config.createdAt,
       updatedAt: config.updatedAt,
     }
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
   });
 }
 
@@ -100,23 +90,13 @@ async function upsertUserMegaConfig(request: Request, userId: string): Promise<R
   const { email, password } = body;
 
   if (!email || !password) {
-    return new Response(JSON.stringify({ 
-      error: 'Email et mot de passe MEGA requis' 
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return createErrorResponse('Email et mot de passe MEGA requis', 400);
   }
 
   // Validation basique de l'email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    return new Response(JSON.stringify({ 
-      error: 'Format d\'email invalide' 
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return createErrorResponse("Format d'email invalide", 400);
   }
 
   const config = await userMegaConfigService.upsertUserMegaConfig(userId, {
@@ -125,7 +105,7 @@ async function upsertUserMegaConfig(request: Request, userId: string): Promise<R
     isActive: true
   });
 
-  return new Response(JSON.stringify({
+  return createSuccessResponse({
     message: 'Configuration MEGA mise à jour avec succès',
     config: {
       id: config.id,
@@ -134,9 +114,6 @@ async function upsertUserMegaConfig(request: Request, userId: string): Promise<R
       createdAt: config.createdAt,
       updatedAt: config.updatedAt,
     }
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
   });
 }
 
@@ -148,26 +125,16 @@ async function toggleUserMegaConfig(request: Request, userId: string): Promise<R
   const { isActive } = body;
 
   if (typeof isActive !== 'boolean') {
-    return new Response(JSON.stringify({ 
-      error: 'isActive doit être un booléen' 
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return createErrorResponse('isActive doit être un booléen', 400);
   }
 
   const config = await userMegaConfigService.toggleUserMegaConfig(userId, isActive);
 
   if (!config) {
-    return new Response(JSON.stringify({ 
-      error: 'Configuration MEGA non trouvée' 
-    }), {
-      status: 404,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return createErrorResponse('Configuration MEGA non trouvée', 404);
   }
 
-  return new Response(JSON.stringify({
+  return createSuccessResponse({
     message: `Configuration MEGA ${isActive ? 'activée' : 'désactivée'} avec succès`,
     config: {
       id: config.id,
@@ -175,9 +142,6 @@ async function toggleUserMegaConfig(request: Request, userId: string): Promise<R
       isActive: config.isActive,
       updatedAt: config.updatedAt,
     }
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
   });
 }
 
@@ -187,10 +151,7 @@ async function toggleUserMegaConfig(request: Request, userId: string): Promise<R
 async function deleteUserMegaConfig(userId: string): Promise<Response> {
   await userMegaConfigService.deleteUserMegaConfig(userId);
 
-  return new Response(JSON.stringify({
+  return createSuccessResponse({
     message: 'Configuration MEGA supprimée avec succès'
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
   });
 }

@@ -18,6 +18,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { useEffect, useState } from "react";
+import {
+  deleteUserMegaConfig,
+  getUserMegaConfig,
+  saveUserMegaConfig,
+  toggleUserMegaConfig,
+  type UserMegaConfigInfo,
+} from "@/lib/api/api-mega-config";
+import { useToast } from "@/hooks/useToast";
 import type { ViewMode, SortBy } from "@/types";
 import { useUser } from "@/hooks/useUser";
 
@@ -30,6 +41,41 @@ export function SettingsModal({
 }) {
   const { settings, updateSettings, resetSettings } = useSettings();
   const { logout, session } = useUser();
+  const { toast } = useToast();
+
+  // MEGA config state (secured: we never persist password locally)
+  const [megaLoading, setMegaLoading] = useState(false);
+  const [megaError, setMegaError] = useState<string | undefined>();
+  const [megaConfig, setMegaConfig] = useState<UserMegaConfigInfo | null>(null);
+  const [megaEmail, setMegaEmail] = useState("");
+  const [megaPassword, setMegaPassword] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    // fetch config when modal opens
+    (async () => {
+      try {
+        setMegaLoading(true);
+        setMegaError(undefined);
+        const res = await getUserMegaConfig();
+        if (res.hasConfig && res.config) {
+          setMegaConfig(res.config);
+          setMegaEmail(res.config.email || "");
+        } else {
+          setMegaConfig(null);
+          setMegaEmail("");
+        }
+      } catch (e) {
+        setMegaError(
+          e instanceof Error
+            ? e.message
+            : "Impossible de charger la config MEGA"
+        );
+      } finally {
+        setMegaLoading(false);
+      }
+    })();
+  }, [open]);
 
   const themes = [
     { value: "system", label: "Système" },
@@ -120,6 +166,142 @@ export function SettingsModal({
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Configuration MEGA (sécurisée) */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Stockage MEGA</CardTitle>
+              <CardDescription>
+                Configurez vos identifiants MEGA. Le mot de passe n'est jamais
+                stocké en clair.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {megaError && (
+                <p className="text-sm text-destructive">{megaError}</p>
+              )}
+
+              <div className="grid gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="mega-email">Email MEGA</Label>
+                  <Input
+                    id="mega-email"
+                    type="email"
+                    autoComplete="username"
+                    className="w-72"
+                    value={megaEmail}
+                    onChange={(e) => setMegaEmail(e.target.value)}
+                    placeholder="nom@domaine.com"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="mega-password">Mot de passe</Label>
+                  <Input
+                    id="mega-password"
+                    type="password"
+                    autoComplete="current-password"
+                    className="w-72"
+                    value={megaPassword}
+                    onChange={(e) => setMegaPassword(e.target.value)}
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="mega-active">Activer MEGA</Label>
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      id="mega-active"
+                      checked={!!megaConfig?.isActive}
+                      onCheckedChange={async (checked) => {
+                        try {
+                          setMegaLoading(true);
+                          const res = await toggleUserMegaConfig(!!checked);
+                          setMegaConfig(res.config);
+                          toast({
+                            title: "MEGA",
+                            description: res.message,
+                          });
+                        } catch (e) {
+                          toast({
+                            title: "Erreur",
+                            description:
+                              e instanceof Error
+                                ? e.message
+                                : "Impossible de mettre à jour l'état",
+                            variant: "destructive",
+                          });
+                        } finally {
+                          setMegaLoading(false);
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    variant="secondary"
+                    disabled={megaLoading || !megaConfig}
+                    onClick={async () => {
+                      try {
+                        setMegaLoading(true);
+                        await deleteUserMegaConfig();
+                        setMegaConfig(null);
+                        setMegaEmail("");
+                        setMegaPassword("");
+                        toast({
+                          title: "MEGA",
+                          description: "Configuration supprimée",
+                        });
+                      } catch (e) {
+                        toast({
+                          title: "Erreur",
+                          description:
+                            e instanceof Error
+                              ? e.message
+                              : "Impossible de supprimer la configuration",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setMegaLoading(false);
+                      }
+                    }}
+                  >
+                    Supprimer
+                  </Button>
+                  <Button
+                    disabled={megaLoading || !megaEmail || !megaPassword}
+                    onClick={async () => {
+                      try {
+                        setMegaLoading(true);
+                        const res = await saveUserMegaConfig(
+                          megaEmail.trim(),
+                          megaPassword
+                        );
+                        setMegaConfig(res.config);
+                        setMegaPassword(""); // clear password after save
+                        toast({ title: "MEGA", description: res.message });
+                      } catch (e) {
+                        toast({
+                          title: "Erreur",
+                          description:
+                            e instanceof Error
+                              ? e.message
+                              : "Impossible d'enregistrer les identifiants",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setMegaLoading(false);
+                      }
+                    }}
+                  >
+                    Enregistrer
+                  </Button>
                 </div>
               </div>
             </CardContent>
