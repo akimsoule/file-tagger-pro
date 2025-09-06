@@ -91,7 +91,7 @@ export function SettingsModal({
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="Sélectionner un thème" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[10010]">
                       {themes.map((t) => (
                         <SelectItem key={t.value} value={t.value}>
                           {t.label}
@@ -112,7 +112,7 @@ export function SettingsModal({
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="Sélectionner une langue" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[10010]">
                       {languages.map((lang) => (
                         <SelectItem key={lang.value} value={lang.value}>
                           {lang.label}
@@ -145,7 +145,7 @@ export function SettingsModal({
                   <SelectTrigger className="w-44">
                     <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[10010]">
                     <SelectItem value="grid">Grille</SelectItem>
                     <SelectItem value="list">Liste</SelectItem>
                   </SelectContent>
@@ -162,7 +162,7 @@ export function SettingsModal({
                   <SelectTrigger className="w-44">
                     <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[10010]">
                     <SelectItem value="name">Nom</SelectItem>
                     <SelectItem value="date">Date</SelectItem>
                     <SelectItem value="size">Taille</SelectItem>
