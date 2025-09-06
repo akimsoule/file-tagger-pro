@@ -255,32 +255,14 @@ export class FileTreeNodeApi extends FileTreeNode {
     return true;
   }
 
-  // === Outils d'inspection du cache (debug/observabilité) ===
-  public static cacheSize(): number {
-    return nodeCache.size();
-  }
-  public static cacheKeys(): string[] {
-    return nodeCache.keys();
-  }
-  public static cacheSummary(): ReadonlyArray<{
-    id: string;
-    parentId?: string;
-    tagCount: number;
-  }> {
-    return nodeCache.summary();
-  }
-
   // === Chargement complet de l'arbre depuis l'API ===
   public static async buildFromRemoteTree(
     ownerId: string
   ): Promise<FileTreeNodeApi | null> {
-    // Prepare to rollback cache on failure
-    const prevCache = nodeCache.entries();
-    try {
-      const res = await getFullTree();
-      if (!res.tree) return null;
+    const res = await getFullTree();
+    if (!res.tree) return null;
 
-      const apiTreeRoot = res.tree;
+    const apiTreeRoot = res.tree;
     const makeFolderData = (f: TreeFolderDTO): Folder => ({
       id: f.id,
       name: f.name,
@@ -346,11 +328,8 @@ export class FileTreeNodeApi extends FileTreeNode {
           stack.push({ dto: childDto, node: folderNode as FileTreeNodeApi });
         }
       }
-  rootApi.updateStats();
-  // Success: reset cache to a lean initial state and snapshot the new root
-  nodeCache.clear();
-  nodeCache.take(rootApi);
-  return rootApi;
+      rootApi.updateStats();
+      return rootApi;
     }
 
     // Fallback: reconstruire via méthode générique (synthetic root)
@@ -391,27 +370,17 @@ export class FileTreeNodeApi extends FileTreeNode {
       }
       for (let i = f.folders.length - 1; i >= 0; i--) stack.push(f.folders[i]);
     }
-      const syntheticRoot = FileTreeNode.buildRootTree(documents, folders);
-      const apiRoot = new FileTreeNodeApi(
-        syntheticRoot.id,
-        syntheticRoot.name,
-        syntheticRoot.type,
-        syntheticRoot.getData() as Folder,
-        syntheticRoot.stats,
-        syntheticRoot.parentId
-      );
-      for (const child of syntheticRoot.children) apiRoot.addChild(child);
-      apiRoot.updateStats();
-      // Success: reset cache to a lean initial state and snapshot the synthetic root
-      nodeCache.clear();
-      nodeCache.take(apiRoot);
-      return apiRoot;
-    } catch (e) {
-      // Restore previous cache state to allow rollbacks of in-flight mutations
-      nodeCache.restore(prevCache);
-      // Emit a global rollback-like notification via console for visibility
-      console.error('[FileTreeNodeApi] buildFromRemoteTree failed -> cache restored', e);
-      return null;
-    }
+    const syntheticRoot = FileTreeNode.buildRootTree(documents, folders);
+    const apiRoot = new FileTreeNodeApi(
+      syntheticRoot.id,
+      syntheticRoot.name,
+      syntheticRoot.type,
+      syntheticRoot.getData() as Folder,
+      syntheticRoot.stats,
+      syntheticRoot.parentId
+    );
+    for (const child of syntheticRoot.children) apiRoot.addChild(child);
+    apiRoot.updateStats();
+    return apiRoot;
   }
 }
