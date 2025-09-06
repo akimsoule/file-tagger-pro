@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import { MegaStorageService } from "./megaStorage";
 import crypto from "crypto";
+import { EmbeddingGenerator } from "./embeddingGenerator";
 
 export interface CreateDocumentData {
   name: string;
@@ -244,6 +245,10 @@ export class DocumentService {
 
   // Synchroniser les relations Tag <-> Document
   await this.syncDocumentTags(document.id, document.tags, ownerId);
+
+  // Indexation d'un embedding basé métadonnées (asynchrone best-effort)
+  // On ne bloque pas le flux utilisateur; l'échec n'empêche pas la création du doc
+  void new EmbeddingGenerator().generateForDocument(document.id).catch(() => undefined);
 
     await this.logService.log({
       action: "DOCUMENT_CREATE",
@@ -485,6 +490,11 @@ export class DocumentService {
         ", "
       )})`,
     });
+
+    // Réindexation embedding (asynchrone, best-effort)
+    if (updateData.name !== undefined || updateData.type !== undefined || updateData.description !== undefined || updateData.tags !== undefined) {
+  void new EmbeddingGenerator().generateForDocument(id).catch(() => undefined);
+    }
 
     return document;
   }

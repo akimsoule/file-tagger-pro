@@ -61,6 +61,21 @@ export function syncMega(folderId?: string) {
   return api<{ message: string; syncedCount: number; updatedCount: number }>(`/documents/sync-mega`, { method: 'POST', body: JSON.stringify({ folderId }), auth: true });
 }
 
+export function getSimilarDocuments(documentId: string, limit = 5) {
+  return api<{ documentId: string; limit: number; results: DocumentDTO[] }>(`/semantic/similar`, {
+    auth: true,
+    query: { documentId, limit }
+  });
+}
+
+export function reindexDocumentEmbeddings(documentId: string) {
+  return api<{ message: string }>(`/semantic/reindex`, {
+    method: 'POST',
+    body: JSON.stringify({ documentId }),
+    auth: true,
+  });
+}
+
 function authHeaders() {
   const t = loadStoredToken();
   return t ? { Authorization: 'Bearer ' + t } : {};

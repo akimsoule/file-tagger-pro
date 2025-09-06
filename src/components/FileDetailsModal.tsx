@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { FileText, Heart, Download, Share, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDocumentMutations, useSimilarDocuments } from '@/hooks/useApiDocuments';
+import { useToast } from '@/hooks/useToast';
 
 interface FileDetailsModalProps {
   document: Document | null;
@@ -36,6 +38,9 @@ export function FileDetailsModal({
   onTagClick,
   selectedTags = []
 }: FileDetailsModalProps) {
+  const { data: similarDocs, isLoading: loadingSimilar } = useSimilarDocuments(doc?.id, 5);
+  const { reindexMut } = useDocumentMutations();
+  const { toast } = useToast();
   if (!doc) return null;
 
   const extension = doc.name.split('.').pop()?.toUpperCase();
@@ -108,6 +113,49 @@ export function FileDetailsModal({
             </div>
           </>
         )}
+
+        {/* Similaires */}
+        <Separator className="my-4" />
+        <div>
+          <h4 className="text-sm text-muted-foreground mb-2">Similaires</h4>
+          {loadingSimilar ? (
+            <p className="text-sm text-muted-foreground">Chargement…</p>
+          ) : similarDocs && similarDocs.length > 0 ? (
+            <ul className="space-y-2">
+              {similarDocs.map(s => (
+                <li key={s.id} className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{s.name}</p>
+                    <p className="text-xs text-muted-foreground">{formatFileSize(s.size)} • {new Date(s.modifiedAt).toLocaleDateString()}</p>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => window.open(`/documents/${s.id}`, '_blank')}>
+                    Ouvrir
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Aucun résultat.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={reindexMut.isPending}
+                onClick={async () => {
+                  try {
+                    await reindexMut.mutateAsync(doc.id);
+                    toast({ title: 'Réindexation', description: 'Réindexation lancée. Revenez dans quelques secondes.' });
+                  } catch (e: unknown) {
+                    console.error(e);
+                    toast({ title: 'Erreur', description: 'Impossible de lancer la réindexation', variant: 'destructive' });
+                  }
+                }}
+              >
+                {reindexMut.isPending ? 'Réindexation…' : 'Réindexer'}
+              </Button>
+            </div>
+          )}
+        </div>
 
         {/* Actions */}
         <Separator className="my-4" />

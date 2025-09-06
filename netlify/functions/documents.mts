@@ -1,5 +1,6 @@
 import { Context } from "@netlify/functions";
 import { DocumentService } from "../files.core/src/services/documentService";
+import { SearchService } from "../files.core/src/services/searchService";
 import { MegaStorageService } from "../files.core/src/services/megaStorage";
 import { LogService } from "../files.core/src/services/logService";
 import {
@@ -20,6 +21,7 @@ import {
 const logService = new LogService();
 const megaStorageService = new MegaStorageService();
 const documentService = new DocumentService(megaStorageService, logService);
+const searchService = new SearchService(logService);
 
 // Fonction helper pour déterminer le type de document basé sur le fichier
 function getDocumentTypeFromFile(fileName: string, mimeType?: string): string {
@@ -148,6 +150,16 @@ const documentsHandler = handleErrors(
       const user = authResult.success ? authResult.context!.user! : null;
 
       if (documentId) {
+        // Supporte /documents/:id/similar
+        const pathSegments = url.pathname.split("/").filter(Boolean);
+        const last = pathSegments[pathSegments.length - 1];
+        if (last === "similar") {
+          const maybeDocId = pathSegments[pathSegments.length - 2];
+          if (!maybeDocId) {
+            return createErrorResponse("ID de document manquant pour la requête 'similar'", 400);
+          }
+          return await handleGetSimilarDocuments(maybeDocId, url, user);
+        }
         return await handleGetDocument(documentId, user);
       } else {
         return await handleGetDocuments(url, user);
@@ -211,6 +223,25 @@ async function handleGetDocument(documentId: string, _user: AuthUser | null) {
     console.error("Erreur lors de la récupération du document:", error);
     return createErrorResponse(
       "Erreur lors de la récupération du document",
+      500
+    );
+  }
+}
+
+async function handleGetSimilarDocuments(documentId: string, url: URL, _user: AuthUser | null) {
+  try {
+    const limitParam = url.searchParams.get("limit");
+    const limit = Math.max(1, Math.min(50, Number(limitParam) || 5));
+    const similar = await searchService.findSimilarDocuments(documentId, limit);
+    return createSuccessResponse({
+      documentId,
+      limit,
+      results: similar,
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des documents similaires:", error);
+    return createErrorResponse(
+      "Erreur lors de la récupération des documents similaires",
       500
     );
   }
