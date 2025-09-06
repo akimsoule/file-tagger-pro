@@ -16,6 +16,7 @@ import { Files, Heart, Hash, Settings, LogOut } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { useTags } from '@/hooks/useTags';
 import { useFileContext } from '@/hooks/useFileContext';
+import { useUiCommands } from '@/contexts/ui/useUiCommands';
 
 import { FileTreeNode } from "@/logic/local/FileTreeNode";
 
@@ -35,6 +36,7 @@ export function FileManagerSidebar({ onNavigateToFolder, currentNode }: FileMana
   const { toggleTagSelection: toggleTag, selectedTags, tags: allTags } = useTags();
   const { currentNode: activeNode, getTagCount, setCurrentNode } = useFileContext();
   const { logout, session } = useUser();
+  const { openSettings } = useUiCommands();
 
   const rootNodes: FileTreeNode[] = activeNode
     ? ((activeNode.parent ? (activeNode.parent as FileTreeNode) : activeNode).children as FileTreeNode[])
@@ -128,19 +130,13 @@ export function FileManagerSidebar({ onNavigateToFolder, currentNode }: FileMana
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
-                    <NavLink
-                      to="/settings"
-                      className={({ isActive }) =>
-                        `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          isActive
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                        }`
-                      }
+                    <button
+                      onClick={() => openSettings?.()}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                     >
                       <Settings className="h-4 w-4 flex-shrink-0" />
                       {open && <span>Paramètres</span>}
-                    </NavLink>
+                    </button>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

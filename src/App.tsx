@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import Favorites from "./pages/Favorites";
-import Settings from "./pages/Settings";
 import LoginPage from "./pages/Login";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { PublicRoute } from "./components/auth/PublicRoute";
@@ -15,6 +14,9 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import GlobalCommand from "./components/GlobalCommand";
 import { UiCommandProvider } from "./contexts/ui/UiCommandContext";
 import GlobalFab from "./components/GlobalFab";
+import React from "react";
+import { SettingsModal } from "./components/SettingsModal";
+import { useUiCommands } from "./contexts/ui/useUiCommands";
 
 function RouteExtras() {
   const { pathname } = useLocation();
@@ -25,6 +27,22 @@ function RouteExtras() {
     <>
       <GlobalCommand />
       <GlobalFab />
+    </>
+  );
+}
+
+function GlobalModals() {
+  const { setOpenSettings } = useUiCommands();
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    setOpenSettings(() => () => setSettingsOpen(true));
+    return () => setOpenSettings(undefined);
+  }, [setOpenSettings]);
+
+  return (
+    <>
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   );
 }
@@ -65,18 +83,11 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="/settings"
-                  element={
-                    <ProtectedRoute>
-                      <Settings />
-                    </ProtectedRoute>
-                  }
-                />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <RouteExtras />
+              <GlobalModals />
             </UiCommandProvider>
           </BrowserRouter>
         </ThemeProvider>
