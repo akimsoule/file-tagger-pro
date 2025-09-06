@@ -86,7 +86,7 @@ export async function api<T = unknown>(
     if (!options._retried) {
       try {
         // Mutualiser les refresh concurrents
-        const refreshPromise = new Promise<void>((resolve, reject) => {
+  const refreshPromise = new Promise<void>((resolve) => {
           pendingQueue.push(resolve);
         });
         if (!isRefreshing) {

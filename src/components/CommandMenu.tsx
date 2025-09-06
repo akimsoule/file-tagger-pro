@@ -9,8 +9,6 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
-import { useNavigate } from "react-router-dom";
-import { useUiCommands } from "@/contexts/ui/useUiCommands";
 import {
   Grid3X3,
   List,
@@ -40,6 +38,7 @@ interface CommandMenuProps {
   onReload: () => void;
   onGoRoot: () => void;
   onOpenSettings: () => void;
+  onOpenFavorites: () => void;
   // Filtres globaux de tags (pour la recherche)
   filterTags?: Array<{ id: string; name: string; selected: boolean }>;
   onToggleFilterTag?: (id: string) => void;
@@ -85,8 +84,8 @@ export function CommandMenu({
   quickItems = [],
   selectedContext = null,
   onOpenSettings,
+  onOpenFavorites,
 }: CommandMenuProps) {
-  const navigate = useNavigate();
   const tagsGroupRef = useMemo(() => ({ current: null as null | HTMLDivElement }), []);
   // Amener la section Tags en vue si demandé
   // NB: on utilise un ref sur un wrapper autour du groupe Tags
@@ -162,7 +161,7 @@ export function CommandMenu({
           </CommandItem>
           <CommandItem
             onSelect={() => {
-              navigate("/favorites");
+              onOpenFavorites();
               onOpenChange(false);
             }}
           >

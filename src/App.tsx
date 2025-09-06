@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Index from "./pages/Index";
-import Favorites from "./pages/Favorites";
 import LoginPage from "./pages/Login";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { PublicRoute } from "./components/auth/PublicRoute";
@@ -21,7 +20,7 @@ import { useUiCommands } from "./contexts/ui/useUiCommands";
 function RouteExtras() {
   const { pathname } = useLocation();
   // Afficher uniquement sur la page d'accueil et Favoris
-  const allowed = pathname === "/" || pathname.startsWith("/favorites");
+  const allowed = pathname === "/"; // plus de page Favoris
   if (!allowed) return null;
   return (
     <>
@@ -91,14 +90,6 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <Index />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/favorites"
-                  element={
-                    <ProtectedRoute>
-                      <Favorites />
                     </ProtectedRoute>
                   }
                 />

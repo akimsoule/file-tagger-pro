@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +36,7 @@ export function SearchBar({
   toggleTagSelection,
   tags,
 }: SearchBarProps) {
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  // filtre avancé désactivé pour le moment
 
   const sortOptions = [
     { value: 'name' as SortBy, label: 'Nom' },

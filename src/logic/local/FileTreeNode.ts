@@ -1,11 +1,11 @@
 import TreeNode from "./TreeNode";
 import type { Document, Folder, Tag } from "@/contexts/file";
 import {
+  TagTreeNode,
   computeTagStatsUtil,
   addTagUtil,
   removeTagUtil,
   purgeTagUtil,
-  TagTreeNode,
 } from "./treeTags.ts";
 import { printTreeUtil } from "./treePrint.ts";
 import type { TreeNodeType } from "@/types";
@@ -95,7 +95,7 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
   public static buildRootTree(
     documents: Document[],
     folders: Folder[],
-    options?: { debug?: boolean }
+  _options?: { debug?: boolean }
   ): FileTreeNode {
     // Créer le dossier racine avec ses propriétés minimales requises
     const root = FileTreeNode.createFolder({

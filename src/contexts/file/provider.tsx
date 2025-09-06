@@ -152,8 +152,12 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
   const updateNode = useCallback(
     async (nodeId: string, updates: Partial<Document | Folder>) => {
       // Interdit de renommer ou modifier les tags du root
-      if (nodeId === 'root' && ('name' in updates || 'tags' in updates)) {
-        toast({ title: 'Action interdite', description: 'Le dossier racine ne peut pas être renommé ni taggé.', variant: 'destructive' });
+      if (nodeId === "root" && ("name" in updates || "tags" in updates)) {
+        toast({
+          title: "Action interdite",
+          description: "Le dossier racine ne peut pas être renommé ni taggé.",
+          variant: "destructive",
+        });
         return;
       }
       if (rootNode.updateNodeFields(nodeId, updates)) bumpTreeVersion();
@@ -218,8 +222,12 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 
   const addNodeTag = useCallback(
     (node: FileTreeNode, tagName: string) => {
-      if (node.id === 'root') {
-        toast({ title: 'Action interdite', description: 'Le dossier racine ne peut pas être taggé.', variant: 'destructive' });
+      if (node.id === "root") {
+        toast({
+          title: "Action interdite",
+          description: "Le dossier racine ne peut pas être taggé.",
+          variant: "destructive",
+        });
         return;
       }
       if (rootNode.addTagToNode(node.id, tagName)) bumpTreeVersion();
@@ -229,8 +237,12 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 
   const removeNodeTag = useCallback(
     (node: FileTreeNode, tagName: string) => {
-      if (node.id === 'root') {
-        toast({ title: 'Action interdite', description: 'Le dossier racine ne peut pas être taggé.', variant: 'destructive' });
+      if (node.id === "root") {
+        toast({
+          title: "Action interdite",
+          description: "Le dossier racine ne peut pas être taggé.",
+          variant: "destructive",
+        });
         return;
       }
       if (rootNode.removeTagFromNode(node.id, tagName)) bumpTreeVersion();
@@ -263,8 +275,12 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
 
   const deleteNode = useCallback(
     async (nodeId: string) => {
-      if (nodeId === 'root') {
-        toast({ title: 'Action interdite', description: 'Le dossier racine ne peut pas être supprimé.', variant: 'destructive' });
+      if (nodeId === "root") {
+        toast({
+          title: "Action interdite",
+          description: "Le dossier racine ne peut pas être supprimé.",
+          variant: "destructive",
+        });
         return;
       }
       if (!(rootNode instanceof FileTreeNodeApi)) return;
@@ -332,7 +348,7 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
         moveNode,
         createFolder,
         createDocument,
-  deleteNode,
+        deleteNode,
         loadingTree,
         reloadTree,
       }}

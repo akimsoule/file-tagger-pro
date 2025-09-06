@@ -39,6 +39,13 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  const setFavoriteFilter = useCallback((next: boolean) => {
+    setFilters(prev => ({
+      ...prev,
+      showFavorites: next,
+    }));
+  }, []);
+
   const toggleHiddenFilter = useCallback(() => {
     setFilters(prev => ({
       ...prev,
@@ -125,6 +132,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     setSortBy,
     setViewMode: handleViewModeChange,
     toggleFavoriteFilter,
+  setFavoriteFilter,
     toggleHiddenFilter,
     clearFilters,
     getFilteredContent,

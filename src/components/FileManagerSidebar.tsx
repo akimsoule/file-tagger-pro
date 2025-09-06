@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import React, { useCallback, useMemo } from "react";
+import { NavLink } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -10,37 +10,62 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
-import { Files, Heart, Hash } from 'lucide-react';
-import { useUser } from '@/hooks/useUser';
-import { useTags } from '@/hooks/useTags';
-import { useFileContext } from '@/hooks/useFileContext';
+} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { Files, Hash, Heart } from "lucide-react";
+import { useUser } from "@/hooks/useUser";
+import { useTags } from "@/hooks/useTags";
+import { useFileContext } from "@/hooks/useFileContext";
+import { useQuery } from "@/hooks/useQuery";
+import { useFavoriteNodes } from "@/hooks/useFavoriteNodes";
+import clsx from "clsx";
 // import { useUiCommands } from '@/contexts/ui/useUiCommands';
 
-import { FileTreeNode } from "@/logic/local/FileTreeNode";
+type NavItem = {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+  isRoot?: boolean;
+};
 
-interface FileManagerSidebarProps {
-  onNavigateToFolder?: (node: FileTreeNode) => void;
-  currentNode?: FileTreeNode | null;
+const navigationItems: ReadonlyArray<NavItem> = [
+  { title: "Root", url: "/", icon: Files, isRoot: true },
+] as const;
+
+function navLinkClasses(isActive: boolean) {
+  return clsx(
+    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+    isActive
+      ? "bg-primary text-primary-foreground"
+      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+  );
 }
 
-const navigationItems = [
-  { title: 'Root', url: '/', icon: Files, isRoot: true },
-  { title: 'Favoris', url: '/favorites', icon: Heart },
-];
-
-export function FileManagerSidebar({ onNavigateToFolder, currentNode }: FileManagerSidebarProps) {
+export function FileManagerSidebar() {
   const { open } = useSidebar();
-  const location = useLocation();
-  const { toggleTagSelection: toggleTag, selectedTags, tags: allTags } = useTags();
-  const { currentNode: activeNode, getTagCount, setCurrentNode } = useFileContext();
+  const {
+    toggleTagSelection: toggleTag,
+    selectedTags,
+    tags: allTags,
+  } = useTags();
+  const { getTagCount, setCurrentNode } = useFileContext();
   const { session } = useUser();
+  const { filters, toggleFavoriteFilter } = useQuery();
+  const { favoriteNodes } = useFavoriteNodes();
 
-  const rootNodes: FileTreeNode[] = activeNode
-    ? ((activeNode.parent ? (activeNode.parent as FileTreeNode) : activeNode).children as FileTreeNode[])
-    : [];
-  const isActive = (path: string) => location.pathname === path;
+  // Pré-calcule
+  const favoritesActive = filters.showFavorites;
+  const sortedTags = useMemo(
+    () => [...allTags].sort((a, b) => a.name.localeCompare(b.name)),
+    [allTags]
+  );
+  const handleNavClick = useCallback(
+    (item: NavItem) => () => {
+      if (item.isRoot) setCurrentNode(null);
+    },
+    [setCurrentNode]
+  );
+  const handleToggleTag = useCallback((id: string) => toggleTag(id), [toggleTag]);
 
   return (
     <Sidebar collapsible="icon">
@@ -57,18 +82,8 @@ export function FileManagerSidebar({ onNavigateToFolder, currentNode }: FileMana
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          isActive
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                        }`
-                      }
-                      onClick={() => {
-                        if (item.isRoot) {
-                          setCurrentNode(null);
-                        }
-                      }}
+                      className={({ isActive }) => navLinkClasses(Boolean(isActive))}
+                      onClick={handleNavClick(item)}
                     >
                       <item.icon className="h-4 w-4 flex-shrink-0" />
                       {open && <span>{item.title}</span>}
@@ -80,35 +95,71 @@ export function FileManagerSidebar({ onNavigateToFolder, currentNode }: FileMana
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Section Favoris */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
+            {open && "Favoris"}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={favoritesActive}
+                  onClick={toggleFavoriteFilter}
+                  tooltip="Favoris"
+                  className="flex items-center gap-2 px-3 py-2"
+                  aria-pressed={favoritesActive}
+                  aria-label="Basculer l'affichage des favoris"
+                >
+                  <Heart
+                    className={clsx("h-4 w-4", favoritesActive && "fill-current")}
+                  />
+                  {open && (
+                    <>
+                      <span className="sr-only">Favoris</span>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {favoriteNodes.length}
+                      </span>
+                    </>
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         {/* Section Tags */}
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-6">
             <span className="flex items-center gap-2">
               <Hash className="h-3 w-3" />
-              {open && 'Tags'}
+              {open && "Tags"}
             </span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {allTags.map((tag) => (
+              {sortedTags.map((tag) => (
                 <SidebarMenuItem key={tag.id}>
                   <SidebarMenuButton asChild>
                     <Button
                       variant="ghost"
-                      className={`w-full justify-start gap-2 px-3 py-2 text-sm ${
+                      className={clsx(
+                        "w-full justify-start gap-2 px-3 py-2 text-sm",
                         selectedTags.includes(tag.id)
-                          ? 'bg-accent text-accent-foreground'
-                          : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground'
-                      }`}
-                      onClick={() => toggleTag(tag.id)}
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                      )}
+                      onClick={() => handleToggleTag(tag.id)}
                     >
-                      <div 
-                        className="h-3 w-3 rounded-full flex-shrink-0" 
-                        style={{ backgroundColor: tag.color || '#888' }} 
+                      <div
+                        className="h-3 w-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: tag.color || "#888" }}
                       />
                       {open && (
                         <>
-                          <span className="flex-1 truncate text-left">{tag.name}</span>
+                          <span className="flex-1 truncate text-left">
+                            {tag.name}
+                          </span>
                           <span className="text-xs text-muted-foreground">
                             {getTagCount(tag.id)}
                           </span>
@@ -122,10 +173,12 @@ export function FileManagerSidebar({ onNavigateToFolder, currentNode }: FileMana
           </SidebarGroupContent>
         </SidebarGroup>
 
-  {/* Footer */}
+        {/* Footer */}
         <div className="mt-auto">
           {open && session.user && (
-            <div className="px-3 py-2 text-xs text-muted-foreground truncate">{session.user.email}</div>
+            <div className="px-3 py-2 text-xs text-muted-foreground truncate">
+              {session.user.email}
+            </div>
           )}
         </div>
       </SidebarContent>

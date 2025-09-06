@@ -19,17 +19,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
 }
 
-function parseEmbedding(data: string): number[] {
-  try {
-    const arr = JSON.parse(data);
-    if (Array.isArray(arr)) {
-      return arr.map(Number);
-    }
-  } catch {
-    // ignore
-  }
-  return [];
-}
+// parseEmbedding supprimé (non utilisé)
 
 const VECTOR_STORAGE = "mega" as const; // enforced: MEGA-only storage
 const redisUrl = process.env.REDIS_URL;

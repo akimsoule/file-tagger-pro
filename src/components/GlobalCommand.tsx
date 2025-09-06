@@ -15,7 +15,7 @@ import { useTags } from "@/hooks/useTags";
 export default function GlobalCommand() {
   const navigate = useNavigate();
   const location = useLocation();
-  const isFavorites = location.pathname.startsWith("/favorites");
+  // plus de route /favorites ; on détermine favoris via filtre
   const ui = useUiCommands();
   const uiRef = useRef(ui);
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function GlobalCommand() {
     setTimeout(() => tryOpen(tries), 0);
   };
 
-  const { viewMode, setViewMode, sortBy, setSortBy } = useQuery();
+  const { setViewMode, setSortBy, filters, setFavoriteFilter } = useQuery();
   const {
     currentNode,
     selectedNode,
@@ -72,10 +72,10 @@ export default function GlobalCommand() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      const tag = (target?.tagName || '').toLowerCase();
+      const tag = (target?.tagName || "").toLowerCase();
       const isEditable =
-        tag === 'input' ||
-        tag === 'textarea' ||
+        tag === "input" ||
+        tag === "textarea" ||
         (target && (target as HTMLElement).isContentEditable);
 
       // Cmd/Ctrl+K -> open command menu
@@ -109,7 +109,11 @@ export default function GlobalCommand() {
         reloadTree?.();
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.altKey && (e.code === "KeyT" || e.code === "KeyG")) {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.altKey &&
+        (e.code === "KeyT" || e.code === "KeyG")
+      ) {
         e.preventDefault();
         setScrollToTags(true);
         setCmdOpen(true);
@@ -117,7 +121,7 @@ export default function GlobalCommand() {
       }
 
       // Backspace -> go to parent folder (or close preview if a document is selected)
-      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === 'Backspace') {
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === "Backspace") {
         if (isEditable) return; // ne pas interférer avec la saisie
         e.preventDefault(); // empêcher le retour navigateur
         // Si un document est ouvert, fermer d'abord le modal
@@ -135,12 +139,19 @@ export default function GlobalCommand() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [reloadTree, setViewMode, selectedNode, currentNode, setCurrentNode, setSelectedNode]);
+  }, [
+    reloadTree,
+    setViewMode,
+    selectedNode,
+    currentNode,
+    setCurrentNode,
+    setSelectedNode,
+  ]);
 
   // (TagEditor supprimé)
 
   const quickItems = useMemo(() => {
-    if (isFavorites) {
+    if (filters.showFavorites) {
       return favoriteNodes.slice(0, 20).map((n) => ({
         id: n.id,
         type: "document" as const,
@@ -170,7 +181,7 @@ export default function GlobalCommand() {
       })),
     ];
   }, [
-    isFavorites,
+    filters.showFavorites,
     favoriteNodes,
     folderNodes,
     documentNodes,
@@ -269,7 +280,11 @@ export default function GlobalCommand() {
           setCurrentNode(null as unknown as FileTreeNode);
           if (location.pathname !== "/") navigate("/");
         }}
-  onOpenSettings={() => openWithRetry(() => uiRef.current.openSettings)}
+        onOpenSettings={() => openWithRetry(() => uiRef.current.openSettings)}
+        onOpenFavorites={() => {
+          if (location.pathname !== "/") navigate("/");
+          setFavoriteFilter(true);
+        }}
         filterTags={tags.map((t) => ({
           id: t.id,
           name: t.name,
@@ -280,7 +295,7 @@ export default function GlobalCommand() {
         quickItems={quickItems}
         selectedContext={selectedContext}
       />
-  {/* TagEditor supprimé */}
+      {/* TagEditor supprimé */}
       {cmdOpen === false && scrollToTags && setScrollToTags(false)}
       <ConfirmDialog
         open={!!confirmOpen}

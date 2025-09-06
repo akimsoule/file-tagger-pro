@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { FileManagerSidebar } from "@/components/FileManagerSidebar";
 import { SearchBar } from "@/components/SearchBar";
@@ -39,8 +39,6 @@ const Index = () => {
     setViewMode,
     sortBy,
     setSortBy,
-    getFilteredContent,
-    getSortedContent,
   } = useQuery();
 
   const {
@@ -54,17 +52,6 @@ const Index = () => {
   } = useFileContext();
 
   const { selectedTags, toggleTagSelection: toggleTag, tags } = useTags();
-
-  // IDs -> noms (tags dans les données sont stockés comme noms)
-  const selectedTagNames = useMemo(
-    () =>
-      selectedTags.map((id) => {
-        const t = tags.find((tag) => tag.id === id);
-        if (t) return t.name;
-        return id.replace(/^tag-/, "");
-      }),
-    [selectedTags, tags]
-  );
 
   const clearFilters = useCallback(() => {
     setSearchQuery("");
@@ -107,10 +94,7 @@ const Index = () => {
     <>
       <SidebarProvider>
         <div className="flex h-screen w-full overflow-hidden">
-          <FileManagerSidebar
-            onNavigateToFolder={(node) => setCurrentNode(node as FileTreeNode)}
-            currentNode={currentNode}
-          />
+          <FileManagerSidebar />
 
           <main className="flex-1 flex flex-col min-w-0 w-full min-h-0">
             <header className="flex items-center gap-1 sm:gap-4 p-1 sm:p-4 border-b border-border bg-card/50">
@@ -152,19 +136,22 @@ const Index = () => {
                   </p>
                 </div>
               </div>
-                <div className="ml-auto flex items-center gap-2">
-                  <button
-                    onClick={() => setSettingsOpen(true)}
-                    className="p-1.5 sm:p-2 rounded-lg hover:bg-accent text-muted-foreground"
-                    title="Paramètres"
-                    aria-label="Paramètres"
-                  >
-                    <SettingsIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-                </div>
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  onClick={() => setSettingsOpen(true)}
+                  className="p-1.5 sm:p-2 rounded-lg hover:bg-accent text-muted-foreground"
+                  title="Paramètres"
+                  aria-label="Paramètres"
+                >
+                  <SettingsIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              </div>
             </header>
             {/* Modal simple Paramètres */}
-            <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+            <SettingsModal
+              open={settingsOpen}
+              onClose={() => setSettingsOpen(false)}
+            />
 
             <div className="flex flex-1 flex-col min-h-0 p-3 gap-2 sm:gap-4 md:gap-6">
               <Breadcrumb />
@@ -304,7 +291,7 @@ const Index = () => {
           />
         </div>
 
-  {/* FAB global géré dans App via GlobalFab */}
+        {/* FAB global géré dans App via GlobalFab */}
 
         <CreateFolderModal
           open={createFolderOpen}

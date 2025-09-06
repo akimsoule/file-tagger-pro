@@ -15,10 +15,11 @@ interface FilteredNodesResult {
 
 export function useFilteredNodes(currentNode: FileTreeNode | null): FilteredNodesResult {
   const { currentNode: ctxCurrent } = useFileContext();
-  const { getFilteredContent, getSortedContent, searchQuery, sortBy } = useQuery();
+  const { getFilteredContent, getSortedContent, searchQuery, sortBy, filters } = useQuery();
   const { selectedTagNames } = useSelectedTagNames();
 
-  const hasActiveFilter = selectedTagNames.length > 0 || !!searchQuery; // vrai si tags ou recherche actifs
+  // Vrai si tags, recherche ou filtre favoris actifs
+  const hasActiveFilter = selectedTagNames.length > 0 || !!searchQuery || !!filters.showFavorites;
 
   // Collecte récursive seulement si filtrage actif
   const collectDescendants = useCallback((node: FileTreeNode): FileTreeNode[] => {
@@ -40,8 +41,8 @@ export function useFilteredNodes(currentNode: FileTreeNode | null): FilteredNode
         : (target.children as FileTreeNode[])
       : [];
 
-    const documentNodes = baseNodes.filter(n => n.type === 'file') as FileTreeNode[];
-    const folderNodes = baseNodes.filter(n => n.type === 'folder') as FileTreeNode[];
+  const documentNodes = baseNodes.filter(n => n.type === 'file') as FileTreeNode[];
+  const folderNodes = baseNodes.filter(n => n.type === 'folder') as FileTreeNode[];
 
     // Filtrage documents via contexte
     const docData = documentNodes.map(n => n.getData() as Document);
@@ -52,8 +53,9 @@ export function useFilteredNodes(currentNode: FileTreeNode | null): FilteredNode
       .filter((n): n is FileTreeNode => !!n);
 
     // Filtrage dossiers
-    let filteredFolderNodes = folderNodes;
-    if (selectedTagNames.length > 0 || searchQuery) {
+  // Si le filtre favoris est actif, on masque totalement les dossiers
+  let filteredFolderNodes = filters.showFavorites ? [] as FileTreeNode[] : folderNodes;
+  if (!filters.showFavorites && (selectedTagNames.length > 0 || searchQuery)) {
       const q = searchQuery.toLowerCase();
       filteredFolderNodes = folderNodes.filter(node => {
         const data = node.getData() as Folder;
@@ -71,7 +73,7 @@ export function useFilteredNodes(currentNode: FileTreeNode | null): FilteredNode
     }
 
     // Tri des dossiers (même logique que documents, mais adapté aux champs Folder)
-    if (filteredFolderNodes.length > 1) {
+  if (!filters.showFavorites && filteredFolderNodes.length > 1) {
       const folderData = filteredFolderNodes.map(f => f.getData() as Folder);
       const sortedFolderData = sortFolders(folderData, sortBy, folder => resolveFolderSize(folder, filteredFolderNodes));
       filteredFolderNodes = sortedFolderData.map(f => filteredFolderNodes.find(n => n.id === f.id)!)
@@ -82,5 +84,5 @@ export function useFilteredNodes(currentNode: FileTreeNode | null): FilteredNode
       documents: filteredDocumentNodes,
       hasActiveFilter
     };
-  }, [currentNode, ctxCurrent, hasActiveFilter, getFilteredContent, getSortedContent, selectedTagNames, searchQuery, sortBy, collectDescendants]);
+  }, [currentNode, ctxCurrent, hasActiveFilter, getFilteredContent, getSortedContent, selectedTagNames, searchQuery, sortBy, collectDescendants, filters.showFavorites]);
 }

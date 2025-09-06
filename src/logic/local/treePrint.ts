@@ -1,4 +1,3 @@
-import type { Document, Folder } from "@/contexts/file";
 
 interface PrintableNode {
   id: string;

@@ -3,7 +3,7 @@ import { FileTreeNode } from '@/logic/local/FileTreeNode';
 import { Folder } from '@/contexts/file';
 import { TagBadge } from './TagBadge';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, FolderIcon, FolderOutput, Tags, Trash2 } from 'lucide-react';
+import { MoreHorizontal, FolderIcon, FolderOutput, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,7 +23,7 @@ interface FolderCardProps {
 export function FolderCard({ node, onClick }: FolderCardProps) {
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const { moveNode, updateNode, deleteNode } = useFileContext();
+  const { moveNode, deleteNode } = useFileContext();
   
   const folderData = node.getData() as Folder;
   // findNodeById n'est pas nécessaire ici, on utilise directement l'id cible

@@ -109,14 +109,14 @@ export async function getSimilarDocuments(documentId: string, limit = 5) {
       auth: true,
       query: { limit }
     });
-  } catch (_e) {
+  } catch {
     // 2) Fallback via fonction search.mts
     try {
       return await api<SimilarDocumentsResponse>(`/search/similar`, {
         auth: true,
         query: { documentId, limit }
       });
-    } catch (_e2) {
+    } catch {
       // 3) Fallback legacy via fonction semantic.mts
       return await api<SimilarDocumentsResponse>(`/semantic/similar`, {
         auth: true,
@@ -134,7 +134,7 @@ export async function reindexDocumentEmbeddings(documentId: string) {
       auth: true,
       body: JSON.stringify({ documentId })
     });
-  } catch (_e) {
+  } catch {
     // 2) Fallback legacy via semantic.mts (réindexation réelle)
     return await api<{ message: string }>(`/semantic/reindex`, {
       method: 'POST',

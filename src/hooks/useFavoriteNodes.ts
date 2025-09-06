@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { useFileContext } from '@/hooks/useFileContext';
 import { useQuery } from '@/hooks/useQuery';
-import { useTags } from '@/hooks/useTags';
 import { FileTreeNode } from '@/logic/local/FileTreeNode';
 import type { Document } from '@/contexts/file';
 
@@ -13,13 +12,6 @@ interface UseFavoriteNodesResult {
 export function useFavoriteNodes(): UseFavoriteNodesResult {
   const { currentNode } = useFileContext();
   const { getFilteredContent, getSortedContent } = useQuery();
-  const { selectedTags, tags } = useTags();
-
-  // Traduire les IDs de tags en noms (documents stockent les noms des tags, pas les IDs)
-  const selectedTagNames = useMemo(() => selectedTags.map(id => {
-    const t = tags.find(tag => tag.id === id);
-    return t ? t.name : id.replace(/^tag-/, '');
-  }), [selectedTags, tags]);
 
   return useMemo(() => {
   // On part de la racine implicite: remonter jusqu'au parent null depuis currentNode si dispo
@@ -41,11 +33,7 @@ export function useFavoriteNodes(): UseFavoriteNodesResult {
 
     // Appliquer filtres (tags + recherche déjà géré côté getFilteredContent si query context utilise selectedTags & searchQuery)
     const docs = favNodes.map(n => n.getData() as Document);
-    const filtered = getFilteredContent(docs).filter(doc => {
-      // getFilteredContent applique déjà tags et search, mais il ne connaît que les noms -> déjà suffisant
-      // On garde néanmoins ce hook prêt pour ajouter d'autres règles si besoin
-      return true;
-    });
+  const filtered = getFilteredContent(docs);
 
     const sorted = getSortedContent(filtered);
     const sortedNodes = sorted

@@ -37,17 +37,13 @@ export function computeTagStatsUtil(
 ): Tag[] {
   const root = node.getRoot();
   const countMap = new Map<string, number>();
-  let traversed = 0;
-  let workRaw = 0;
   for (const n of iterate(root)) {
-    traversed++;
     const raw = (n.getData().tags || '')
       .split(',')
       .map(t => t.trim())
       .filter(Boolean);
     for (const name of raw) {
       countMap.set(name, (countMap.get(name) || 0) + 1);
-      if (name === 'work') workRaw++;
     }
   }
   const prevColor = new Map<string, string>();

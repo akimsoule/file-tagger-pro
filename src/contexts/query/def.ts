@@ -24,6 +24,7 @@ export interface QueryContextType {
   setSortBy: (sort: SortBy) => void;
   setViewMode: (mode: ViewMode) => void;
   toggleFavoriteFilter: () => void;
+  setFavoriteFilter: (next: boolean) => void;
   toggleHiddenFilter: () => void;
   clearFilters: () => void;
 }

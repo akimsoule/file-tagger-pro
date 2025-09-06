@@ -104,7 +104,7 @@ export default class TreeNode {
     // Optimisation avec index si disponible et recherche par ID
     const root = this.getRoot();
     if (root.rootIndex && this.isRoot()) {
-      for (const [id, node] of root.rootIndex) {
+  for (const [, node] of root.rootIndex) {
         if (predicate(node)) return node;
       }
       return undefined;

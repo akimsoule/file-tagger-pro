@@ -45,8 +45,7 @@ interface FileDetailsModalProps {
   selectedTags?: string[];
 }
 
-function getFileIcon(doc: Document) {
-  const name = doc.name || "";
+function getFileIcon(_doc: Document) {
   // Personnaliser par extension si besoin
   return <FileText className="h-5 w-5 text-muted-foreground" />;
 }
@@ -124,9 +123,9 @@ export function FileDetailsModal({
         setPreviewUrl(res.dataUrl);
         setPreviewType(res.type);
       })
-      .catch((e) => {
+    .catch(_e => {
         if (!active) return;
-        setPreviewError(e?.message || "Impossible de charger l'aperçu");
+        setPreviewError("Impossible de charger l'aperçu");
       })
       .finally(() => active && setLoadingPreview(false));
     return () => {
@@ -209,7 +208,7 @@ export function FileDetailsModal({
 
   const [isSaving, setIsSaving] = useState(false);
 
-  const extension = doc?.name.split(".").pop()?.toUpperCase();
+  const extension = doc?.name.split(".").pop()?.toUpperCase() || null;
 
   // Générer une Blob URL pour les PDF, surtout sur mobile (iOS bloque souvent les data URL en iframe)
   useEffect(() => {
@@ -266,7 +265,7 @@ export function FileDetailsModal({
         setLoadingSimilar(true);
         const res = await getSimilarDocuments(doc.id, 5);
         if (!cancelled) setSimilarDocs(res.results);
-      } catch (e) {
+  } catch {
         if (!cancelled) setSimilarDocs([]);
       } finally {
         if (!cancelled) setLoadingSimilar(false);

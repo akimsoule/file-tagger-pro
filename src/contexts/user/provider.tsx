@@ -149,7 +149,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         try {
           const { user } = await authVerify();
           verifiedUser = user;
-        } catch (e) {
+  } catch {
           // tentative refresh
           try {
             const { user } = await authRefresh();
@@ -163,7 +163,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         } else {
           setSession(prev => ({ ...prev, isLoading: false }));
         }
-      } catch (e) {
+  } catch {
         setAuthToken(null);
         setSession(prev => ({ ...prev, isLoading: false, isAuthenticated: false }));
       }
