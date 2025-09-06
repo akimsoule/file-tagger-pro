@@ -63,121 +63,66 @@ const createFolder = (
 });
 
 export const mockFolders: Folder[] = [
-  // Dossiers racine
-  createFolder('1', 'Documents Importants', 'Dossier pour les documents importants', '#3B82F6', 'important,work'),
-  createFolder('2', 'Photos', 'Album photos', '#EC4899', 'photos'),
-  createFolder('3', 'Projets', 'Tous les projets en cours', '#10B981', 'work,projet'),
-  createFolder('10', 'Archives', 'Documents archivés', '#6B7280', 'archives'),
+  // Top-level (like macOS/Windows user home)
+  createFolder('f-desktop', 'Desktop', 'Your desktop items', '#3B82F6', 'desktop,system'),
+  createFolder('f-documents', 'Documents', 'Personal documents', '#10B981', 'documents,personal'),
+  createFolder('f-downloads', 'Downloads', 'Downloaded files', '#F59E0B', 'downloads,system'),
+  createFolder('f-pictures', 'Pictures', 'Your pictures and photos', '#EC4899', 'pictures,photos'),
+  createFolder('f-music', 'Music', 'Your music library', '#8B5CF6', 'music,audio'),
+  createFolder('f-videos', 'Videos', 'Videos and movies', '#60A5FA', 'videos,movies'),
 
-  // Sous-dossiers de Photos
-  createFolder('7', 'Vacances', 'Photos et documents des vacances', '#EC4899', 'photos,vacances', '2'),
-  createFolder('8', 'Été', 'Vacances d\'été', '#F59E0B', 'photos,vacances,été', '7'),
-  createFolder('9', 'Hiver', 'Vacances d\'hiver', '#60A5FA', 'photos,vacances,hiver', '7'),
+  // Documents subfolders
+  createFolder('f-work', 'Work', 'Work-related documents', '#10B981', 'work,documents', 'f-documents'),
+  createFolder('f-finance', 'Finance', 'Budgets and invoices', '#6B7280', 'finance,documents', 'f-documents'),
+  createFolder('f-personal', 'Personal', 'Personal notes', '#D946EF', 'personal,documents', 'f-documents'),
 
-  // Sous-dossiers de Projets
-  createFolder('4', 'Projet A', 'Premier projet', '#10B981', 'work,projet', '3'),
-  createFolder('5', 'Documentation', 'Documentation du projet', '#8B5CF6', 'work,projet,docs', '4'),
-  createFolder('6', 'UI Design', 'Design de l\'interface', '#EC4899', 'work,projet,design', '4')
+  // Pictures subfolders
+  createFolder('f-screenshots', 'Screenshots', 'Captured screenshots', '#60A5FA', 'pictures,screenshots', 'f-pictures'),
+  createFolder('f-wallpapers', 'Wallpapers', 'Desktop backgrounds', '#EC4899', 'pictures,wallpapers', 'f-pictures'),
+
+  // Downloads subfolders
+  createFolder('f-installers', 'Installers', 'Downloaded installers', '#F59E0B', 'downloads,installers', 'f-downloads'),
+  createFolder('f-archives', 'Archives', 'Compressed files', '#6B7280', 'downloads,archives', 'f-downloads'),
+
+  // Music subfolders
+  createFolder('f-playlists', 'Playlists', 'Favorite playlists', '#8B5CF6', 'music,playlists', 'f-music'),
+
+  // Videos subfolders
+  createFolder('f-tutorials', 'Tutorials', 'Learning videos', '#60A5FA', 'videos,tutorials', 'f-videos'),
 ];
 
 export const mockDocuments: Document[] = [
-  // Documents du dossier "Documents Importants"
-  createDocument(
-    'doc-1',
-    'Contrat de travail.pdf',
-    'application/pdf',
-    524288,
-    'Mon contrat de travail',
-    'important,work',
-    '1',
-    true
-  ),
-  createDocument(
-    'doc-2',
-    'Passeport.jpg',
-    'image/jpeg',
-    1048576,
-    'Scan du passeport',
-    'important,documents',
-    '1'
-  ),
+  // Desktop
+  createDocument('doc-1', 'Resume.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 128_000, 'My latest resume', 'desktop,work,personal', 'f-desktop', true),
+  createDocument('doc-2', 'Project Shortcut.webloc', 'application/octet-stream', 1_024, 'Shortcut to project site', 'desktop,system', 'f-desktop'),
 
-  // Documents du dossier "Photos"
-  createDocument(
-    'doc-3',
-    'Photo de profil.jpg',
-    'image/jpeg',
-    262144,
-    'Photo de profil pour les réseaux sociaux',
-    'photos,perso',
-    '2',
-    true
-  ),
+  // Documents / Work
+  createDocument('doc-3', 'Quarterly Report Q2.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 512_000, 'Financial report for Q2', 'work,finance,documents', 'f-work', true),
+  createDocument('doc-4', 'Team Presentation.pptx', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 2_048_000, 'Slides for team meeting', 'work,documents,presentation', 'f-work'),
+  createDocument('doc-5', 'API Spec.pdf', 'application/pdf', 1_024_000, 'Backend API specification', 'work,documents,tech', 'f-work'),
 
-  // Documents du dossier "Hiver" (sous-dossier de Photos/Vacances)
-  createDocument(
-    'doc-4',
-    'Vacances au ski.jpg',
-    'image/jpeg',
-    2097152,
-    'Photos des vacances au ski',
-    'photos,vacances,hiver',
-    '9'
-  ),
+  // Documents / Finance
+  createDocument('doc-6', 'Invoices_2025.zip', 'application/zip', 3_145_728, 'All invoices 2025', 'finance,archives,documents', 'f-finance'),
+  createDocument('doc-7', 'Tax_Return_2024.pdf', 'application/pdf', 980_000, 'Tax return 2024', 'finance,tax,documents', 'f-finance', true),
 
-  // Documents du dossier "Documentation" (sous-dossier de Projets/Projet A)
-  createDocument(
-    'doc-5',
-    'Spécifications Techniques v1.pdf',
-    'application/pdf',
-    1048576,
-    'Document des spécifications techniques',
-    'work,projet',
-    '5',
-    true
-  ),
-  createDocument(
-    'doc-6',
-    'Design System.fig',
-    'application/figma',
-    4194304,
-    'Design system du projet',
-    'design,work,projet',
-    '5',
-    true
-  ),
+  // Documents / Personal
+  createDocument('doc-8', 'Grocery List.txt', 'text/plain', 2_048, 'Weekly grocery list', 'personal,notes,documents', 'f-personal'),
+  createDocument('doc-9', 'TravelPlan.md', 'text/markdown', 6_144, 'Summer travel plan', 'personal,travel,documents', 'f-personal'),
 
-  // Documents du dossier "Archives"
-  createDocument(
-    'doc-7',
-    'Budget 2023.xlsx',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    524288,
-    'Budget prévisionnel de l\'année dernière',
-    'finance,archives',
-    '10'
-  ),
-  
-  // Documents du dossier "Projet A"
-  createDocument(
-    'doc-8',
-    'Notes de réunion.md',
-    'text/markdown',
-    8192,
-    'Notes de la dernière réunion d\'équipe',
-    'work,projet',
-    '4'
-  ),
+  // Pictures
+  createDocument('doc-10', 'IMG_1001.jpg', 'image/jpeg', 2_621_440, 'Photo from weekend trip', 'pictures,photos', 'f-pictures', true),
+  createDocument('doc-11', 'Screenshot 2025-09-01 at 10.32.11.png', 'image/png', 1_572_864, 'Desktop screenshot', 'pictures,screenshots', 'f-screenshots'),
+  createDocument('doc-12', 'Sunset-4K.jpg', 'image/jpeg', 3_670_016, 'Wallpaper image', 'pictures,wallpapers,desktop', 'f-wallpapers'),
 
-  // Documents du dossier "Été" (sous-dossier de Photos/Vacances)
-  createDocument(
-    'doc-9',
-    'Photos plage.jpg',
-    'image/jpeg',
-    3145728,
-    'Album photos des vacances d\'été',
-    'photos,vacances,été',
-    '8',
-    true
-  )
+  // Downloads
+  createDocument('doc-13', 'Setup-Tool-1.2.3.dmg', 'application/x-apple-diskimage', 85_000_000, 'macOS installer', 'downloads,installers,mac', 'f-installers'),
+  createDocument('doc-14', 'VSCodeUserSetup-x64-1.92.0.exe', 'application/x-msdownload', 95_000_000, 'Windows installer', 'downloads,installers,windows', 'f-installers'),
+  createDocument('doc-15', 'dataset.json', 'application/json', 4_194_304, 'Sample JSON dataset', 'downloads,data', 'f-downloads'),
+  createDocument('doc-16', 'project-backup.zip', 'application/zip', 25_165_824, 'Zipped backup', 'downloads,archives,backup', 'f-archives'),
+
+  // Music
+  createDocument('doc-17', 'Favorite Song.mp3', 'audio/mpeg', 6_291_456, 'An MP3 track', 'music,audio', 'f-music'),
+
+  // Videos
+  createDocument('doc-18', 'Tutorial React Hooks.mp4', 'video/mp4', 150_000_000, 'React Hooks tutorial', 'videos,tutorials,dev', 'f-tutorials')
 ];

@@ -6,7 +6,6 @@ import { FileTreeNode } from "@/logic/local/FileTreeNode";
 import { FileTreeNodeApi } from "@/logic/miror/FileTreeNodeApi";
 import { mockFolders, mockDocuments } from "@/data/mockData";
 import { toast } from "@/hooks/useToast";
-import { TreeFolderDTO, TreeDocumentDTO } from "@/lib/api/api-tree";
 
 // Couleurs par défaut pour les tags
 const defaultColors = [
@@ -109,6 +108,10 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
         description: "Impossible de charger l'arbre distant.",
         variant: "destructive",
       });
+      const localRoot = FileTreeNode.buildRootTree(mockDocuments, mockFolders);
+      setRootNode(localRoot);
+      setCurrentNodeRef(localRoot);
+      bumpTreeVersion();
     } finally {
       setLoadingTree(false);
     }
