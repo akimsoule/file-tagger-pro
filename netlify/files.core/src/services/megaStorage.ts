@@ -90,7 +90,16 @@ export class MegaStorageService {
    */
   async getFileUrl(fileId: string, userId?: string): Promise<string> {
     const storage = await this.getStorage(userId);
-    const file = storage.find((f) => f.nodeId === fileId);
+    let file = storage.find((f) => f.nodeId === fileId);
+    // Fallback: essayer le stockage par défaut si non trouvé côté utilisateur
+    if (!file && userId) {
+      try {
+        const defaultStorage = await this.getStorage();
+        file = defaultStorage.find((f) => f.nodeId === fileId);
+      } catch {
+        /* ignore */
+      }
+    }
     if (!file) throw new Error("Fichier non trouvé");
 
     // Génère une URL temporaire valide pendant 1 heure
@@ -108,7 +117,16 @@ export class MegaStorageService {
    */
   async getBase64FileUrl(fileId: string, userId?: string): Promise<string> {
     const storage = await this.getStorage(userId);
-    const file = storage.find((f) => f.nodeId === fileId);
+    let file = storage.find((f) => f.nodeId === fileId);
+    // Fallback: essayer le stockage par défaut si non trouvé côté utilisateur
+    if (!file && userId) {
+      try {
+        const defaultStorage = await this.getStorage();
+        file = defaultStorage.find((f) => f.nodeId === fileId);
+      } catch {
+        /* ignore */
+      }
+    }
     if (!file) throw new Error("Fichier non trouvé");
 
     // Déterminer le type MIME en fonction de l'extension du fichier
@@ -304,7 +322,16 @@ export class MegaStorageService {
    */
   async downloadFile(fileId: string, userId?: string): Promise<Buffer> {
     const storage = await this.getStorage(userId);
-    const file = storage.find((f) => f.nodeId === fileId);
+    let file = storage.find((f) => f.nodeId === fileId);
+    // Fallback: essayer le stockage par défaut si non trouvé côté utilisateur
+    if (!file && userId) {
+      try {
+        const defaultStorage = await this.getStorage();
+        file = defaultStorage.find((f) => f.nodeId === fileId);
+      } catch {
+        /* ignore */
+      }
+    }
     if (!file) throw new Error("Fichier non trouvé");
 
     const data = await file.downloadBuffer({});
