@@ -44,18 +44,6 @@ export function FileCard({ node, onClick, onToggleFavorite }: FileCardProps) {
     moveNode(document.id, targetFolderId);
   };
 
-  const handleUpdateTags = (newTags: string) => {
-    console.log(
-      "Mise à jour des tags du document",
-      document.id,
-      "de",
-      document.tags,
-      "vers",
-      newTags
-    );
-    updateNode(document.id, { tags: newTags });
-  };
-
   const handleDelete = () => setConfirmOpen(true);
 
   return (
