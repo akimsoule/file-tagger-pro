@@ -17,6 +17,9 @@ export class MegaStorageService {
   private defaultEmail = process.env.MEGA_EMAIL;
   private defaultPassword = process.env.MEGA_PASSWORD;
   private appRootName = process.env.MEGA_APP_ROOT_NAME || "app.file-tagger-pro";
+  private requireUserConfig =
+    (process.env.MEGA_REQUIRE_USER_CONFIG || "false").toLowerCase() ===
+    "true";
 
   /**
    * Helper: retourne le storage et le contexte du dossier appRoot (id + objet)
@@ -98,8 +101,9 @@ export class MegaStorageService {
     let storageKey = "default";
     let email = this.defaultEmail;
     let password = this.defaultPassword;
+    let origin: "user" | "default" = "default";
 
-    // Si un userId est fourni, utiliser sa configuration
+    // Si un userId est fourni, tenter d'utiliser sa configuration
     if (userId) {
       const credentials = await userMegaConfigService.getUserMegaCredentials(
         userId
@@ -108,6 +112,12 @@ export class MegaStorageService {
         storageKey = userId;
         email = credentials.email;
         password = credentials.password;
+        origin = "user";
+      } else if (this.requireUserConfig) {
+        // En mode strict, exiger la présence de la config utilisateur
+        throw new Error(
+          "Identifiants MEGA utilisateur requis - ouvrez les Paramètres et configurez votre compte MEGA"
+        );
       }
     }
 
@@ -116,8 +126,8 @@ export class MegaStorageService {
       return this.storageCache.get(storageKey)!;
     }
 
-    // Vérifier que les credentials sont disponibles
-    if (!email || !password) {
+  // Vérifier que les credentials sont disponibles
+  if (!email || !password) {
       throw new Error(
         "Identifiants MEGA requis - configurez votre compte MEGA dans vos paramètres"
       );
@@ -128,7 +138,14 @@ export class MegaStorageService {
         email,
         password,
       }).ready;
-
+      if (origin === "user") {
+        // Journalisation non sensible pour diagnostiquer en prod
+        console.info(
+          `[mega] Connexion établie sur le storage utilisateur (${userId}).`
+        );
+      } else {
+        console.info(`[mega] Connexion établie sur le storage par défaut.`);
+      }
       this.storageCache.set(storageKey, storage);
       return storage;
     } catch (error) {
