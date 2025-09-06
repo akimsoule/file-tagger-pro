@@ -6,12 +6,7 @@ import { FileTreeNode } from "@/logic/local/FileTreeNode";
 import { FileTreeNodeApi } from "@/logic/miror/FileTreeNodeApi";
 import { mockFolders, mockDocuments } from "@/data/mockData";
 import { toast } from "@/hooks/useToast";
-import {
-  getFullTree,
-  TreeFolderDTO,
-  TreeDocumentDTO,
-} from "@/lib/api/api-tree";
-import { api } from "@/lib";
+import { TreeFolderDTO, TreeDocumentDTO } from "@/lib/api/api-tree";
 
 // Couleurs par défaut pour les tags
 const defaultColors = [
@@ -93,8 +88,10 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
     }
     setLoadingTree(true);
     try {
-      const res = await getFullTree();
-      if (!res.tree) {
+      const apiRoot = await FileTreeNodeApi.buildFromRemoteTree(
+        session.user.id
+      );
+      if (!apiRoot) {
         toast({
           title: "Aucun arbre",
           description: "Aucun dossier racine en base.",
@@ -102,130 +99,8 @@ export function FileProvider({ children }: { children: React.ReactNode }) {
         });
         return;
       }
-      // Si le backend fournit déjà un root réel (isRoot + parentId null), construire directement sans racine synthétique
-      const apiTreeRoot = res.tree;
-      if (apiTreeRoot.isRoot && apiTreeRoot.parentId == null) {
-        const makeFolderData = (f: TreeFolderDTO): Folder => ({
-          id: f.id,
-          name: f.name,
-          description: f.description || "",
-          color: f.color || "#000000",
-          ownerId: session?.user.id || "me",
-          parentId: f.parentId || undefined,
-          children: [],
-          documents: [],
-          tags: f.tags || "",
-          createdAt: new Date(f.createdAt),
-          updatedAt: new Date(f.updatedAt),
-        });
-        // Créer la racine réelle directement en FileTreeNodeApi
-        const rootApi = new FileTreeNodeApi(
-          apiTreeRoot.id,
-          apiTreeRoot.name,
-          "folder",
-          makeFolderData(apiTreeRoot),
-          {
-            totalSize: 0,
-            tagsCount: 0,
-            totalItems: 0,
-            filesCount: 0,
-            foldersCount: 0,
-          },
-          undefined
-        );
-        // Parcours itératif pour attacher sous-dossiers & documents
-        interface StackItem {
-          dto: TreeFolderDTO;
-          node: FileTreeNodeApi;
-        }
-        const stack: StackItem[] = [{ dto: apiTreeRoot, node: rootApi }];
-        while (stack.length) {
-          const { dto, node } = stack.pop()!;
-          // Documents
-          for (const d of dto.documents) {
-            const doc: Document = {
-              id: d.id,
-              name: d.name,
-              type: d.type,
-              size: d.size,
-              description: d.description || "",
-              tags: d.tags || "",
-              fileId: d.id,
-              hash: "",
-              ownerId: session?.user.id || "me",
-              folderId: d.folderId || undefined,
-              isFavorite: d.isFavorite,
-              createdAt: new Date(d.createdAt),
-              modifiedAt: new Date(d.modifiedAt),
-            };
-            node.addChild(FileTreeNode.createDocument(doc));
-          }
-          // Sous-dossiers
-          for (let i = dto.folders.length - 1; i >= 0; i--) {
-            const childDto = dto.folders[i];
-            const folderData = makeFolderData(childDto);
-            const folderNode = FileTreeNode.createFolder(folderData);
-            node.addChild(folderNode);
-            stack.push({ dto: childDto, node: folderNode as FileTreeNodeApi });
-          }
-        }
-  rootApi.updateStats();
-        setRootNode(rootApi);
-        setCurrentNodeRef(rootApi);
-      } else {
-        // Fallback: reconstruire via méthode générique (rare / autre format)
-        const folders: Folder[] = [];
-        const documents: Document[] = [];
-        const stack: TreeFolderDTO[] = [res.tree];
-        while (stack.length) {
-          const f = stack.pop()!;
-          folders.push({
-            id: f.id,
-            name: f.name,
-            description: f.description || "",
-            color: f.color || "#000000",
-            ownerId: session?.user.id || "me",
-            parentId: f.parentId || undefined,
-            children: [],
-            documents: [],
-            tags: f.tags || "",
-            createdAt: new Date(f.createdAt),
-            updatedAt: new Date(f.updatedAt),
-          });
-          for (const d of f.documents) {
-            documents.push({
-              id: d.id,
-              name: d.name,
-              type: d.type,
-              size: d.size,
-              description: d.description || "",
-              tags: d.tags || "",
-              fileId: d.id,
-              hash: "",
-              ownerId: session?.user.id || "me",
-              folderId: d.folderId || undefined,
-              isFavorite: d.isFavorite,
-              createdAt: new Date(d.createdAt),
-              modifiedAt: new Date(d.modifiedAt),
-            });
-          }
-          for (let i = f.folders.length - 1; i >= 0; i--)
-            stack.push(f.folders[i]);
-        }
-        const syntheticRoot = FileTreeNode.buildRootTree(documents, folders);
-        const apiRoot = new FileTreeNodeApi(
-          syntheticRoot.id,
-          syntheticRoot.name,
-          syntheticRoot.type,
-          syntheticRoot.getData() as Folder,
-          syntheticRoot.stats,
-          syntheticRoot.parentId
-        );
-        for (const child of syntheticRoot.children) apiRoot.addChild(child);
-  apiRoot.updateStats();
-        setRootNode(apiRoot);
-        setCurrentNodeRef(apiRoot);
-      }
+      setRootNode(apiRoot);
+      setCurrentNodeRef(apiRoot);
       bumpTreeVersion();
     } catch (e) {
       console.error("Erreur chargement arbre", e);
