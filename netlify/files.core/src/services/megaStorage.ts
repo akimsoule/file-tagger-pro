@@ -19,6 +19,74 @@ export class MegaStorageService {
   private appRootName = process.env.MEGA_APP_ROOT_NAME || "app.file-tagger-pro";
 
   /**
+   * Helper: retourne le storage et le contexte du dossier appRoot (id + objet)
+   */
+  private async getAppRootContext(
+    userId?: string
+  ): Promise<{ storage: Storage; appRootId: string; appRoot: NodeLike | null }> {
+    const storage = await this.getStorage(userId);
+    const appRef = await this.getAppRootFolder(userId);
+    const appRoot = (storage.find((f) => f.nodeId === appRef.nodeId) ||
+      storage.root) as unknown as NodeLike;
+    return { storage, appRootId: appRef.nodeId, appRoot };
+  }
+
+  /**
+   * Helper: teste si un node appartient (directement/indirectement) à appRoot
+   */
+  private isUnderAppRoot(
+    node: NodeLike | null | undefined,
+    appRootId: string,
+    appRoot: NodeLike | null | undefined
+  ): boolean {
+    let cur = node?.parent as NodeLike | null | undefined;
+    while (cur) {
+      if (cur.nodeId && cur.nodeId === appRootId) return true;
+      cur = cur.parent as NodeLike | null | undefined;
+    }
+    // Cas où les objets parent sont comparables par référence
+    return node?.parent === appRoot;
+  }
+
+  /**
+   * Helper: retrouve un nœud par ID, avec fallback sur le storage par défaut si userId fourni
+   */
+  private async findNodeById(
+    fileId: string,
+    userId?: string
+  ): Promise<
+    | (NodeLike & {
+        link?: (opts?: unknown) => Promise<string>;
+        downloadBuffer?: (opts?: unknown) => Promise<Buffer>;
+        delete?: () => Promise<void>;
+        name?: string;
+      })
+    | undefined
+  > {
+    const storage = await this.getStorage(userId);
+    let file = storage.find((f) => f.nodeId === fileId) as unknown as
+      | (NodeLike & {
+          link?: (opts?: unknown) => Promise<string>;
+          downloadBuffer?: (opts?: unknown) => Promise<Buffer>;
+        })
+      | undefined;
+    if (!file && userId) {
+      try {
+        const defaultStorage = await this.getStorage();
+        file = defaultStorage.find((f) => f.nodeId === fileId) as unknown as
+          | (NodeLike & {
+              link?: (opts?: unknown) => Promise<string>;
+              downloadBuffer?: (opts?: unknown) => Promise<Buffer>;
+            })
+          | undefined;
+      } catch {
+        /* ignore */
+      }
+    }
+    return file;
+  }
+
+  /**
    * Initialise la connexion MEGA pour un utilisateur spécifique
    */
   private async getStorage(userId?: string): Promise<Storage> {
@@ -98,23 +166,9 @@ export class MegaStorageService {
     userId?: string
   ): Promise<{ nodeId: string; name?: string } | null> {
     const tryFind = async (forUserId?: string) => {
-      const storage = await this.getStorage(forUserId);
-      const appRef = await this.getAppRootFolder(forUserId);
-      const appRoot = (storage.find((f) => f.nodeId === appRef.nodeId) ||
-        storage.root) as unknown as NodeLike;
-      const appRootId = appRef.nodeId;
-
-      const isDescendantOfAppRoot = (
-        node: NodeLike | null | undefined
-      ): boolean => {
-        let cur = node?.parent as NodeLike | null | undefined;
-        while (cur) {
-          if (cur.nodeId && cur.nodeId === appRootId) return true;
-          cur = cur.parent as NodeLike | null | undefined;
-        }
-        // Si aucun parent n'est disponible, dernier recours: vérifier l'égalité stricte (cas où les objets parent sont identiques)
-        return node?.parent === appRoot;
-      };
+      const { storage, appRootId, appRoot } = await this.getAppRootContext(
+        forUserId
+      );
 
       const candidates = (
         Object.values(storage.files) as unknown as NodeLike[]
@@ -123,7 +177,7 @@ export class MegaStorageService {
           !f.directory &&
           typeof f.name === "string" &&
           f.name === name &&
-          isDescendantOfAppRoot(f)
+          this.isUnderAppRoot(f, appRootId, appRoot)
       );
 
       const first = candidates.find((c) => !!c.nodeId);
@@ -150,21 +204,9 @@ export class MegaStorageService {
     userId?: string
   ): Promise<{ nodeId: string; name?: string } | null> {
     const tryFind = async (forUserId?: string) => {
-      const storage = await this.getStorage(forUserId);
-      const appRef = await this.getAppRootFolder(forUserId);
-      const appRoot = (storage.find((f) => f.nodeId === appRef.nodeId) || storage.root) as unknown as NodeLike;
-      const appRootId = appRef.nodeId;
-
-      const isDescendantOfAppRoot = (
-        node: NodeLike | null | undefined
-      ): boolean => {
-        let cur = node?.parent as NodeLike | null | undefined;
-        while (cur) {
-          if (cur.nodeId && cur.nodeId === appRootId) return true;
-          cur = cur.parent as NodeLike | null | undefined;
-        }
-        return node?.parent === appRoot;
-      };
+      const { storage, appRootId, appRoot } = await this.getAppRootContext(
+        forUserId
+      );
 
       // Pré-filtrer par extension (si fournie) et par appartenance au appRoot
       const candidates = (Object.values(storage.files) as unknown as Array<
@@ -172,12 +214,8 @@ export class MegaStorageService {
       >).filter((f) => {
         if (f.directory) return false;
         if (!f.nodeId) return false;
-        if (!isDescendantOfAppRoot(f)) return false;
+        if (!this.isUnderAppRoot(f, appRootId, appRoot)) return false;
         if (typeof f?.size === "number" && f.size !== expected.size) return false;
-        if (expected.ext && typeof f.name === "string") {
-          const fe = f.name.split(".").pop()?.toLowerCase();
-          if (fe && fe !== expected.ext.toLowerCase()) return false;
-        }
         return true;
       });
 
@@ -263,10 +301,6 @@ export class MegaStorageService {
       const candidates = all.filter((f) => {
         if (f.directory || !f.nodeId) return false;
         if (typeof f.size === "number" && f.size !== expected.size) return false;
-        if (expected.ext && typeof f.name === "string") {
-          const fe = f.name.split(".").pop()?.toLowerCase();
-          if (fe && fe !== expected.ext.toLowerCase()) return false;
-        }
         return true;
       });
       for (const c of candidates) {
@@ -333,27 +367,15 @@ export class MegaStorageService {
     userId?: string
   ): Promise<{ nodeId: string; name?: string } | null> {
     const tryFind = async (forUserId?: string) => {
-      const storage = await this.getStorage(forUserId);
-      const appRef = await this.getAppRootFolder(forUserId);
-      const appRoot = (storage.find((f) => f.nodeId === appRef.nodeId) || storage.root) as unknown as NodeLike;
-      const appRootId = appRef.nodeId;
-
-      const isDescendantOfAppRoot = (
-        node: NodeLike | null | undefined
-      ): boolean => {
-        let cur = node?.parent as NodeLike | null | undefined;
-        while (cur) {
-          if (cur.nodeId && cur.nodeId === appRootId) return true;
-          cur = cur.parent as NodeLike | null | undefined;
-        }
-        return node?.parent === appRoot;
-      };
+      const { storage, appRootId, appRoot } = await this.getAppRootContext(
+        forUserId
+      );
 
       const candidates = (Object.values(storage.files) as unknown as Array<
         NodeLike & { nodeId?: string; size?: number }
       >).filter((f) => {
         if (f.directory || !f.nodeId) return false;
-        if (!isDescendantOfAppRoot(f)) return false;
+        if (!this.isUnderAppRoot(f, appRootId, appRoot)) return false;
         if (typeof f.size === "number" && f.size !== expected.size) return false;
         if (expected.ext && typeof f.name === "string") {
           const fe = f.name.split(".").pop()?.toLowerCase();
@@ -380,21 +402,13 @@ export class MegaStorageService {
    * @returns Une URL temporaire valide pendant 1 heure
    */
   async getFileUrl(fileId: string, userId?: string): Promise<string> {
-    const storage = await this.getStorage(userId);
-    let file = storage.find((f) => f.nodeId === fileId);
-    // Fallback: essayer le stockage par défaut si non trouvé côté utilisateur
-    if (!file && userId) {
-      try {
-        const defaultStorage = await this.getStorage();
-        file = defaultStorage.find((f) => f.nodeId === fileId);
-      } catch {
-        /* ignore */
-      }
-    }
+    const file = await this.findNodeById(fileId, userId);
     if (!file) throw new Error("Fichier non trouvé");
 
     // Génère une URL temporaire valide pendant 1 heure
-    return await file.link({
+    return await (file as unknown as {
+      link: (opts?: unknown) => Promise<string>;
+    }).link({
       // noExpire: false,
       // expiry: 3600 // 1 heure
     });
@@ -407,25 +421,20 @@ export class MegaStorageService {
    * @returns Une URL data en base64
    */
   async getBase64FileUrl(fileId: string, userId?: string): Promise<string> {
-    const storage = await this.getStorage(userId);
-    let file = storage.find((f) => f.nodeId === fileId);
-    // Fallback: essayer le stockage par défaut si non trouvé côté utilisateur
-    if (!file && userId) {
-      try {
-        const defaultStorage = await this.getStorage();
-        file = defaultStorage.find((f) => f.nodeId === fileId);
-      } catch {
-        /* ignore */
-      }
-    }
+    const file = await this.findNodeById(fileId, userId);
     if (!file) throw new Error("Fichier non trouvé");
 
     // Déterminer le type MIME en fonction de l'extension du fichier
-    const ext = file.name?.split(".").pop()?.toLowerCase();
+    const ext = (file as unknown as { name?: string }).name
+      ?.split(".")
+      .pop()
+      ?.toLowerCase();
     const mimeType = this.getMimeType(ext || "");
 
     // Télécharger et convertir le fichier en base64
-    const data = await file.downloadBuffer({});
+    const data = await (file as unknown as {
+      downloadBuffer: (opts?: unknown) => Promise<Buffer>;
+    }).downloadBuffer({});
     const base64 = data.toString("base64");
 
     // Retourner l'URL data avec le type MIME approprié
@@ -701,20 +710,12 @@ export class MegaStorageService {
    * @returns Buffer contenant le fichier
    */
   async downloadFile(fileId: string, userId?: string): Promise<Buffer> {
-    const storage = await this.getStorage(userId);
-    let file = storage.find((f) => f.nodeId === fileId);
-    // Fallback: essayer le stockage par défaut si non trouvé côté utilisateur
-    if (!file && userId) {
-      try {
-        const defaultStorage = await this.getStorage();
-        file = defaultStorage.find((f) => f.nodeId === fileId);
-      } catch {
-        /* ignore */
-      }
-    }
+    const file = await this.findNodeById(fileId, userId);
     if (!file) throw new Error("Fichier non trouvé");
 
-    const data = await file.downloadBuffer({});
+    const data = await (file as unknown as {
+      downloadBuffer: (opts?: unknown) => Promise<Buffer>;
+    }).downloadBuffer({});
 
     const result = await verify(data);
     if (!result) throw new Error("Fichier corrompu");

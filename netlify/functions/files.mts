@@ -73,24 +73,42 @@ async function handleFileDownload(
       return createErrorResponse("Accès non autorisé", 403);
     }
 
-    try {
-      // Toujours récupérer le contenu en base64 pour éviter d'exposer les URLs MEGA
-      const dataUrl = await megaStorageService.getBase64FileUrl(
-        document.fileId,
-        document.ownerId
-      );
-      return createSuccessResponse({
+    // Helpers locaux (clean code)
+    const getExt = (name: string) => name.split(".").pop()?.toLowerCase();
+    const success = (dataUrl: string) =>
+      createSuccessResponse({
         documentId: document.id,
         name: document.name,
         type: document.type,
         dataUrl,
         size: document.size,
       });
+    const reconcile = async (newNodeId: string | undefined, reason: string) => {
+      if (!newNodeId || newNodeId === document.fileId) return;
+      try {
+        await documentService.updateDocumentFileId(
+          document.id,
+          newNodeId,
+          user.userId,
+          reason
+        );
+        console.warn(`fileId réconcilié (${reason}) pour ${document.id}`);
+      } catch {}
+    };
+
+    try {
+      // Toujours récupérer le contenu en base64 pour éviter d'exposer les URLs MEGA
+      const dataUrl = await megaStorageService.getBase64FileUrl(
+        document.fileId,
+        document.ownerId
+      );
+      return success(dataUrl);
     } catch (fileError) {
       console.error(
         "Erreur lors de la récupération du fichier (par ID):",
         fileError
       );
+      const ext = getExt(document.name);
       // Fallback: si le fichier a été déplacé/dupliqué, tenter par nom sous appRoot
       try {
         const byName =
@@ -100,31 +118,15 @@ async function handleFileDownload(
           );
         if (byName) {
           // Réconciliation clean via DocumentService
-          try {
-            const found = await megaStorageService.findFileByNameUnderAppRoot(
-              document.name,
-              document.ownerId
-            );
-            if (found?.nodeId && found.nodeId !== document.fileId) {
-              await documentService.updateDocumentFileId(
-                document.id,
-                found.nodeId,
-                user.userId,
-                "fallback:name:appRoot"
-              );
-              console.warn(`fileId réconcilié pour ${document.id}`);
-            }
-          } catch {}
+          const found = await megaStorageService.findFileByNameUnderAppRoot(
+            document.name,
+            document.ownerId
+          );
+          await reconcile(found?.nodeId, "fallback:name:appRoot");
           console.warn(
             `Fallback par nom activé sous appRoot pour le document ${document.id} (${document.name}). Pensez à réconcilier fileId en base de données si nécessaire.`
           );
-          return createSuccessResponse({
-            documentId: document.id,
-            name: document.name,
-            type: document.type,
-            dataUrl: byName,
-            size: document.size,
-          });
+          return success(byName);
         }
         // Fallback global par nom (dans tout le storage)
         const byNameAny = await megaStorageService.getBase64FileUrlByNameAnywhere(
@@ -132,20 +134,19 @@ async function handleFileDownload(
           document.ownerId
         );
         if (byNameAny) {
+          // Réconciliation clean via DocumentService (global)
+          const found = await megaStorageService.findFileByNameAnywhere(
+            document.name,
+            document.ownerId
+          );
+          await reconcile(found?.nodeId, "fallback:name:anywhere");
           console.warn(
             `Fallback global par nom activé pour le document ${document.id}.`
           );
-          return createSuccessResponse({
-            documentId: document.id,
-            name: document.name,
-            type: document.type,
-            dataUrl: byNameAny,
-            size: document.size,
-          });
+          return success(byNameAny);
         }
         // Fallback additionnel: recherche par taille+hash sous appRoot (indépendant du nom)
         if (document.hash && document.size) {
-          const ext = document.name.split(".").pop()?.toLowerCase();
           const byHash =
             await megaStorageService.getBase64FileUrlByHashUnderAppRoot(
               { size: document.size, hash: document.hash, ext },
@@ -153,31 +154,15 @@ async function handleFileDownload(
             );
           if (byHash) {
             // Réconciliation: fileId
-            try {
-              const found = await megaStorageService.findFileByHashUnderAppRoot(
-                { size: document.size, hash: document.hash, ext },
-                document.ownerId
-              );
-              if (found?.nodeId && found.nodeId !== document.fileId) {
-                await documentService.updateDocumentFileId(
-                  document.id,
-                  found.nodeId,
-                  user.userId,
-                  "fallback:hash:appRoot"
-                );
-                console.warn(`fileId réconcilié (hash/appRoot) pour ${document.id}`);
-              }
-            } catch {}
+            const found = await megaStorageService.findFileByHashUnderAppRoot(
+              { size: document.size, hash: document.hash, ext },
+              document.ownerId
+            );
+            await reconcile(found?.nodeId, "fallback:hash:appRoot");
             console.warn(
               `Fallback par hash/size activé sous appRoot pour le document ${document.id}.`
             );
-            return createSuccessResponse({
-              documentId: document.id,
-              name: document.name,
-              type: document.type,
-              dataUrl: byHash,
-              size: document.size,
-            });
+            return success(byHash);
           }
 
           // Fallback global par hash/size (dans tout le storage)
@@ -188,36 +173,19 @@ async function handleFileDownload(
             );
           if (byHashAny) {
             // Réconciliation: fileId
-            try {
-              const found = await megaStorageService.findFileByHashAnywhere(
-                { size: document.size, hash: document.hash, ext },
-                document.ownerId
-              );
-              if (found?.nodeId && found.nodeId !== document.fileId) {
-                await documentService.updateDocumentFileId(
-                  document.id,
-                  found.nodeId,
-                  user.userId,
-                  "fallback:hash:anywhere"
-                );
-                console.warn(`fileId réconcilié (hash/anywhere) pour ${document.id}`);
-              }
-            } catch {}
+            const found = await megaStorageService.findFileByHashAnywhere(
+              { size: document.size, hash: document.hash, ext },
+              document.ownerId
+            );
+            await reconcile(found?.nodeId, "fallback:hash:anywhere");
             console.warn(
               `Fallback global par hash/size activé pour le document ${document.id}.`
             );
-            return createSuccessResponse({
-              documentId: document.id,
-              name: document.name,
-              type: document.type,
-              dataUrl: byHashAny,
-              size: document.size,
-            });
+            return success(byHashAny);
           }
         }
         // Fallback final: par taille + extension (pour anciens documents sans hash)
         if (document.size) {
-          const ext = document.name.split(".").pop()?.toLowerCase();
           const bySizeExt =
             await megaStorageService.getBase64FileUrlBySizeAndExtUnderAppRoot(
               { size: document.size, ext },
@@ -225,31 +193,15 @@ async function handleFileDownload(
             );
           if (bySizeExt) {
             // Réconciliation: tentative prudente (taille+ext non unique)
-            try {
-              const found = await megaStorageService.findFileBySizeAndExtUnderAppRoot(
-                { size: document.size, ext },
-                document.ownerId
-              );
-              if (found?.nodeId && found.nodeId !== document.fileId) {
-                await documentService.updateDocumentFileId(
-                  document.id,
-                  found.nodeId,
-                  user.userId,
-                  "fallback:sizeExt:appRoot"
-                );
-                console.warn(`fileId réconcilié (sizeExt/appRoot) pour ${document.id}`);
-              }
-            } catch {}
+            const found = await megaStorageService.findFileBySizeAndExtUnderAppRoot(
+              { size: document.size, ext },
+              document.ownerId
+            );
+            await reconcile(found?.nodeId, "fallback:sizeExt:appRoot");
             console.warn(
               `Fallback taille+extension activé pour le document ${document.id}.`
             );
-            return createSuccessResponse({
-              documentId: document.id,
-              name: document.name,
-              type: document.type,
-              dataUrl: bySizeExt,
-              size: document.size,
-            });
+            return success(bySizeExt);
           }
 
           // Fallback global taille+extension (dans tout le storage)
@@ -260,31 +212,15 @@ async function handleFileDownload(
             );
           if (bySizeExtAny) {
             // Réconciliation: très prudente
-            try {
-              const found = await megaStorageService.findFileBySizeAndExtAnywhere(
-                { size: document.size, ext },
-                document.ownerId
-              );
-              if (found?.nodeId && found.nodeId !== document.fileId) {
-                await documentService.updateDocumentFileId(
-                  document.id,
-                  found.nodeId,
-                  user.userId,
-                  "fallback:sizeExt:anywhere"
-                );
-                console.warn(`fileId réconcilié (sizeExt/anywhere) pour ${document.id}`);
-              }
-            } catch {}
+            const found = await megaStorageService.findFileBySizeAndExtAnywhere(
+              { size: document.size, ext },
+              document.ownerId
+            );
+            await reconcile(found?.nodeId, "fallback:sizeExt:anywhere");
             console.warn(
               `Fallback global taille+extension activé pour le document ${document.id}.`
             );
-            return createSuccessResponse({
-              documentId: document.id,
-              name: document.name,
-              type: document.type,
-              dataUrl: bySizeExtAny,
-              size: document.size,
-            });
+            return success(bySizeExtAny);
           }
         }
       } catch {}
