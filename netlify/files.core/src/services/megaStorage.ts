@@ -1,4 +1,5 @@
 import { Storage, verify } from "megajs";
+import crypto from "crypto";
 import { userMegaConfigService } from "./userMegaConfigService";
 
 type NodeLike = {
@@ -141,6 +142,74 @@ export class MegaStorageService {
   }
 
   /**
+   * Trouve un fichier sous appRoot par taille et hash (SHA-256), indépendamment du nom
+   * Meilleure garantie d’unicité lorsque le nom a changé.
+   */
+  private async findFileByHashUnderAppRoot(
+    expected: { size: number; hash: string; ext?: string },
+    userId?: string
+  ): Promise<{ nodeId: string; name?: string } | null> {
+    const tryFind = async (forUserId?: string) => {
+      const storage = await this.getStorage(forUserId);
+      const appRef = await this.getAppRootFolder(forUserId);
+      const appRoot = (storage.find((f) => f.nodeId === appRef.nodeId) || storage.root) as unknown as NodeLike;
+      const appRootId = appRef.nodeId;
+
+      const isDescendantOfAppRoot = (
+        node: NodeLike | null | undefined
+      ): boolean => {
+        let cur = node?.parent as NodeLike | null | undefined;
+        while (cur) {
+          if (cur.nodeId && cur.nodeId === appRootId) return true;
+          cur = cur.parent as NodeLike | null | undefined;
+        }
+        return node?.parent === appRoot;
+      };
+
+      // Pré-filtrer par extension (si fournie) et par appartenance au appRoot
+      const candidates = (Object.values(storage.files) as unknown as Array<
+        NodeLike & { size?: number }
+      >).filter((f) => {
+        if (f.directory) return false;
+        if (!f.nodeId) return false;
+        if (!isDescendantOfAppRoot(f)) return false;
+        if (typeof f?.size === "number" && f.size !== expected.size) return false;
+        if (expected.ext && typeof f.name === "string") {
+          const fe = f.name.split(".").pop()?.toLowerCase();
+          if (fe && fe !== expected.ext.toLowerCase()) return false;
+        }
+        return true;
+      });
+
+      // Vérifier le hash en téléchargeant jusqu’à trouver un match
+      for (const c of candidates) {
+        try {
+          const node = storage.find((n) => n.nodeId === c.nodeId);
+          if (!node) continue;
+          const buf = await node.downloadBuffer({});
+          const hash = crypto.createHash("sha256").update(buf).digest("hex");
+          if (hash === expected.hash) {
+            return { nodeId: node.nodeId as string, name: node.name };
+          }
+        } catch {
+          // ignorer et continuer
+        }
+      }
+      return null;
+    };
+
+    // 1) Chercher côté utilisateur (si fourni)
+  const fromUser = await tryFind(userId);
+  if (fromUser && fromUser.nodeId) return { nodeId: fromUser.nodeId, name: fromUser.name ?? undefined };
+
+    // 2) Fallback: chercher sur le stockage par défaut
+  const fromDefault = await tryFind(undefined);
+  if (fromDefault && fromDefault.nodeId) return { nodeId: fromDefault.nodeId, name: fromDefault.name ?? undefined };
+
+    return null;
+  }
+
+  /**
    * Génère une URL de téléchargement temporaire pour un fichier
    * @param fileId - L'ID du fichier sur MEGA
    * @param userId - ID de l'utilisateur (optionnel, utilise la config par défaut si non fourni)
@@ -207,6 +276,22 @@ export class MegaStorageService {
     userId?: string
   ): Promise<string | null> {
     const found = await this.findFileByNameUnderAppRoot(name, userId);
+    if (!found) return null;
+    try {
+      return await this.getBase64FileUrl(found.nodeId, userId);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Génère une data URL base64 par fallback de hash/size sous appRoot (nom ignoré)
+   */
+  async getBase64FileUrlByHashUnderAppRoot(
+    expected: { size: number; hash: string; ext?: string },
+    userId?: string
+  ): Promise<string | null> {
+    const found = await this.findFileByHashUnderAppRoot(expected, userId);
     if (!found) return null;
     try {
       return await this.getBase64FileUrl(found.nodeId, userId);
