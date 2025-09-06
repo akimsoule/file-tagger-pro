@@ -94,27 +94,54 @@ export function invalidateDocumentPreviewCache(id?: string) {
   previewCache.invalidate(id);
 }
 
-// --- Similarité & embeddings (endpoints exposés par la fonction `search`) ---
+// --- Similarité & embeddings (endpoints avec compat multi-impl: documents/search/semantic) ---
 
 export interface SimilarDocumentsResponse {
   documentId: string;
   results: DocumentDTO[];
+  limit?: number;
 }
 
-export function getSimilarDocuments(documentId: string, limit = 5) {
-  return api<SimilarDocumentsResponse>(`/search/similar`, {
-    auth: true,
-    query: { documentId, limit }
-  });
+export async function getSimilarDocuments(documentId: string, limit = 5) {
+  // 1) Préférence: endpoint RESTful exposé par documents.mts
+  try {
+    return await api<SimilarDocumentsResponse>(`/documents/${documentId}/similar`, {
+      auth: true,
+      query: { limit }
+    });
+  } catch (_e) {
+    // 2) Fallback via fonction search.mts
+    try {
+      return await api<SimilarDocumentsResponse>(`/search/similar`, {
+        auth: true,
+        query: { documentId, limit }
+      });
+    } catch (_e2) {
+      // 3) Fallback legacy via fonction semantic.mts
+      return await api<SimilarDocumentsResponse>(`/semantic/similar`, {
+        auth: true,
+        query: { documentId, limit }
+      });
+    }
+  }
 }
 
-export function reindexDocumentEmbeddings(documentId: string) {
-  // Implémentation côté serveur non bloquante (stub) qui renvoie un message de succès
-  return api<{ message: string }>(`/search/reindex-document`, {
-    method: 'POST',
-    auth: true,
-    body: JSON.stringify({ documentId })
-  });
+export async function reindexDocumentEmbeddings(documentId: string) {
+  // 1) Essai via la fonction search.mts (stub)
+  try {
+    return await api<{ message: string }>(`/search/reindex-document`, {
+      method: 'POST',
+      auth: true,
+      body: JSON.stringify({ documentId })
+    });
+  } catch (_e) {
+    // 2) Fallback legacy via semantic.mts (réindexation réelle)
+    return await api<{ message: string }>(`/semantic/reindex`, {
+      method: 'POST',
+      auth: true,
+      body: JSON.stringify({ documentId })
+    });
+  }
 }
 
 function authHeaders() {

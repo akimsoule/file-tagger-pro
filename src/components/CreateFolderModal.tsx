@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useFolderMutations } from "@/hooks/useApiFolders";
+import { createFolder as apiCreateFolder } from "@/lib/api/api-folders";
 import { useFileContext } from "@/hooks/useFileContext";
 
 interface CreateFolderModalProps {
@@ -25,11 +25,11 @@ export function CreateFolderModal({
   onClose,
   onCreated,
 }: CreateFolderModalProps) {
-  const { createMut } = useFolderMutations();
   const { createFolder, currentNode } = useFileContext();
   const [name, setName] = useState("");
   const [color, setColor] = useState("#3B82F6");
   const [description, setDescription] = useState("");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -38,7 +38,7 @@ export function CreateFolderModal({
     }
   }, [open]);
 
-  const disabled = createMut.isPending || name.trim().length === 0;
+  const disabled = creating || name.trim().length === 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +58,8 @@ export function CreateFolderModal({
       const targetParentId = parentId ?? currentNode?.id;
       if (targetParentId && targetParentId !== "root")
         payload.parentId = targetParentId;
-      const res = await createMut.mutateAsync(payload);
+  setCreating(true);
+  const res = await apiCreateFolder(payload);
       if (createFolder) {
         createFolder({
           id: res.id,
@@ -69,7 +70,7 @@ export function CreateFolderModal({
           parentId: res.parentId || undefined,
           children: [],
           documents: [],
-          tags: "",
+      tags: res.tags || "",
           createdAt: new Date(res.createdAt),
           updatedAt: new Date(res.updatedAt),
         } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -79,6 +80,8 @@ export function CreateFolderModal({
     } catch (err) {
       // TODO: toast error
       console.error("Erreur création dossier", err);
+    } finally {
+  setCreating(false);
     }
   };
 
@@ -130,7 +133,7 @@ export function CreateFolderModal({
               Annuler
             </Button>
             <Button type="submit" disabled={disabled}>
-              {createMut.isPending ? "Création..." : "Créer"}
+              {creating ? "Création..." : "Créer"}
             </Button>
           </DialogFooter>
         </form>

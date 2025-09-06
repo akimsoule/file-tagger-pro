@@ -78,6 +78,7 @@ model Document {
   createdAt   DateTime   @default(now())
   modifiedAt  DateTime   @updatedAt
   logs        Log[]      @relation("DocumentLogs")
+  embedding   DocumentEmbedding?
 
   @@map("documents")
   // Index composite pour accélérer les requêtes filtrant par propriétaire + tags + ordre chronologique
@@ -145,4 +146,22 @@ model Log {
   createdAt   DateTime  @default(now())
 
   @@map("logs")
+}
+
+/// Stocke les embeddings vectoriels des documents pour la recherche sémantique
+model DocumentEmbedding {
+  id          String   @id @default(uuid())
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId  String   @unique
+  // Embedding optionnel en DB. Si non présent, utiliser megaFileId
+  embedding   String?
+  model       String   // ex: 'text-embedding-3-small'
+  dim         Int
+  storageMode String   @default("db") // db | mega | external
+  megaFileId  String?
+  checksum    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("document_embeddings")
 }

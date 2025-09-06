@@ -1,5 +1,11 @@
+import { useEffect, useMemo, useState } from "react";
 import { Document } from "@/contexts/file";
 import { formatFileSize, formatDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { getDocumentPreview } from "@/lib/api/api-documents";
+import { useFileContext } from "@/hooks/useFileContext";
+import { useToast } from "@/hooks/useToast";
+import { getSimilarDocuments, reindexDocumentEmbeddings, type DocumentDTO } from "@/lib/api/api-documents";
 import { TagBadge } from "./TagBadge";
 import {
   Dialog,
@@ -11,11 +17,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { FileText, Heart, Download, Share, Edit, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useEffect, useMemo, useState } from "react";
-import { getDocumentPreview } from "@/lib/api/api-documents";
-import { useFileContext } from "@/hooks/useFileContext";
-import { useToast } from "@/hooks/useToast";
 
 interface FileDetailsModalProps {
   document: Document | null;
@@ -26,11 +27,11 @@ interface FileDetailsModalProps {
   selectedTags?: string[];
 }
 
-// Suppression des implémentations locales de formatage au profit d'utilitaires globaux
-
-const getFileIcon = (doc: Document) => {
-  return <FileText className="h-12 w-12 text-muted-foreground" />;
-};
+function getFileIcon(doc: Document) {
+  const name = doc.name || "";
+  // Personnaliser par extension si besoin
+  return <FileText className="h-5 w-5 text-muted-foreground" />;
+}
 
 export function FileDetailsModal({
   document: doc,
@@ -40,10 +41,13 @@ export function FileDetailsModal({
   onTagClick,
   selectedTags = [],
 }: FileDetailsModalProps) {
-  // Les hooks doivent être avant tout return conditionnel
-  // L'état de prévisualisation est indépendant et sera (ré)initialisé sur changement d'open/doc
+  const { updateNode } = useFileContext();
+  const [similarDocs, setSimilarDocs] = useState<DocumentDTO[] | null>(null);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
+  const [reindexing, setReindexing] = useState(false);
+  const { toast } = useToast();
 
-  // Aperçu: charge dataUrl et type
+  // Aperçu
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewType, setPreviewType] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -76,17 +80,13 @@ export function FileDetailsModal({
   }, [doc?.id, isOpen]);
 
   const effectiveType = useMemo(() => {
-    // 1) Tenter depuis la data URL
     if (previewUrl) {
       const m = /^data:([^;]+);base64,/i.exec(previewUrl);
       if (m && m[1]) return m[1].toLowerCase();
     }
-    // 2) Type retourné par l'API files
     if (previewType) return previewType.toLowerCase();
-    // 3) Type connu sur le doc
-    const docType = doc ? (doc.type as string | undefined) : undefined; // heuristique
+    const docType = doc ? (doc.type as string | undefined) : undefined;
     if (docType) return docType.toLowerCase();
-    // 4) Déduire depuis l'extension
     const name = doc ? (doc.name as string | undefined) : undefined;
     const ext = name?.split(".").pop()?.toLowerCase();
     const map: Record<string, string> = {
@@ -110,26 +110,17 @@ export function FileDetailsModal({
     return ext && map[ext] ? map[ext] : null;
   }, [previewUrl, previewType, doc]);
 
-  const isImage = useMemo(
-    () => !!effectiveType && effectiveType.startsWith("image/"),
-    [effectiveType]
-  );
-  const isPdf = useMemo(
-    () => effectiveType === "application/pdf",
-    [effectiveType]
-  );
+  const isImage = useMemo(() => !!effectiveType && effectiveType.startsWith("image/"), [effectiveType]);
+  const isPdf = useMemo(() => effectiveType === "application/pdf", [effectiveType]);
   const isText = useMemo(() => {
     if (!effectiveType) return false;
     if (effectiveType.startsWith("text/")) return true;
-    return [
-      "application/json",
-      "application/xml",
-      "application/javascript",
-      "application/typescript",
-    ].includes(effectiveType);
+    return ["application/json", "application/xml", "application/javascript", "application/typescript"].includes(
+      effectiveType
+    );
   }, [effectiveType]);
 
-  // Tags affichés (synchro depuis doc, mis à jour après sauvegarde)
+  // Tags (édition inline)
   const [currentTags, setCurrentTags] = useState<string[]>(() =>
     (doc?.tags || "")
       .split(",")
@@ -145,7 +136,6 @@ export function FileDetailsModal({
     );
   }, [doc?.id, doc?.tags]);
 
-  // Édition des tags
   const [isEditingTags, setIsEditingTags] = useState(false);
   const [editTags, setEditTags] = useState<string[]>(currentTags);
   const [newTag, setNewTag] = useState("");
@@ -153,13 +143,9 @@ export function FileDetailsModal({
     if (isEditingTags) setEditTags(currentTags);
   }, [isEditingTags, currentTags]);
 
-  const { updateNode } = useFileContext();
-  const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
 
-  if (!doc) return null;
-
-  const extension = doc.name.split(".").pop()?.toUpperCase();
+  const extension = doc?.name.split(".").pop()?.toUpperCase();
 
   const addTag = (value: string) => {
     const v = value.trim();
@@ -167,10 +153,28 @@ export function FileDetailsModal({
     const exists = editTags.some((t) => t.toLowerCase() === v.toLowerCase());
     if (!exists) setEditTags((prev) => [...prev, v]);
   };
+
+  // Charger documents similaires quand doc change
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!doc?.id) return;
+      try {
+        setLoadingSimilar(true);
+        const res = await getSimilarDocuments(doc.id, 5);
+        if (!cancelled) setSimilarDocs(res.results);
+      } catch (e) {
+        if (!cancelled) setSimilarDocs([]);
+      } finally {
+        if (!cancelled) setLoadingSimilar(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [doc?.id]);
   const removeTag = (name: string) => {
-    setEditTags((prev) =>
-      prev.filter((t) => t.toLowerCase() !== name.toLowerCase())
-    );
+    setEditTags((prev) => prev.filter((t) => t.toLowerCase() !== name.toLowerCase()));
   };
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
@@ -181,13 +185,12 @@ export function FileDetailsModal({
       }
     }
     if (e.key === "Backspace" && !newTag && editTags.length) {
-      // Backspace supprime le dernier
       setEditTags((prev) => prev.slice(0, -1));
     }
   };
+
   const saveTags = async () => {
     const cleaned = editTags.map((t) => t.trim()).filter(Boolean);
-    // dédupliquer par lower-case mais garder le premier casing
     const seen = new Set<string>();
     const unique = cleaned.filter((t) => {
       const k = t.toLowerCase();
@@ -202,56 +205,46 @@ export function FileDetailsModal({
       setCurrentTags(unique);
       setIsEditingTags(false);
       toast({ title: "Tags mis à jour" });
-      // En cas d’échec distant, un rollback est géré par FileProvider (toast automatique)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      toast({
-        title: "Échec de la mise à jour",
-        description: message,
-        variant: "destructive",
-      });
+      toast({ title: "Échec de la mise à jour", description: message, variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   };
 
+  const tags = currentTags;
+
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="w-screen h-screen max-w-[100vw] p-0 sm:rounded-none overflow-hidden">
         <div className="flex flex-col h-full min-h-0">
+          {!doc ? (
+            <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+              Aucun document sélectionné.
+            </div>
+          ) : (<>
           <DialogHeader className="px-6 py-4 border-b">
             <div className="flex items-start gap-4">
               <div className="shrink-0">{getFileIcon(doc)}</div>
               <div className="min-w-0">
-                <DialogTitle className="text-xl mb-1 truncate">
-                  {doc.name}
-                </DialogTitle>
+                <DialogTitle className="text-xl mb-1 truncate">{doc.name}</DialogTitle>
                 <DialogDescription asChild>
                   <div>
-                    <span className="text-sm">
-                      Type : {extension || "Document"}
-                    </span>
-                    {doc.description && (
-                      <p className="mt-1 text-sm line-clamp-2">
-                        {doc.description}
-                      </p>
-                    )}
+                    <span className="text-sm">Type : {extension || "Document"}</span>
+                    {doc.description && <p className="mt-1 text-sm line-clamp-2">{doc.description}</p>}
                   </div>
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
-          {/* Contenu scrollable: Aperçu + métadonnées + tags */}
           <div className="flex-1 overflow-y-auto min-h-0">
-            {/* Aperçu du fichier */}
             <div className="px-6 py-4">
               <h4 className="text-sm text-muted-foreground mb-2">Aperçu</h4>
               <div className="rounded-md border bg-muted/30 flex items-center justify-center overflow-hidden h-[55vh]">
                 {loadingPreview && (
-                  <div className="p-6 text-sm text-muted-foreground">
-                    Chargement…
-                  </div>
+                  <div className="p-6 text-sm text-muted-foreground">Chargement…</div>
                 )}
                 {!loadingPreview && previewError && (
                   <div className="p-6 text-sm text-red-500">{previewError}</div>
@@ -259,64 +252,40 @@ export function FileDetailsModal({
                 {!loadingPreview && !previewError && previewUrl && (
                   <div className="w-full h-full">
                     {isImage && (
-                      <img
-                        src={previewUrl}
-                        alt={doc.name}
-                        className="w-full h-full object-contain"
-                      />
+                      <img src={previewUrl} alt={doc.name} className="w-full h-full object-contain" />
                     )}
                     {isPdf && (
-                      <iframe
-                        title="aperçu-pdf"
-                        src={previewUrl}
-                        className="w-full h-full"
-                      />
+                      <iframe title="aperçu-pdf" src={previewUrl} className="w-full h-full" />
                     )}
                     {isText && (
-                      <iframe
-                        title="aperçu-texte"
-                        src={previewUrl}
-                        className="w-full h-full bg-background"
-                      />
+                      <iframe title="aperçu-texte" src={previewUrl} className="w-full h-full bg-background" />
                     )}
                     {!isImage && !isPdf && !isText && (
-                      <div className="p-6 text-sm text-muted-foreground">
-                        Aucun aperçu disponible pour ce type de fichier.
-                      </div>
+                      <div className="p-6 text-sm text-muted-foreground">Aucun aperçu disponible pour ce type de fichier.</div>
                     )}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Métadonnées du fichier */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 px-6">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Taille</p>
                 <p className="font-medium">{formatFileSize(doc.size)}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">
-                  Dernière modification
-                </p>
-                <p className="font-medium text-sm">
-                  {formatDate(doc.modifiedAt)}
-                </p>
+                <p className="text-sm text-muted-foreground mb-1">Dernière modification</p>
+                <p className="font-medium text-sm">{formatDate(doc.modifiedAt)}</p>
               </div>
             </div>
 
-            {/* Tags */}
             <>
               <Separator className="my-4 mx-6" />
               <div className="px-6 pb-2">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-sm text-muted-foreground">Tags</h4>
                   {!isEditingTags ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setIsEditingTags(true)}
-                    >
+                    <Button size="sm" variant="outline" onClick={() => setIsEditingTags(true)}>
                       Modifier
                     </Button>
                   ) : (
@@ -340,12 +309,10 @@ export function FileDetailsModal({
 
                 {!isEditingTags && (
                   <div className="flex flex-wrap gap-1.5">
-                    {currentTags.length === 0 && (
-                      <span className="text-sm text-muted-foreground">
-                        Aucun tag
-                      </span>
+                    {tags.length === 0 && (
+                      <span className="text-sm text-muted-foreground">Aucun tag</span>
                     )}
-                    {currentTags.map((tag) => (
+                    {tags.map((tag) => (
                       <TagBadge
                         key={tag}
                         name={tag}
@@ -363,10 +330,7 @@ export function FileDetailsModal({
                 {isEditingTags && (
                   <div className="flex flex-wrap items-center gap-2">
                     {editTags.map((t) => (
-                      <span
-                        key={t}
-                        className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm"
-                      >
+                      <span key={t} className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm">
                         <span className="truncate max-w-[160px]" title={t}>
                           {t}
                         </span>
@@ -397,9 +361,68 @@ export function FileDetailsModal({
                 )}
               </div>
             </>
+
+            <div className="px-6 py-4">
+              <h4 className="text-sm text-muted-foreground mb-2">Similaires</h4>
+              {loadingSimilar ? (
+                <p className="text-sm text-muted-foreground">Chargement…</p>
+              ) : similarDocs && similarDocs.length > 0 ? (
+                <ul className="space-y-2">
+                  {similarDocs.map((s) => (
+                    <li key={s.id} className="flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{s.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatFileSize(s.size)} • {formatDate(s.modifiedAt)}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(`/documents/${s.id}`, "_blank")}
+                      >
+                        Ouvrir
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">Aucun résultat.</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={reindexing}
+                    onClick={async () => {
+                      if (!doc?.id) return;
+                      try {
+                        setReindexing(true);
+                        await reindexDocumentEmbeddings(doc.id);
+                        toast({ title: "Réindexation", description: "Réindexation lancée. Revenez dans quelques secondes." });
+                        // Optionnel: recharger après un court délai
+                        setTimeout(async () => {
+                          try {
+                            const res = await getSimilarDocuments(doc.id, 5);
+                            setSimilarDocs(res.results);
+                          } catch {
+                            /* noop */
+                          }
+                        }, 1200);
+                      } catch (e: unknown) {
+                        console.error(e);
+                        toast({ title: "Erreur", description: "Impossible de lancer la réindexation", variant: "destructive" });
+                      } finally {
+                        setReindexing(false);
+                      }
+                    }}
+                  >
+                    {reindexing ? "Réindexation…" : "Réindexer"}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Actions (footer) */}
           <div className="mt-auto px-6 py-4 border-t flex flex-wrap gap-2 justify-end bg-background">
             <Button
               variant="outline"
@@ -408,16 +431,9 @@ export function FileDetailsModal({
               onClick={onToggleFavorite}
             >
               <Heart
-                className={cn(
-                  "h-4 w-4",
-                  doc.isFavorite
-                    ? "fill-red-500 text-red-500"
-                    : "text-muted-foreground"
-                )}
+                className={cn("h-4 w-4", doc.isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground")}
               />
-              <span className="truncate">
-                {doc.isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-              </span>
+              <span className="truncate">{doc.isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}</span>
             </Button>
             <Button
               variant="outline"
@@ -429,29 +445,22 @@ export function FileDetailsModal({
                   a.href = previewUrl;
                   a.download = doc.name;
                   a.click();
-                  return;
                 }
               }}
             >
               <Download className="h-4 w-4" />
               <span className="truncate">Télécharger</span>
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 sm:flex-none gap-2 min-w-[120px]"
-            >
+            <Button variant="outline" size="sm" className="flex-1 sm:flex-none gap-2 min-w-[120px]">
               <Share className="h-4 w-4" />
               <span className="truncate">Partager</span>
             </Button>
-            <Button
-              size="sm"
-              className="flex-1 sm:flex-none gap-2 min-w-[120px]"
-            >
+            <Button size="sm" className="flex-1 sm:flex-none gap-2 min-w-[120px]">
               <Edit className="h-4 w-4" />
               <span className="truncate">Modifier</span>
             </Button>
           </div>
+          </>)}
         </div>
       </DialogContent>
     </Dialog>

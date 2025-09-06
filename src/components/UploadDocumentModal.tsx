@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useDocumentMutations } from '@/hooks/useApiDocuments';
+import { uploadDocument as apiUploadDocument } from '@/lib/api/api-documents';
 import { useFileContext } from '@/hooks/useFileContext';
-import { useFileContext as useFC } from '@/hooks/useFileContext';
 
 interface UploadDocumentModalProps {
   open: boolean;
@@ -13,13 +12,13 @@ interface UploadDocumentModalProps {
 }
 
 export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumentModalProps) {
-  const { uploadMut } = useDocumentMutations();
   const { currentNode, createDocument } = useFileContext() as any; // eslint-disable-line @typescript-eslint/no-explicit-any
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   // On capture le dossier cible à l'ouverture du modal pour éviter les déplacements ultérieurs
   const [capturedFolderId, setCapturedFolderId] = useState<string | undefined>(undefined);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -34,14 +33,15 @@ export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumen
     }
   }, [open, currentNode?.id]);
 
-  const disabled = uploadMut.isPending || !file;
+  const disabled = uploading || !file;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (disabled || !file) return;
     try {
     const targetFolderId = capturedFolderId;
-    const res = await uploadMut.mutateAsync({ file, extra: { name: name || file.name, description: description || undefined, folderId: targetFolderId } as any }); // eslint-disable-line @typescript-eslint/no-explicit-any
+    setUploading(true);
+    const res = await apiUploadDocument(file, { name: name || file.name, description: description || undefined, folderId: targetFolderId } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
       if (createDocument) {
         createDocument({
           id: res.id,
@@ -64,6 +64,8 @@ export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumen
       onClose();
     } catch (err) {
       console.error('Erreur upload document', err);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -93,7 +95,7 @@ export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumen
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
-            <Button type="submit" disabled={disabled}>{uploadMut.isPending ? 'Upload...' : 'Uploader'}</Button>
+            <Button type="submit" disabled={disabled}>{uploading ? 'Upload...' : 'Uploader'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
