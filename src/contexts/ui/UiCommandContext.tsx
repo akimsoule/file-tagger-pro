@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { UiCommandContext, type UiCommandContextValue, type VoidFn } from './context';
+import { UiCommandContext, type VoidFn } from './context';
 
 export function UiCommandProvider({ children }: { children: React.ReactNode }) {
   const [openUpload, setOpenUploadState] = useState<VoidFn>(undefined);

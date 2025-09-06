@@ -1,4 +1,4 @@
-import type { Document, Folder } from '../file/def';
+import type { Document } from '../file/def';
 
 export type ViewMode = 'grid' | 'list';
 export type SortBy = 'name' | 'date' | 'type' | 'size';

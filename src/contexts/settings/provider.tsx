@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { Settings, SettingsContextType } from './def';
 import { SettingsContext } from './context';
-import type { SortBy, ViewMode } from '../query/def';
 
 const defaultSettings: Settings = {
   theme: 'system',

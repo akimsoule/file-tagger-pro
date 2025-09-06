@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { User, UserContextType, UserSession } from './def';
 import { UserContext } from './context';
-import { mockUser } from '@/data/mockData'; // Fallback possible
 import { authLogin, authRegister, authRefresh, authVerify, setAuthToken, loadStoredToken, onAuthError } from '@/lib/api/api';
 
 
