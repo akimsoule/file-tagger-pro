@@ -83,6 +83,42 @@ export class MegaStorageService {
   }
 
   /**
+   * Trouve un fichier par nom sous le dossier appRoot (recherche récursive via chaîne de parents)
+   */
+  private async findFileByNameUnderAppRoot(
+    name: string,
+    userId?: string
+  ): Promise<{ nodeId: string; name?: string } | null> {
+    const storage = await this.getStorage(userId);
+    const appRef = await this.getAppRootFolder(userId);
+    const appRoot =
+      storage.find((f) => f.nodeId === appRef.nodeId) || storage.root;
+
+    const isDescendantOfAppRoot = (node: any): boolean => {
+      // eslint-disable-line @typescript-eslint/no-explicit-any
+      let cur = node?.parent;
+      while (cur) {
+        if (cur === appRoot) return true;
+        cur = cur.parent;
+      }
+      return false;
+    };
+
+    const candidates = Object.values(storage.files).filter(
+      (
+        f: any // eslint-disable-line @typescript-eslint/no-explicit-any
+      ) =>
+        !f.directory &&
+        typeof f.name === "string" &&
+        f.name === name &&
+        isDescendantOfAppRoot(f)
+    ) as Array<{ nodeId?: string; name?: string }>;
+
+    const first = candidates.find((c) => !!c.nodeId);
+    return first?.nodeId ? { nodeId: first.nodeId!, name: first.name } : null;
+  }
+
+  /**
    * Génère une URL de téléchargement temporaire pour un fichier
    * @param fileId - L'ID du fichier sur MEGA
    * @param userId - ID de l'utilisateur (optionnel, utilise la config par défaut si non fourni)
@@ -139,6 +175,22 @@ export class MegaStorageService {
 
     // Retourner l'URL data avec le type MIME approprié
     return `data:${mimeType};base64,${base64}`;
+  }
+
+  /**
+   * Génère une data URL base64 pour un fichier identifié par son nom sous appRoot
+   */
+  async getBase64FileUrlByNameUnderAppRoot(
+    name: string,
+    userId?: string
+  ): Promise<string | null> {
+    const found = await this.findFileByNameUnderAppRoot(name, userId);
+    if (!found) return null;
+    try {
+      return await this.getBase64FileUrl(found.nodeId, userId);
+    } catch {
+      return null;
+    }
   }
 
   /**
