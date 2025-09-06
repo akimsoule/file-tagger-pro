@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useCallback } from "react";
 import { Document } from "@/contexts/file";
 import { formatFileSize, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { FileText, Heart, Download, Share, Edit, X } from "lucide-react";
+import { FileText, Heart, Download, Share, Edit, X, ChevronLeft, ChevronRight } from "lucide-react";
+import type { FileTreeNode } from "@/logic/local/FileTreeNode";
 
 interface FileDetailsModalProps {
   document: Document | null;
@@ -41,11 +43,13 @@ export function FileDetailsModal({
   onTagClick,
   selectedTags = [],
 }: FileDetailsModalProps) {
-  const { updateNode } = useFileContext();
+  const { updateNode, setSelectedNode, currentNode } = useFileContext();
   const [similarDocs, setSimilarDocs] = useState<DocumentDTO[] | null>(null);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
   const [reindexing, setReindexing] = useState(false);
   const { toast } = useToast();
+  // Navigation dans les similaires
+  const [similarFocusId, setSimilarFocusId] = useState<string | null>(null);
 
   // Aperçu
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -187,6 +191,8 @@ export function FileDetailsModal({
 
   // Charger documents similaires quand doc change
   useEffect(() => {
+    // Réinitialiser le focus similaire quand on change de document affiché
+    setSimilarFocusId(null);
     let cancelled = false;
     (async () => {
       if (!doc?.id) return;
@@ -204,6 +210,70 @@ export function FileDetailsModal({
       cancelled = true;
     };
   }, [doc?.id]);
+
+  // Ouvre un document similaire dans ce même modal
+  const openSimilarById = useCallback(
+    (id: string) => {
+      try {
+        const root = currentNode?.getRoot();
+        const target = root?.findChildById(id);
+        if (target) {
+          setSimilarFocusId(id);
+          setSelectedNode(target as FileTreeNode);
+        } else {
+          onClose();
+        }
+      } catch {
+        onClose();
+      }
+    },
+    [currentNode, setSelectedNode, onClose]
+  );
+
+  // Navigation relative dans la liste des similaires
+  const navigateSimilar = useCallback(
+    (delta: number) => {
+      if (!similarDocs || similarDocs.length === 0) return;
+      const len = similarDocs.length;
+      const currentIndex = similarFocusId
+        ? Math.max(-1, similarDocs.findIndex((d) => d.id === similarFocusId))
+        : -1;
+      let targetIndex: number;
+      if (currentIndex === -1) {
+        targetIndex = delta > 0 ? 0 : len - 1; // premier/dernier si pas de focus
+      } else {
+        targetIndex = (currentIndex + delta + len) % len;
+      }
+      const target = similarDocs[targetIndex];
+      if (target) openSimilarById(target.id);
+    },
+    [similarDocs, similarFocusId, openSimilarById]
+  );
+
+  // Gestion des flèches gauche/droite pour naviguer
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Ignorer si focus sur input/textarea ou contenteditable
+      const t = e.target as HTMLElement | null;
+      const tag = (t?.tagName || "").toLowerCase();
+      const isEditable =
+        tag === "input" ||
+        tag === "textarea" ||
+        (t && (t as HTMLElement).isContentEditable);
+      if (isEditable) return;
+
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        navigateSimilar(1);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        navigateSimilar(-1);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, { passive: false });
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, navigateSimilar]);
   const removeTag = (name: string) => {
     setEditTags((prev) => prev.filter((t) => t.toLowerCase() !== name.toLowerCase()));
   };
@@ -257,6 +327,7 @@ export function FileDetailsModal({
           ) : (<>
           <DialogHeader className="px-6 py-4 border-b">
             <div className="flex items-start gap-4">
+              <div className="flex items-start gap-4 min-w-0">
               <div className="shrink-0">{getFileIcon(doc)}</div>
               <div className="min-w-0">
                 <DialogTitle className="text-xl mb-1 truncate">{doc.name}</DialogTitle>
@@ -267,13 +338,39 @@ export function FileDetailsModal({
                   </div>
                 </DialogDescription>
               </div>
+              </div>
             </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="px-6 py-4">
               <h4 className="text-sm text-muted-foreground mb-2">Aperçu</h4>
-              <div className="rounded-md border bg-muted/30 flex items-center justify-center overflow-hidden h-[55vh]">
+              <div className="relative group rounded-md border bg-muted/30 flex items-center justify-center overflow-hidden h-[55vh]">
+                {/* Flèches overlay centrées verticalement */}
+                {similarDocs && similarDocs.length > 0 && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                      title="Précédent (←)"
+                      onClick={() => navigateSimilar(-1)}
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                      title="Suivant (→)"
+                      onClick={() => navigateSimilar(1)}
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                  </>
+                )}
                 {loadingPreview && (
                   <div className="p-6 text-sm text-muted-foreground">Chargement…</div>
                 )}
@@ -399,13 +496,31 @@ export function FileDetailsModal({
             </>
 
             <div className="px-6 py-4">
-              <h4 className="text-sm text-muted-foreground mb-2">Similaires</h4>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm text-muted-foreground">Similaires</h4>
+                {similarDocs && similarDocs.length > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {(() => {
+                      const idx = similarFocusId && similarDocs ? similarDocs.findIndex(d => d.id === similarFocusId) : -1;
+                      const cur = idx >= 0 ? idx + 1 : 0;
+                      const total = similarDocs?.length || 0;
+                      return `${cur}/${total} • utilisez ← →`;
+                    })()}
+                  </span>
+                )}
+              </div>
               {loadingSimilar ? (
                 <p className="text-sm text-muted-foreground">Chargement…</p>
               ) : similarDocs && similarDocs.length > 0 ? (
                 <ul className="space-y-2">
                   {similarDocs.map((s) => (
-                    <li key={s.id} className="flex items-center justify-between">
+                    <li
+                      key={s.id}
+                      className={cn(
+                        "flex items-center justify-between rounded-md px-2 py-1",
+                        similarFocusId === s.id ? "bg-accent/40 ring-1 ring-accent" : "hover:bg-accent/20"
+                      )}
+                    >
                       <div className="min-w-0">
                         <p className="font-medium truncate">{s.name}</p>
                         <p className="text-xs text-muted-foreground">
@@ -415,7 +530,7 @@ export function FileDetailsModal({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => window.open(`/documents/${s.id}`, "_blank")}
+                        onClick={() => openSimilarById(s.id)}
                       >
                         Ouvrir
                       </Button>
