@@ -49,8 +49,8 @@ export class UserService {
     });
 
     // Créer le dossier root logique pour cet utilisateur (non affiché dans la liste)
-    await (prisma as any).folder.create({
-      // eslint-disable-line @typescript-eslint/no-explicit-any
+    await prisma.folder.create({
+       
       data: {
         name: "root",
         description: "Dossier racine",

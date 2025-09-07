@@ -143,7 +143,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   // Mapping backend -> User local (placeholder jusqu’à adaptation backend complète)
   function mapBackendUser(u: any): User {
-    // eslint-disable-line @typescript-eslint/no-explicit-any
+     
     return {
       id: u.id,
       email: u.email,

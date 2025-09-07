@@ -32,9 +32,9 @@ import {
   getSimilarDocuments,
   reindexDocumentEmbeddings,
 } from "@/lib/api/api-documents";
-import { formatDate, formatFileSize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { FileTreeNode } from "@/logic/local/FileTreeNode";
+import { formatDate, formatFileSize } from "@/utils";
 
 import { TagBadge } from "./TagBadge";
 

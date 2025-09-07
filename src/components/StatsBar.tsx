@@ -1,6 +1,6 @@
 import React from "react";
 
-import { formatFileSize } from "@/lib/format";
+import { formatFileSize } from "@/utils";
 
 interface StatsBarProps {
   folders: number;
