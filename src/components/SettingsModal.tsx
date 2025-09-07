@@ -19,14 +19,12 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 //
 import { useEffect, useState } from "react";
 import {
   deleteUserMegaConfig,
   getUserMegaConfig,
   saveUserMegaConfig,
-  toggleUserMegaConfig,
   testUserMegaCredentials,
   type UserMegaConfigInfo,
 } from "@/lib/api/api-mega-config";
@@ -213,38 +211,6 @@ export function SettingsModal({
                     onChange={(e) => setMegaPassword(e.target.value)}
                     placeholder="••••••••"
                   />
-                </div>
-
-                <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="mega-active">Activer MEGA</Label>
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      id="mega-active"
-                      checked={!!megaConfig?.isActive}
-                      onCheckedChange={async (checked) => {
-                        try {
-                          setMegaLoading(true);
-                          const res = await toggleUserMegaConfig(!!checked);
-                          setMegaConfig(res.config);
-                          toast({
-                            title: "MEGA",
-                            description: res.message,
-                          });
-                        } catch (e) {
-                          toast({
-                            title: "Erreur",
-                            description:
-                              e instanceof Error
-                                ? e.message
-                                : "Impossible de mettre à jour l'état",
-                            variant: "destructive",
-                          });
-                        } finally {
-                          setMegaLoading(false);
-                        }
-                      }}
-                    />
-                  </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-2">
