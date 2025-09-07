@@ -153,17 +153,16 @@ async function upsertUserMegaConfig(
   userId: string
 ): Promise<Response> {
   const body = await request.json();
-  const { email, password, key } = body;
+  const { emailEnc, passwordEnc, key } = body;
 
-  if (!email || !password || !key) {
+  if (!emailEnc || !passwordEnc || !key) {
     return createErrorResponse("Email, mot de passe ou clé MEGA requis", 400);
   }
 
   const config = await userMegaConfigService.upsertUserMegaConfig(userId, {
-    email,
-    password,
+    emailEnc,
+    passwordEnc,
     key,
-    isActive: true,
   });
 
   return createSuccessResponse({
@@ -183,13 +182,13 @@ async function upsertUserMegaConfig(
  */
 async function testUserMegaCredentials(request: Request): Promise<Response> {
   const body = await request.json();
-  const { email, password, key } = body;
+  const { emailEnc, passwordEnc, key } = body;
 
-  if (!email || !password || !key) {
+  if (!emailEnc || !passwordEnc || !key) {
     return createErrorResponse("Email, mot de passe ou clé MEGA requis", 400);
   }
 
-  const { email: decryptedEmail, password: decryptedPassword } = encryptionService.decryptWithKey(email, password, key);
+  const { email: decryptedEmail, password: decryptedPassword } = encryptionService.decryptWithKey(emailEnc, passwordEnc, key);
 
   try {
     // Essayer de se connecter à MEGA

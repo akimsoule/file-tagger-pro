@@ -2,9 +2,8 @@ import prisma from "./database";
 import { encryptionService } from "./encryptionService";
 
 export interface UserMegaConfigData {
-  email: string;
-  password: string;
-  isActive?: boolean;
+  emailEnc: string;
+  passwordEnc: string;
   key?: string; // clé XOR à persister si fournie par le frontend
 }
 
@@ -28,8 +27,8 @@ export class UserMegaConfigService {
     configData: UserMegaConfigData
   ): Promise<UserMegaConfigResponse> {
     // Stockage direct sans chiffrement
-    const encEmail = configData.email;
-    const encPassword = configData.password;
+    const encEmail = configData.emailEnc;
+    const encPassword = configData.passwordEnc;
     const key = configData.key;
 
     if (!key) {
@@ -82,8 +81,19 @@ export class UserMegaConfigService {
       return null;
     }
 
-    // Retourner l'email tel quel
-    const emailOut = config.email;
+    // Retourner l'email tel quel; fallback déchiffré si une ancienne clé est présente
+    let emailOut = config.email;
+    if (config.encKey) {
+      try {
+        emailOut = encryptionService.decryptWithKey(
+          config.email,
+          config.password,
+          config.encKey
+        ).email;
+      } catch {
+        // ignore
+      }
+    }
     return {
       id: config.id,
       userId: config.userId,
@@ -109,6 +119,17 @@ export class UserMegaConfigService {
       return null;
     }
 
+    if (config.encKey) {
+      try {
+        return encryptionService.decryptWithKey(
+          config.email,
+          config.password,
+          config.encKey
+        );
+      } catch {
+        // ignore and return plain
+      }
+    }
     return { email: config.email, password: config.password };
   }
 

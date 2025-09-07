@@ -340,6 +340,7 @@ export class FileTreeNodeApi extends FileTreeNode {
         }
       }
       rootApi.updateStats();
+      console.log(rootApi.printTree());
       return rootApi;
     }
 

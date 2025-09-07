@@ -108,30 +108,19 @@ export class EmbeddingService {
       where: { documentId },
       select: { megaFileId: true },
     });
-    const embeddingsFolderId = await this.mega.ensureEmbeddingsFolder(
-      doc.ownerId
-    );
     // 1) Tenter de supprimer l'ancien fichier par ID si on l'a
     if (existing?.megaFileId) {
       await this.mega
         .deleteFile(existing.megaFileId, doc.ownerId)
         .catch(() => undefined);
     }
-    // 2) Purger tout doublon homonyme résiduel dans le dossier embeddings
-    await this.mega
-      .deleteFilesInFolderByName(embeddingsFolderId, filename, doc.ownerId)
-      .catch(() => undefined);
+    // 2) Purger tout doublon homonyme résiduel directement à la racine
+    await this.mega.deleteFilesByNameAtRoot(filename, doc.ownerId).catch(() => undefined);
     // 3) Upload unique du nouveau contenu
     console.log(
-      `[embeddings] Uploading embedding for doc ${documentId} (owner ${doc.ownerId}) to MEGA folder ${embeddingsFolderId}`
+      `[embeddings] Uploading embedding for doc ${documentId} (owner ${doc.ownerId}) to MEGA root`
     );
-    megaFileId = await this.mega.uploadFile(
-      filename,
-      mime,
-      buffer,
-      embeddingsFolderId,
-      doc.ownerId
-    );
+    megaFileId = await this.mega.uploadFile(filename, mime, buffer, undefined, doc.ownerId);
     console.log(
       `[embeddings] Uploaded embedding file ${filename} -> MEGA fileId ${megaFileId}`
     );
@@ -256,7 +245,7 @@ export class EmbeddingService {
       where: ownerId
         ? { document: { ownerId }, documentId: { not: documentId } }
         : { documentId: { not: documentId } },
-      take: 300, // éviter trop de téléchargements
+      take: CANDIDATES_LIMIT, // éviter trop de téléchargements
       include: {
         document: {
           select: {
