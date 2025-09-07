@@ -62,6 +62,10 @@ export default async function handler(
   const { url, method } = request;
   const urlPath = new URL(url);
   const segments = urlPath.pathname.split("/").filter(Boolean);
+  // Robust route detection (works under /.netlify/functions/* and /api/*)
+  const last = segments[segments.length - 1];
+  const prev = segments[segments.length - 2];
+  const isTestRoute = prev === "user-mega-config" && last === "test";
 
   // CORS preflight
   if (method === "OPTIONS") {
@@ -93,12 +97,7 @@ export default async function handler(
 
       case "POST":
         // POST /user-mega-config/test - Tester une connexion MEGA sans sauvegarder
-        console.log("Segments:", segments);
-        if (
-          segments.length >= 2 &&
-          segments[1] === "user-mega-config" &&
-          segments[2] === "test"
-        ) {
+        if (isTestRoute) {
           return await testUserMegaCredentials(request);
         }
         // POST /user-mega-config - Créer/mettre à jour la configuration MEGA

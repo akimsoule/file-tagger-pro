@@ -187,33 +187,33 @@ export function SettingsModal({
                 <p className="text-sm text-destructive">{megaError}</p>
               )}
 
-              <div className="grid gap-3">
-                <div className="flex items-center justify-between gap-3">
+              <div className="grid gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <Label htmlFor="mega-email">Email MEGA</Label>
                   <Input
                     id="mega-email"
                     type="email"
                     autoComplete="username"
-                    className="w-72"
+                    className="w-full sm:w-72"
                     value={megaEmail}
                     onChange={(e) => setMegaEmail(e.target.value)}
                     placeholder="nom@domaine.com"
                   />
                 </div>
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <Label htmlFor="mega-password">Mot de passe</Label>
                   <Input
                     id="mega-password"
                     type="password"
                     autoComplete="current-password"
-                    className="w-72"
+                    className="w-full sm:w-72"
                     value={megaPassword}
                     onChange={(e) => setMegaPassword(e.target.value)}
                     placeholder="••••••••"
                   />
                 </div>
 
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <Button
                     variant="secondary"
                     disabled={megaLoading || !megaConfig}
@@ -305,7 +305,8 @@ export function SettingsModal({
                         }
                         toast({
                           title: "MEGA",
-                          description: "Connexion validée, sauvegarde en cours…",
+                          description:
+                            "Connexion validée, sauvegarde en cours…",
                         });
                         // 2) Sauvegarder si test OK
                         const res = await saveUserMegaConfig(
@@ -448,7 +449,7 @@ export function SettingsModal({
           </div>
         </div>
       </DialogContent>
-  {/* Toasts utilisés pour le retour du test MEGA */}
+      {/* Toasts utilisés pour le retour du test MEGA */}
     </Dialog>
   );
 }
