@@ -143,7 +143,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   // Mapping backend -> User local (placeholder jusqu’à adaptation backend complète)
   function mapBackendUser(u: any): User {
-     
     return {
       id: u.id,
       email: u.email,
