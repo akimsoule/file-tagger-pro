@@ -1,7 +1,8 @@
-import prisma from "./database";
-import { MegaStorageService } from "./megaStorage";
 import crypto from "crypto";
 import Redis from "ioredis";
+
+import prisma from "./database";
+import { MegaStorageService } from "./megaStorage";
 
 function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length || a.length === 0) return 0;
@@ -34,32 +35,25 @@ if (redisUrl) {
 }
 
 // In-memory cache fallback with TTL (per warm function instance)
-const CACHE_TTL_MS = parseInt(
-  process.env.EMBED_CACHE_TTL_MS || (24 * 60 * 60 * 1000).toString()
-);
+const CACHE_TTL_MS = parseInt(process.env.EMBED_CACHE_TTL_MS || (24 * 60 * 60 * 1000).toString());
 const CANDIDATES_LIMIT = parseInt(process.env.EMBED_CANDIDATES || "300");
-const DL_CONCURRENCY = Math.max(
-  1,
-  Math.min(16, parseInt(process.env.EMBED_DL_CONCURRENCY || "4"))
-);
+const DL_CONCURRENCY = Math.max(1, Math.min(16, parseInt(process.env.EMBED_DL_CONCURRENCY || "4")));
 const memoryCache = new Map<string, { expires: number; vec: number[] }>();
 
 async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
-  mapper: (item: T, index: number) => Promise<R>
+  mapper: (item: T, index: number) => Promise<R>,
 ): Promise<R[]> {
   const results: R[] = new Array(items.length) as unknown as R[];
   let nextIndex = 0;
-  const workers = new Array(Math.min(limit, items.length))
-    .fill(0)
-    .map(async () => {
-      while (true) {
-        const i = nextIndex++;
-        if (i >= items.length) break;
-        results[i] = await mapper(items[i], i);
-      }
-    });
+  const workers = new Array(Math.min(limit, items.length)).fill(0).map(async () => {
+    while (true) {
+      const i = nextIndex++;
+      if (i >= items.length) break;
+      results[i] = await mapper(items[i], i);
+    }
+  });
   await Promise.all(workers);
   return results;
 }
@@ -98,10 +92,7 @@ export class EmbeddingService {
 
     // Stocker en fichier JSON compact sur MEGA (MEGA-only)
     const filename = `embedding_${documentId}.json`;
-    const buffer = Buffer.from(
-      JSON.stringify({ model, dim, v: embedding }),
-      "utf8"
-    );
+    const buffer = Buffer.from(JSON.stringify({ model, dim, v: embedding }), "utf8");
     const mime = "application/json";
     // Stratégie “replace”: jamais d'update direct (non fiable). On nettoie puis on ré-upload.
     const existing = await prisma.documentEmbedding.findUnique({
@@ -110,20 +101,16 @@ export class EmbeddingService {
     });
     // 1) Tenter de supprimer l'ancien fichier par ID si on l'a
     if (existing?.megaFileId) {
-      await this.mega
-        .deleteFile(existing.megaFileId, doc.ownerId)
-        .catch(() => undefined);
+      await this.mega.deleteFile(existing.megaFileId, doc.ownerId).catch(() => undefined);
     }
     // 2) Purger tout doublon homonyme résiduel directement à la racine
     await this.mega.deleteFilesByNameAtRoot(filename, doc.ownerId).catch(() => undefined);
     // 3) Upload unique du nouveau contenu
     console.log(
-      `[embeddings] Uploading embedding for doc ${documentId} (owner ${doc.ownerId}) to MEGA root`
+      `[embeddings] Uploading embedding for doc ${documentId} (owner ${doc.ownerId}) to MEGA root`,
     );
     megaFileId = await this.mega.uploadFile(filename, mime, buffer, undefined, doc.ownerId);
-    console.log(
-      `[embeddings] Uploaded embedding file ${filename} -> MEGA fileId ${megaFileId}`
-    );
+    console.log(`[embeddings] Uploaded embedding file ${filename} -> MEGA fileId ${megaFileId}`);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {
@@ -153,9 +140,7 @@ export class EmbeddingService {
     const key = this.cacheKey(documentId);
     const payload = JSON.stringify(embedding);
     if (redis) {
-      await redis
-        .set(key, payload, "EX", Math.floor(CACHE_TTL_MS / 1000))
-        .catch(() => undefined);
+      await redis.set(key, payload, "EX", Math.floor(CACHE_TTL_MS / 1000)).catch(() => undefined);
     } else {
       memoryCache.set(key, {
         expires: Date.now() + CACHE_TTL_MS,
@@ -165,9 +150,7 @@ export class EmbeddingService {
     return { documentId, dim, model };
   }
 
-  private async getEmbeddingVector(
-    documentId: string
-  ): Promise<number[] | null> {
+  private async getEmbeddingVector(documentId: string): Promise<number[] | null> {
     const key = this.cacheKey(documentId);
     // Memory cache first
     const mc = memoryCache.get(key);
@@ -210,10 +193,7 @@ export class EmbeddingService {
         select: { ownerId: true },
       });
       if (!owner) return null;
-      const buf = await this.mega.downloadFile(
-        anyRow.megaFileId,
-        owner.ownerId
-      );
+      const buf = await this.mega.downloadFile(anyRow.megaFileId, owner.ownerId);
       try {
         const json = JSON.parse(buf.toString("utf8")) as { v: number[] };
         if (Array.isArray(json.v)) {
@@ -281,14 +261,10 @@ export class EmbeddingService {
     }>;
 
     // Télécharger/charger les vecteurs candidats (cache Redis si dispo)
-    const withVecs = await mapWithConcurrency(
-      candidates,
-      DL_CONCURRENCY,
-      async (c) => {
-        const cv = await this.getEmbeddingVector(c.documentId);
-        return { doc: c.document, vec: cv };
-      }
-    );
+    const withVecs = await mapWithConcurrency(candidates, DL_CONCURRENCY, async (c) => {
+      const cv = await this.getEmbeddingVector(c.documentId);
+      return { doc: c.document, vec: cv };
+    });
     const scored = withVecs
       .filter((x) => Array.isArray(x.vec) && x.vec.length === v.length)
       .map((x) => ({ sim: cosineSimilarity(v, x.vec as number[]), doc: x.doc }))
@@ -338,14 +314,10 @@ export class EmbeddingService {
       };
     }>;
 
-    const withVecs = await mapWithConcurrency(
-      candidates,
-      DL_CONCURRENCY,
-      async (c) => {
-        const cv = await this.getEmbeddingVector(c.documentId);
-        return { doc: c.document, vec: cv };
-      }
-    );
+    const withVecs = await mapWithConcurrency(candidates, DL_CONCURRENCY, async (c) => {
+      const cv = await this.getEmbeddingVector(c.documentId);
+      return { doc: c.document, vec: cv };
+    });
     const scored = withVecs
       .filter((x) => Array.isArray(x.vec) && x.vec.length === vector.length)
       .map((x) => ({

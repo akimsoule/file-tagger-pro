@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 export const FileCardSkeleton: React.FC = () => (
   <div className="rounded-lg border border-border bg-card p-3 animate-pulse flex flex-col gap-2 h-28">

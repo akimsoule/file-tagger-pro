@@ -1,6 +1,11 @@
-import { getCorsHeaders, createSuccessResponse, createErrorResponse } from './shared/middleware.mts';
-import prisma from '../files.core/src/services/database';
-import Redis from 'ioredis';
+import Redis from "ioredis";
+
+import prisma from "../files.core/src/services/database";
+import {
+  createErrorResponse,
+  createSuccessResponse,
+  getCorsHeaders,
+} from "./shared/middleware.mts";
 
 // Optionnel: test connexion Redis si REDIS_URL défini
 let redis: Redis | null = null;
@@ -13,11 +18,11 @@ if (process.env.REDIS_URL) {
 }
 
 export default async function handler(request: Request) {
-  if (request.method === 'OPTIONS') {
+  if (request.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: getCorsHeaders() });
   }
-  if (request.method !== 'GET') {
-    return createErrorResponse('Méthode non autorisée', 405);
+  if (request.method !== "GET") {
+    return createErrorResponse("Méthode non autorisée", 405);
   }
   const start = Date.now();
   let dbOk = false;
@@ -33,12 +38,12 @@ export default async function handler(request: Request) {
     } catch {}
   }
   return createSuccessResponse({
-    status: dbOk && redisOk ? 'ok' : 'degraded',
+    status: dbOk && redisOk ? "ok" : "degraded",
     uptime: process.uptime(),
     durationMs: Date.now() - start,
-    db: dbOk ? 'up' : 'down',
-    redis: redis ? (redisOk ? 'up' : 'down') : 'not_configured'
+    db: dbOk ? "up" : "down",
+    redis: redis ? (redisOk ? "up" : "down") : "not_configured",
   });
 }
 
-export const config = { path: '/health' };
+export const config = { path: "/health" };

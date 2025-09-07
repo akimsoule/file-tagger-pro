@@ -1,5 +1,6 @@
-import prisma from "./database";
 import crypto from "crypto";
+
+import prisma from "./database";
 import { EmbeddingService } from "./embeddingService";
 
 function tokenize(text: string): string[] {

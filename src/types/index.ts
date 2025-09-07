@@ -10,7 +10,7 @@ export interface Tag {
 export interface FileItem {
   id: string;
   name: string;
-  type: 'file' | 'folder';
+  type: "file" | "folder";
   extension?: string;
   size?: number;
   tags: Tag[];
@@ -62,6 +62,5 @@ export interface FolderStats extends Stats {
   foldersCount: number;
 }
 
-
-export type ViewMode = 'grid' | 'list';
-export type SortBy = 'name' | 'date' | 'size' | 'type';
+export type ViewMode = "grid" | "list";
+export type SortBy = "name" | "date" | "size" | "type";

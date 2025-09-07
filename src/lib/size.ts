@@ -1,6 +1,6 @@
-import { FileTreeNode } from '@/logic/local/FileTreeNode';
-import type { Document, Folder } from '@/contexts/file';
-import type { FileNodeStats } from '@/logic/local/FileTreeNode';
+import type { Document, Folder } from "@/contexts/file";
+import type { FileNodeStats } from "@/logic/local/FileTreeNode";
+import { FileTreeNode } from "@/logic/local/FileTreeNode";
 
 /**
  * Retourne la taille (octets) d'un nœud fichier.
@@ -16,12 +16,12 @@ export function getFileNodeSize(node: FileTreeNode): number {
 function computeFolderSizeRecursively(node: FileTreeNode): number {
   let total = 0;
   for (const child of node.children as FileTreeNode[]) {
-    if (child.type === 'file') {
+    if (child.type === "file") {
       total += getFileNodeSize(child);
     } else {
       // Utiliser stats si disponibles pour éviter descente récursive complète
       const stats = child.stats as FileNodeStats | undefined;
-      if (stats && typeof stats.totalSize === 'number') {
+      if (stats && typeof stats.totalSize === "number") {
         total += stats.totalSize;
       } else {
         total += computeFolderSizeRecursively(child);
@@ -36,7 +36,7 @@ function computeFolderSizeRecursively(node: FileTreeNode): number {
  */
 export function getFolderNodeSize(node: FileTreeNode): number {
   const stats = node.stats as FileNodeStats | undefined;
-  if (stats && typeof stats.totalSize === 'number') {
+  if (stats && typeof stats.totalSize === "number") {
     return stats.totalSize;
   }
   return computeFolderSizeRecursively(node);
@@ -46,7 +46,7 @@ export function getFolderNodeSize(node: FileTreeNode): number {
  * Abstraction unique pour récupérer la taille d'un nœud (fichier ou dossier).
  */
 export function getNodeSize(node: FileTreeNode): number {
-  return node.type === 'file' ? getFileNodeSize(node) : getFolderNodeSize(node);
+  return node.type === "file" ? getFileNodeSize(node) : getFolderNodeSize(node);
 }
 
 /**
@@ -54,7 +54,7 @@ export function getNodeSize(node: FileTreeNode): number {
  * On passe la liste des nœuds dossiers correspondants.
  */
 export function resolveFolderSize(folder: Folder, folderNodes: FileTreeNode[]): number {
-  const node = folderNodes.find(n => n.id === folder.id);
+  const node = folderNodes.find((n) => n.id === folder.id);
   if (!node) return 0;
   return getFolderNodeSize(node);
 }

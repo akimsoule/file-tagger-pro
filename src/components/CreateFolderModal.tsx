@@ -1,16 +1,17 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createFolder as apiCreateFolder } from "@/lib/api/api-folders";
 import { useFileContext } from "@/hooks/useFileContext";
+import { createFolder as apiCreateFolder } from "@/lib/api/api-folders";
 
 interface CreateFolderModalProps {
   open: boolean;
@@ -19,12 +20,7 @@ interface CreateFolderModalProps {
   onCreated?: (folderId: string) => void;
 }
 
-export function CreateFolderModal({
-  open,
-  parentId,
-  onClose,
-  onCreated,
-}: CreateFolderModalProps) {
+export function CreateFolderModal({ open, parentId, onClose, onCreated }: CreateFolderModalProps) {
   const { createFolder, currentNode } = useFileContext();
   const [name, setName] = useState("");
   const [color, setColor] = useState("#3B82F6");
@@ -56,10 +52,9 @@ export function CreateFolderModal({
       };
       // Fallback: si parentId non fourni par le parent, utiliser le dossier courant du contexte
       const targetParentId = parentId ?? currentNode?.id;
-      if (targetParentId && targetParentId !== "root")
-        payload.parentId = targetParentId;
-  setCreating(true);
-  const res = await apiCreateFolder(payload);
+      if (targetParentId && targetParentId !== "root") payload.parentId = targetParentId;
+      setCreating(true);
+      const res = await apiCreateFolder(payload);
       if (createFolder) {
         createFolder({
           id: res.id,
@@ -70,7 +65,7 @@ export function CreateFolderModal({
           parentId: res.parentId || undefined,
           children: [],
           documents: [],
-      tags: res.tags || "",
+          tags: res.tags || "",
           createdAt: new Date(res.createdAt),
           updatedAt: new Date(res.updatedAt),
         } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -81,7 +76,7 @@ export function CreateFolderModal({
       // TODO: toast error
       console.error("Erreur création dossier", err);
     } finally {
-  setCreating(false);
+      setCreating(false);
     }
   };
 
@@ -96,9 +91,7 @@ export function CreateFolderModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
             <DialogTitle>Nouveau dossier</DialogTitle>
-            <DialogDescription>
-              Créez un dossier pour organiser vos documents.
-            </DialogDescription>
+            <DialogDescription>Créez un dossier pour organiser vos documents.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <label className="text-sm font-medium">Nom</label>
@@ -110,9 +103,7 @@ export function CreateFolderModal({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Description (optionnel)
-            </label>
+            <label className="text-sm font-medium">Description (optionnel)</label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}

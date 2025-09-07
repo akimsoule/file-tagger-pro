@@ -1,4 +1,4 @@
-import type { SortBy, ViewMode } from '../query/def';
+import type { SortBy, ViewMode } from "../query/def";
 
 export interface Settings {
   theme: string;
@@ -10,11 +10,11 @@ export interface Settings {
 export interface SettingsContextType {
   // State
   settings: Settings;
-  
+
   // Methods
   updateSettings: (settings: Partial<Settings>) => void;
   resetSettings: () => void;
-  
+
   // Getters
   defaultViewMode: ViewMode;
   defaultSortBy: SortBy;

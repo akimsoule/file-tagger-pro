@@ -1,11 +1,11 @@
-import { Document, Folder } from '../file/def';
+import { Document, Folder } from "../file/def";
 
 export interface User {
   id: string;
   email: string;
   name: string;
   avatar?: string;
-  role: 'admin' | 'user';
+  role: "admin" | "user";
   preferences: {
     theme: string;
     language: string;
@@ -24,16 +24,16 @@ export interface UserSession {
 export interface UserContextType {
   // Session state
   session: UserSession;
-  
+
   // Auth methods
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
-  
+
   // User operations
   updateProfile: (updates: Partial<User>) => Promise<void>;
-  updatePreferences: (preferences: Partial<User['preferences']>) => Promise<void>;
-  
+  updatePreferences: (preferences: Partial<User["preferences"]>) => Promise<void>;
+
   // Utilities
   refreshSession: () => Promise<void>;
   clearError: () => void;

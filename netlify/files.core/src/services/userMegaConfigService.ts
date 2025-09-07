@@ -24,7 +24,7 @@ export class UserMegaConfigService {
    */
   async upsertUserMegaConfig(
     userId: string,
-    configData: UserMegaConfigData
+    configData: UserMegaConfigData,
   ): Promise<UserMegaConfigResponse> {
     // Stockage direct sans chiffrement
     const encEmail = configData.emailEnc;
@@ -53,11 +53,7 @@ export class UserMegaConfigService {
 
     // decrypt email and password if encKey is provided
 
-    const { email: decryptedEmail } = encryptionService.decryptWithKey(
-      encEmail,
-      encPassword,
-      key
-    );
+    const { email: decryptedEmail } = encryptionService.decryptWithKey(encEmail, encPassword, key);
     return {
       id: config.id,
       userId: config.userId,
@@ -70,9 +66,7 @@ export class UserMegaConfigService {
   /**
    * Récupère la configuration MEGA d'un utilisateur
    */
-  async getUserMegaConfig(
-    userId: string
-  ): Promise<UserMegaConfigResponse | null> {
+  async getUserMegaConfig(userId: string): Promise<UserMegaConfigResponse | null> {
     const config = await prisma.userMegaConfig.findUnique({
       where: { userId },
     });
@@ -88,7 +82,7 @@ export class UserMegaConfigService {
         emailOut = encryptionService.decryptWithKey(
           config.email,
           config.password,
-          config.encKey
+          config.encKey,
         ).email;
       } catch {
         // ignore
@@ -107,7 +101,7 @@ export class UserMegaConfigService {
    * Récupère les credentials MEGA déchiffrés d'un utilisateur pour utilisation interne
    */
   async getUserMegaCredentials(
-    userId: string
+    userId: string,
   ): Promise<{ email: string; password: string } | null> {
     const config = await prisma.userMegaConfig.findFirst({
       where: {
@@ -121,11 +115,7 @@ export class UserMegaConfigService {
 
     if (config.encKey) {
       try {
-        return encryptionService.decryptWithKey(
-          config.email,
-          config.password,
-          config.encKey
-        );
+        return encryptionService.decryptWithKey(config.email, config.password, config.encKey);
       } catch {
         // ignore and return plain
       }

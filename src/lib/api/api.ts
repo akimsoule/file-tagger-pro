@@ -46,10 +46,7 @@ interface InternalApiOptions extends ApiOptions {
   _retried?: boolean;
 }
 
-export async function api<T = unknown>(
-  path: string,
-  options: InternalApiOptions = {}
-): Promise<T> {
+export async function api<T = unknown>(path: string, options: InternalApiOptions = {}): Promise<T> {
   const base = resolveBase();
   const url = new URL(base + path, window.location.origin);
   if (options.query) {
@@ -124,12 +121,8 @@ export async function api<T = unknown>(
         }
       }
     }
-    const obj =
-      json && typeof json === "object" ? (json as Record<string, unknown>) : {};
-    const errMsg =
-      (obj["error"] as string) ||
-      (obj["message"] as string) ||
-      `HTTP ${res.status}`;
+    const obj = json && typeof json === "object" ? (json as Record<string, unknown>) : {};
+    const errMsg = (obj["error"] as string) || (obj["message"] as string) || `HTTP ${res.status}`;
     throw new Error(errMsg);
   }
   return json as T;
@@ -159,11 +152,7 @@ export async function authLogin(email: string, password: string) {
   return data;
 }
 
-export async function authRegister(
-  email: string,
-  password: string,
-  name: string
-) {
+export async function authRegister(email: string, password: string, name: string) {
   const data = await api<AuthResponse>(`/auth/register`, {
     method: "POST",
     body: JSON.stringify({ email, password, name }),

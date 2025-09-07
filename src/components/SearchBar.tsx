@@ -1,15 +1,16 @@
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Grid3X3, List, Search, SortAsc, X } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Search, Grid3X3, List, SortAsc, X } from 'lucide-react';
-import { ViewMode, SortBy } from '@/types';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { SortBy, ViewMode } from "@/types";
 
 interface SearchBarProps {
   searchQuery: string;
@@ -39,10 +40,10 @@ export function SearchBar({
   // filtre avancé désactivé pour le moment
 
   const sortOptions = [
-    { value: 'name' as SortBy, label: 'Nom' },
-    { value: 'date' as SortBy, label: 'Date de modification' },
-    { value: 'size' as SortBy, label: 'Taille' },
-    { value: 'type' as SortBy, label: 'Type' },
+    { value: "name" as SortBy, label: "Nom" },
+    { value: "date" as SortBy, label: "Date de modification" },
+    { value: "size" as SortBy, label: "Taille" },
+    { value: "type" as SortBy, label: "Type" },
   ];
 
   return (
@@ -87,12 +88,7 @@ export function SearchBar({
             );
           })}
           {selectedTags.length > 1 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClearFilters}
-              className="text-xs h-6 px-2"
-            >
+            <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-xs h-6 px-2">
               Tout effacer
             </Button>
           )}
@@ -101,7 +97,6 @@ export function SearchBar({
 
       {/* Troisième ligne : contrôles */}
       <div className="flex items-center justify-between gap-2">
-
         {/* Contrôles de droite */}
         <div className="flex items-center gap-2">
           {/* Bouton de tri */}
@@ -116,9 +111,7 @@ export function SearchBar({
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => onSortChange(option.value)}
-                  className={cn(
-                    sortBy === option.value && 'bg-accent'
-                  )}
+                  className={cn(sortBy === option.value && "bg-accent")}
                 >
                   {option.label}
                 </DropdownMenuItem>
@@ -129,17 +122,17 @@ export function SearchBar({
           {/* Boutons de vue */}
           <div className="flex items-center rounded-lg border border-border overflow-hidden h-8">
             <Button
-              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              variant={viewMode === "grid" ? "default" : "ghost"}
               size="icon"
-              onClick={() => onViewModeChange('grid')}
+              onClick={() => onViewModeChange("grid")}
               className="rounded-none border-0 h-8 w-8"
             >
               <Grid3X3 className="h-4 w-4" />
             </Button>
             <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              variant={viewMode === "list" ? "default" : "ghost"}
               size="icon"
-              onClick={() => onViewModeChange('list')}
+              onClick={() => onViewModeChange("list")}
               className="rounded-none border-0 border-l border-border h-8 w-8"
             >
               <List className="h-4 w-4" />

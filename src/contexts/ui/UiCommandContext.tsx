@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { UiCommandContext, type VoidFn } from './context';
+import React, { useCallback, useState } from "react";
+
+import { UiCommandContext, type VoidFn } from "./context";
 
 export function UiCommandProvider({ children }: { children: React.ReactNode }) {
   const [openUpload, setOpenUploadState] = useState<VoidFn>(undefined);
@@ -11,7 +12,16 @@ export function UiCommandProvider({ children }: { children: React.ReactNode }) {
   const setOpenSettings = useCallback((fn: VoidFn) => setOpenSettingsState(() => fn), []);
 
   return (
-    <UiCommandContext.Provider value={{ openUpload, openCreateFolder, openSettings, setOpenUpload, setOpenCreateFolder, setOpenSettings }}>
+    <UiCommandContext.Provider
+      value={{
+        openUpload,
+        openCreateFolder,
+        openSettings,
+        setOpenUpload,
+        setOpenCreateFolder,
+        setOpenSettings,
+      }}
+    >
       {children}
     </UiCommandContext.Provider>
   );

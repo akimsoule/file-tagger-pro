@@ -37,7 +37,7 @@ export interface Tag {
   updatedAt: Date;
 }
 
-import type { FileTreeNode } from '@/logic/local/FileTreeNode';
+import type { FileTreeNode } from "@/logic/local/FileTreeNode";
 
 export interface FileContextType {
   // État principal
@@ -68,7 +68,7 @@ export interface FileContextType {
   getTagCount: (tagId: string) => number;
   toggleTagSelection: (tagId: string) => void;
   updateTag: (tagId: string, updates: Partial<Tag>) => Promise<void>;
-  createTag: (tag: Omit<Tag, 'id' | 'count'>) => Promise<void>;
+  createTag: (tag: Omit<Tag, "id" | "count">) => Promise<void>;
   deleteTag: (tagId: string) => Promise<void>;
   customTags?: Tag[];
 

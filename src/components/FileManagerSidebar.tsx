@@ -1,5 +1,9 @@
+import clsx from "clsx";
+import { Files, Hash, Heart } from "lucide-react";
 import React, { useCallback, useMemo } from "react";
 import { NavLink } from "react-router-dom";
+
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -11,14 +15,11 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { Files, Hash, Heart } from "lucide-react";
-import { useUser } from "@/hooks/useUser";
-import { useTags } from "@/hooks/useTags";
+import { useFavoriteNodes } from "@/hooks/useFavoriteNodes";
 import { useFileContext } from "@/hooks/useFileContext";
 import { useQuery } from "@/hooks/useQuery";
-import { useFavoriteNodes } from "@/hooks/useFavoriteNodes";
-import clsx from "clsx";
+import { useTags } from "@/hooks/useTags";
+import { useUser } from "@/hooks/useUser";
 // import { useUiCommands } from '@/contexts/ui/useUiCommands';
 
 type NavItem = {
@@ -37,17 +38,13 @@ function navLinkClasses(isActive: boolean) {
     "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
     isActive
       ? "bg-primary text-primary-foreground"
-      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+      : "text-muted-foreground hover:text-foreground hover:bg-accent",
   );
 }
 
 export function FileManagerSidebar() {
   const { open } = useSidebar();
-  const {
-    toggleTagSelection: toggleTag,
-    selectedTags,
-    tags: allTags,
-  } = useTags();
+  const { toggleTagSelection: toggleTag, selectedTags, tags: allTags } = useTags();
   const { getTagCount, setCurrentNode } = useFileContext();
   const { session } = useUser();
   const { filters, toggleFavoriteFilter } = useQuery();
@@ -57,13 +54,13 @@ export function FileManagerSidebar() {
   const favoritesActive = filters.showFavorites;
   const sortedTags = useMemo(
     () => [...allTags].sort((a, b) => a.name.localeCompare(b.name)),
-    [allTags]
+    [allTags],
   );
   const handleNavClick = useCallback(
     (item: NavItem) => () => {
       if (item.isRoot) setCurrentNode(null);
     },
-    [setCurrentNode]
+    [setCurrentNode],
   );
   const handleToggleTag = useCallback((id: string) => toggleTag(id), [toggleTag]);
 
@@ -111,9 +108,7 @@ export function FileManagerSidebar() {
                   aria-pressed={favoritesActive}
                   aria-label="Basculer l'affichage des favoris"
                 >
-                  <Heart
-                    className={clsx("h-4 w-4", favoritesActive && "fill-current")}
-                  />
+                  <Heart className={clsx("h-4 w-4", favoritesActive && "fill-current")} />
                   {open && (
                     <>
                       <span className="sr-only">Favoris</span>
@@ -147,7 +142,7 @@ export function FileManagerSidebar() {
                         "w-full justify-start gap-2 px-3 py-2 text-sm",
                         selectedTags.includes(tag.id)
                           ? "bg-accent text-accent-foreground"
-                          : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
                       )}
                       onClick={() => handleToggleTag(tag.id)}
                     >
@@ -157,9 +152,7 @@ export function FileManagerSidebar() {
                       />
                       {open && (
                         <>
-                          <span className="flex-1 truncate text-left">
-                            {tag.name}
-                          </span>
+                          <span className="flex-1 truncate text-left">{tag.name}</span>
                           <span className="text-xs text-muted-foreground">
                             {getTagCount(tag.id)}
                           </span>

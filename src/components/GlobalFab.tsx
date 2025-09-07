@@ -1,7 +1,8 @@
+import { Folder as FolderIcon, Plus, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Plus, Upload, Folder as FolderIcon } from "lucide-react";
-import { useUiCommands } from "@/contexts/ui/useUiCommands";
 import { createPortal } from "react-dom";
+
+import { useUiCommands } from "@/contexts/ui/useUiCommands";
 import { useIsMobile } from "@/hooks/useMobile";
 
 export default function GlobalFab() {
@@ -10,7 +11,7 @@ export default function GlobalFab() {
   const isMobile = useIsMobile();
 
   const container = useMemo(() => {
-    if (typeof document === 'undefined') return null;
+    if (typeof document === "undefined") return null;
     return document.body;
   }, []);
 
@@ -19,7 +20,10 @@ export default function GlobalFab() {
   return createPortal(
     <div
       className="fixed right-4 bottom-4 sm:right-6 sm:bottom-6 z-[9999]"
-      style={{ paddingRight: 'env(safe-area-inset-right)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+      style={{
+        paddingRight: "env(safe-area-inset-right)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
     >
       {open && (
         <div className="mb-3 flex flex-col items-end gap-2">
@@ -49,9 +53,9 @@ export default function GlobalFab() {
         onClick={() => setOpen((v) => !v)}
         className="h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-primary/40"
       >
-        <Plus className={`h-6 w-6 transition-transform ${open ? 'rotate-45' : ''}`} />
+        <Plus className={`h-6 w-6 transition-transform ${open ? "rotate-45" : ""}`} />
       </button>
     </div>,
-    container
+    container,
   );
 }

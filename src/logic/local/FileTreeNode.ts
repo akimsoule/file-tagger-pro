@@ -1,14 +1,15 @@
-import TreeNode from "./TreeNode";
 import type { Document, Folder, Tag } from "@/contexts/file";
-import {
-  TagTreeNode,
-  computeTagStatsUtil,
-  addTagUtil,
-  removeTagUtil,
-  purgeTagUtil,
-} from "./treeTags.ts";
-import { printTreeUtil } from "./treePrint.ts";
 import type { TreeNodeType } from "@/types";
+
+import TreeNode from "./TreeNode";
+import { printTreeUtil } from "./treePrint.ts";
+import {
+  addTagUtil,
+  computeTagStatsUtil,
+  purgeTagUtil,
+  removeTagUtil,
+  TagTreeNode,
+} from "./treeTags.ts";
 
 export interface FileNodeStats {
   totalSize: number;
@@ -28,7 +29,7 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
     type: TreeNodeType,
     data: Document | Folder,
     stats?: FileNodeStats,
-    parentId?: string
+    parentId?: string,
   ) {
     const tags = data.tags
       .split(",")
@@ -67,7 +68,7 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
       "file",
       doc,
       { totalSize: doc.size, tagsCount: 0 },
-      doc.folderId
+      doc.folderId,
     );
   }
 
@@ -84,7 +85,7 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
         filesCount: 0,
         foldersCount: 0,
       },
-      folder.parentId
+      folder.parentId,
     );
   }
 
@@ -95,7 +96,7 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
   public static buildRootTree(
     documents: Document[],
     folders: Folder[],
-  _options?: { debug?: boolean }
+    _options?: { debug?: boolean },
   ): FileTreeNode {
     // Créer le dossier racine avec ses propriétés minimales requises
     const root = FileTreeNode.createFolder({
@@ -143,7 +144,7 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
     // Mettre à jour les statistiques de l'arbre complet
     root.updateStats();
 
-  // Option debug supprimée: utilisation éventuelle future d'un logger dédié
+    // Option debug supprimée: utilisation éventuelle future d'un logger dédié
 
     return root;
   }
@@ -210,10 +211,7 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
 
   // ==================== Informations dérivées ====================
   public getTagsInfo(): { id: string; name: string; count: number }[] {
-    const tagsMap = new Map<
-      string,
-      { id: string; name: string; count: number }
-    >();
+    const tagsMap = new Map<string, { id: string; name: string; count: number }>();
     for (const node of FileTreeNode.iterate(this)) {
       for (const tag of node.tags) {
         const entry = tagsMap.get(tag.id) || {
@@ -264,17 +262,8 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
    * Construit la liste des tags agrégés avec comptage.
    * Garde les couleurs précédentes, fusionne les customs, applique la palette.
    */
-  public computeTagStats(
-    previousTags: Tag[],
-    customTags: Tag[],
-    palette: string[]
-  ): Tag[] {
-    return computeTagStatsUtil(
-      this.toTagTree(),
-      previousTags,
-      customTags,
-      palette
-    );
+  public computeTagStats(previousTags: Tag[], customTags: Tag[], palette: string[]): Tag[] {
+    return computeTagStatsUtil(this.toTagTree(), previousTags, customTags, palette);
   }
 
   /** Ajoute un tag (nom simple sans préfixe) à un nœud fichier/dossier. Retourne true si ajouté. */
@@ -307,9 +296,7 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
       id: n.id,
       name: n.name,
       type: n.type,
-      children: (n.children as FileTreeNode[]).map((c) =>
-        map(c as FileTreeNode)
-      ),
+      children: (n.children as FileTreeNode[]).map((c) => map(c as FileTreeNode)),
     });
     return map(this);
   }
@@ -331,9 +318,7 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
       id: n.id,
       type: n.type,
       tags: n.tags.map((t) => ({ id: t.id, name: t.name })),
-      children: (n.children as FileTreeNode[]).map((c) =>
-        build(c as FileTreeNode)
-      ),
+      children: (n.children as FileTreeNode[]).map((c) => build(c as FileTreeNode)),
       getRoot: () => build(root),
       findChildById: (id: string) => {
         const found = root.findChildById(id) as FileTreeNode | undefined;
@@ -378,10 +363,7 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
   }
 
   /** Mise à jour (optimiste) des données d'un nœud */
-  public updateNodeFields(
-    nodeId: string,
-    updates: Partial<Document | Folder>
-  ): boolean {
+  public updateNodeFields(nodeId: string, updates: Partial<Document | Folder>): boolean {
     const root = this.getRoot() as FileTreeNode;
     const node = root.findChildById(nodeId) as FileTreeNode | undefined;
     if (!node) return false;
@@ -426,10 +408,7 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
   }
 
   /** Liste les dossiers selon un parent (null = racine) + filtre tags éventuel */
-  public listFolders(
-    parentId: string | null = null,
-    tagFilter: string[] = []
-  ): Folder[] {
+  public listFolders(parentId: string | null = null, tagFilter: string[] = []): Folder[] {
     const root = this.getRoot() as FileTreeNode;
     const index = root.getRootIndex();
     const all: FileTreeNode[] = index
@@ -440,8 +419,7 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
         (n) =>
           n.type === "folder" &&
           (parentId === null ? !n.parentId : n.parentId === parentId) &&
-          (tagFilter.length === 0 ||
-            tagFilter.every((t) => n.tags.some((tag) => tag.id === t)))
+          (tagFilter.length === 0 || tagFilter.every((t) => n.tags.some((tag) => tag.id === t))),
       )
       .map((n) => n.getData() as Folder);
   }
@@ -449,14 +427,13 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
   /** Récupère récursivement documents + sous-dossiers (filtrage par tags optionnel) */
   public getRecursiveContent(
     folderId?: string,
-    tagFilter: string[] = []
+    tagFilter: string[] = [],
   ): { documents: Document[]; subFolders: Folder[] } {
     const root = this.getRoot() as FileTreeNode;
     const start: FileTreeNode | undefined = folderId
       ? (root.findChildById(folderId) as FileTreeNode)
       : root;
-    if (!start || start.type === "file")
-      return { documents: [], subFolders: [] };
+    if (!start || start.type === "file") return { documents: [], subFolders: [] };
 
     const hasTags = (node: FileTreeNode) => {
       if (tagFilter.length === 0) return true;
@@ -475,9 +452,7 @@ export class FileTreeNode extends TreeNode implements TagTreeNode {
         }
       }
     }
-    const documents = acc
-      .filter((n) => n.type === "file")
-      .map((n) => n.getData() as Document);
+    const documents = acc.filter((n) => n.type === "file").map((n) => n.getData() as Document);
     const subFolders = acc
       .filter((n) => n.type === "folder")
       .map((n) => {

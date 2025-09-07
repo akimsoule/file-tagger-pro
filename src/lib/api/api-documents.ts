@@ -1,6 +1,5 @@
 import { api, loadStoredToken } from "./api";
-import { createResourceCache, type CacheOptions } from "./resource-cache";
-
+import { type CacheOptions, createResourceCache } from "./resource-cache";
 
 export interface DocumentDTO {
   id: string;
@@ -31,7 +30,9 @@ export interface FilePreviewDTO {
   size: number;
 }
 
-export function listDocuments(params: { page?: number; limit?: number; search?: string; tag?: string; userId?: string } = {}) {
+export function listDocuments(
+  params: { page?: number; limit?: number; search?: string; tag?: string; userId?: string } = {},
+) {
   return api<PaginatedDocuments>(`/documents`, { query: params, auth: true });
 }
 
@@ -39,35 +40,61 @@ export function getDocument(id: string) {
   return api<DocumentDTO>(`/documents/${id}`, { auth: true });
 }
 
-export function createDocument(data: { name: string; type?: string; description?: string; tags?: string; folderId?: string }) {
-  return api<DocumentDTO>(`/documents`, { method: 'POST', body: JSON.stringify(data), auth: true });
+export function createDocument(data: {
+  name: string;
+  type?: string;
+  description?: string;
+  tags?: string;
+  folderId?: string;
+}) {
+  return api<DocumentDTO>(`/documents`, { method: "POST", body: JSON.stringify(data), auth: true });
 }
 
-export function uploadDocument(file: File, extra: { name?: string; description?: string; tags?: string; type?: string; folderId?: string } = {}) {
+export function uploadDocument(
+  file: File,
+  extra: {
+    name?: string;
+    description?: string;
+    tags?: string;
+    type?: string;
+    folderId?: string;
+  } = {},
+) {
   const form = new FormData();
-  form.append('file', file, file.name);
-  if (extra.name) form.append('name', extra.name);
-  if (extra.description) form.append('description', extra.description);
-  if (extra.tags) form.append('tags', extra.tags);
-  if (extra.type) form.append('type', extra.type);
-  if (extra.folderId) form.append('folderId', extra.folderId);
-  return fetch('/api/documents', { // redirect géré par netlify
-    method: 'POST',
+  form.append("file", file, file.name);
+  if (extra.name) form.append("name", extra.name);
+  if (extra.description) form.append("description", extra.description);
+  if (extra.tags) form.append("tags", extra.tags);
+  if (extra.type) form.append("type", extra.type);
+  if (extra.folderId) form.append("folderId", extra.folderId);
+  return fetch("/api/documents", {
+    // redirect géré par netlify
+    method: "POST",
     headers: authHeaders(),
-    body: form
-  }).then(r => r.json());
+    body: form,
+  }).then((r) => r.json());
 }
 
-export function updateDocument(id: string, data: Partial<Pick<DocumentDTO,'name'|'type'|'description'|'tags'|'isFavorite'>>) {
-  return api<DocumentDTO>(`/documents/${id}`, { method: 'PUT', body: JSON.stringify(data), auth: true });
+export function updateDocument(
+  id: string,
+  data: Partial<Pick<DocumentDTO, "name" | "type" | "description" | "tags" | "isFavorite">>,
+) {
+  return api<DocumentDTO>(`/documents/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+    auth: true,
+  });
 }
 
 export function deleteDocument(id: string) {
-  return api<{ message: string }>(`/documents/${id}`, { method: 'DELETE', auth: true });
+  return api<{ message: string }>(`/documents/${id}`, { method: "DELETE", auth: true });
 }
 
 export function syncMega(folderId?: string) {
-  return api<{ message: string; syncedCount: number; updatedCount: number }>(`/documents/sync-mega`, { method: 'POST', body: JSON.stringify({ folderId }), auth: true });
+  return api<{ message: string; syncedCount: number; updatedCount: number }>(
+    `/documents/sync-mega`,
+    { method: "POST", body: JSON.stringify({ folderId }), auth: true },
+  );
 }
 
 // Cache mémoire pour les aperçus (base64 potentiellement volumineux)
@@ -83,7 +110,7 @@ export function getDocumentPreview(id: string, opts?: CacheOptions) {
   return previewCache.get(
     id,
     () => api<FilePreviewDTO>(`/files/${id}`, { auth: true, query: { type: "base64" } }),
-    opts
+    opts,
   );
 }
 
@@ -107,20 +134,20 @@ export async function getSimilarDocuments(documentId: string, limit = 5) {
   try {
     return await api<SimilarDocumentsResponse>(`/documents/${documentId}/similar`, {
       auth: true,
-      query: { limit }
+      query: { limit },
     });
   } catch {
     // 2) Fallback via fonction search.mts
     try {
       return await api<SimilarDocumentsResponse>(`/search/similar`, {
         auth: true,
-        query: { documentId, limit }
+        query: { documentId, limit },
       });
     } catch {
       // 3) Fallback legacy via fonction semantic.mts
       return await api<SimilarDocumentsResponse>(`/semantic/similar`, {
         auth: true,
-        query: { documentId, limit }
+        query: { documentId, limit },
       });
     }
   }
@@ -130,21 +157,21 @@ export async function reindexDocumentEmbeddings(documentId: string) {
   // 1) Essai via la fonction search.mts (stub)
   try {
     return await api<{ message: string }>(`/search/reindex-document`, {
-      method: 'POST',
+      method: "POST",
       auth: true,
-      body: JSON.stringify({ documentId })
+      body: JSON.stringify({ documentId }),
     });
   } catch {
     // 2) Fallback legacy via semantic.mts (réindexation réelle)
     return await api<{ message: string }>(`/semantic/reindex`, {
-      method: 'POST',
+      method: "POST",
       auth: true,
-      body: JSON.stringify({ documentId })
+      body: JSON.stringify({ documentId }),
     });
   }
 }
 
 function authHeaders() {
   const t = loadStoredToken();
-  return t ? { Authorization: 'Bearer ' + t } : {};
+  return t ? { Authorization: "Bearer " + t } : {};
 }

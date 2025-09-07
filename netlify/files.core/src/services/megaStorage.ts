@@ -1,5 +1,6 @@
-import { Storage, verify } from "megajs";
 import crypto from "crypto";
+import { Storage, verify } from "megajs";
+
 import { userMegaConfigService } from "./userMegaConfigService";
 
 type NodeLike = {
@@ -20,7 +21,7 @@ export class MegaStorageService {
    */
   private async findNodeById(
     fileId: string,
-    userId?: string
+    userId?: string,
   ): Promise<
     | (NodeLike & {
         link?: (opts?: unknown) => Promise<string>;
@@ -46,25 +47,21 @@ export class MegaStorageService {
           (f) =>
             !f.directory &&
             f.nodeId &&
-            (f.nodeId.includes(fileId) ||
-              (typeof f.name === "string" && f.name.includes(fileId)))
+            (f.nodeId.includes(fileId) || (typeof f.name === "string" && f.name.includes(fileId))),
         );
         // Prendre le premier candidat disponible
         const candidate = partial[0];
         if (candidate) {
-          file = storage.find(
-            (n) => n.nodeId === candidate!.nodeId
-          ) as unknown as
+          file = storage.find((n) => n.nodeId === candidate!.nodeId) as unknown as
             | (NodeLike & {
                 link?: (opts?: unknown) => Promise<string>;
                 downloadBuffer?: (opts?: unknown) => Promise<Buffer>;
               })
             | undefined;
           if (file) {
-            const cname =
-              typeof candidate.name === "string" ? candidate.name : "";
+            const cname = typeof candidate.name === "string" ? candidate.name : "";
             console.warn(
-              `[mega] Heuristique nodeId/nom: mappé ${fileId} -> ${candidate.nodeId} (${cname})`
+              `[mega] Heuristique nodeId/nom: mappé ${fileId} -> ${candidate.nodeId} (${cname})`,
             );
           }
         }
@@ -75,7 +72,7 @@ export class MegaStorageService {
     if (!file && userId) {
       try {
         console.warn(
-          `[mega] ID ${fileId} introuvable dans le storage utilisateur ${userId}. Tentative sur le storage par défaut.`
+          `[mega] ID ${fileId} introuvable dans le storage utilisateur ${userId}. Tentative sur le storage par défaut.`,
         );
         const defaultStorage = await this.getStorage();
         file = defaultStorage.find((f) => f.nodeId === fileId) as unknown as
@@ -87,38 +84,33 @@ export class MegaStorageService {
 
         // Heuristique sur le storage par défaut si nécessaire
         if (!file) {
-          const all = Object.values(
-            defaultStorage.files
-          ) as unknown as NodeLike[];
+          const all = Object.values(defaultStorage.files) as unknown as NodeLike[];
           const partial = all.filter(
             (f) =>
               !f.directory &&
               f.nodeId &&
               (f.nodeId.includes(fileId) ||
-                (typeof f.name === "string" && f.name.includes(fileId)))
+                (typeof f.name === "string" && f.name.includes(fileId))),
           );
           const candidate = partial[0];
           if (candidate) {
-            file = defaultStorage.find(
-              (n) => n.nodeId === candidate!.nodeId
-            ) as unknown as
+            file = defaultStorage.find((n) => n.nodeId === candidate!.nodeId) as unknown as
               | (NodeLike & {
                   link?: (opts?: unknown) => Promise<string>;
                   downloadBuffer?: (opts?: unknown) => Promise<Buffer>;
                 })
               | undefined;
             if (file) {
-              const cname =
-                typeof candidate.name === "string" ? candidate.name : "";
+              const cname = typeof candidate.name === "string" ? candidate.name : "";
               console.warn(
-                `[mega] Heuristique nodeId/nom (default): mappé ${fileId} -> ${candidate.nodeId} (${cname})`
+                `[mega] Heuristique nodeId/nom (default): mappé ${fileId} -> ${candidate.nodeId} (${cname})`,
               );
             }
           }
         }
       } catch {
         console.warn(
-          `[mega] Fallback vers le storage par défaut impossible (identifiants MEGA non configurés ?)`
+          `[mega] Fallback vers le storage par défaut impossible (identifiants MEGA non configurés ?)`,
         );
       }
     }
@@ -136,13 +128,11 @@ export class MegaStorageService {
 
     // Si un userId est fourni, tenter d'utiliser sa configuration
     if (userId) {
-      const credentials = await userMegaConfigService.getUserMegaCredentials(
-        userId
-      );
+      const credentials = await userMegaConfigService.getUserMegaCredentials(userId);
 
       if (!credentials) {
         throw new Error(
-          "Identifiants MEGA utilisateur requis - ouvrez les Paramètres et configurez votre compte MEGA"
+          "Identifiants MEGA utilisateur requis - ouvrez les Paramètres et configurez votre compte MEGA",
         );
       }
       if (credentials) {
@@ -161,7 +151,7 @@ export class MegaStorageService {
     // Vérifier que les credentials sont disponibles
     if (!email || !password) {
       throw new Error(
-        "Identifiants MEGA requis - configurez votre compte MEGA dans vos paramètres"
+        "Identifiants MEGA requis - configurez votre compte MEGA dans vos paramètres",
       );
     }
 
@@ -172,9 +162,7 @@ export class MegaStorageService {
       }).ready;
       if (origin === "user") {
         // Journalisation non sensible pour diagnostiquer en prod
-        console.info(
-          `[mega] Connexion établie sur le storage utilisateur (${userId}).`
-        );
+        console.info(`[mega] Connexion établie sur le storage utilisateur (${userId}).`);
       } else {
         console.info(`[mega] Connexion établie sur le storage par défaut.`);
       }
@@ -182,9 +170,7 @@ export class MegaStorageService {
       return storage;
     } catch (error) {
       throw new Error(
-        `Erreur de connexion MEGA: ${
-          error instanceof Error ? error.message : "Erreur inconnue"
-        }`
+        `Erreur de connexion MEGA: ${error instanceof Error ? error.message : "Erreur inconnue"}`,
       );
     }
   }
@@ -194,7 +180,7 @@ export class MegaStorageService {
    */
   async findFileByNameAnywhere(
     name: string,
-    userId?: string
+    userId?: string,
   ): Promise<{ nodeId: string; name?: string } | null> {
     const tryFind = async (forUserId?: string) => {
       const storage = await this.getStorage(forUserId);
@@ -204,11 +190,7 @@ export class MegaStorageService {
         directory?: boolean;
       }>;
       let match = all.find(
-        (f) =>
-          !f.directory &&
-          f.nodeId &&
-          typeof f.name === "string" &&
-          f.name === name
+        (f) => !f.directory && f.nodeId && typeof f.name === "string" && f.name === name,
       );
       if (!match) {
         const lower = name.toLowerCase();
@@ -217,14 +199,13 @@ export class MegaStorageService {
             !f.directory &&
             f.nodeId &&
             typeof f.name === "string" &&
-            f.name.toLowerCase() === lower
+            f.name.toLowerCase() === lower,
         );
       }
       return match?.nodeId ? { nodeId: match.nodeId, name: match.name } : null;
     };
     const fromUser = await tryFind(userId);
-    if (fromUser)
-      return { nodeId: fromUser.nodeId, name: fromUser.name ?? undefined };
+    if (fromUser) return { nodeId: fromUser.nodeId, name: fromUser.name ?? undefined };
     const fromDefault = await tryFind(undefined);
     if (fromDefault)
       return {
@@ -239,7 +220,7 @@ export class MegaStorageService {
    */
   async findFileByNameContainsAnywhere(
     part: string,
-    userId?: string
+    userId?: string,
   ): Promise<{ nodeId: string; name?: string } | null> {
     const tryFind = async (forUserId?: string) => {
       const storage = await this.getStorage(forUserId);
@@ -255,13 +236,12 @@ export class MegaStorageService {
           !f.directory &&
           f.nodeId &&
           typeof f.name === "string" &&
-          f.name.toLowerCase().includes(lower)
+          f.name.toLowerCase().includes(lower),
       );
       return match?.nodeId ? { nodeId: match.nodeId, name: match.name } : null;
     };
     const fromUser = await tryFind(userId);
-    if (fromUser)
-      return { nodeId: fromUser.nodeId, name: fromUser.name ?? undefined };
+    if (fromUser) return { nodeId: fromUser.nodeId, name: fromUser.name ?? undefined };
     const fromDefault = await tryFind(undefined);
     if (fromDefault)
       return {
@@ -276,14 +256,14 @@ export class MegaStorageService {
    */
   async findFileByNameContainsUnderAppRoot(
     part: string,
-    userId?: string
+    userId?: string,
   ): Promise<{ nodeId: string; name?: string } | null> {
     return this.findFileByNameContainsAnywhere(part, userId);
   }
 
   async getBase64FileUrlByNameContainsAnywhere(
     part: string,
-    userId?: string
+    userId?: string,
   ): Promise<string | null> {
     const found = await this.findFileByNameContainsAnywhere(part, userId);
     if (!found) return null;
@@ -296,7 +276,7 @@ export class MegaStorageService {
 
   async getBase64FileUrlByNameContainsUnderAppRoot(
     part: string,
-    userId?: string
+    userId?: string,
   ): Promise<string | null> {
     const found = await this.findFileByNameContainsUnderAppRoot(part, userId);
     if (!found) return null;
@@ -312,7 +292,7 @@ export class MegaStorageService {
    */
   async findFileByHashAnywhere(
     expected: { size: number; hash: string; ext?: string },
-    userId?: string
+    userId?: string,
   ): Promise<{ nodeId: string; name?: string } | null> {
     const tryFind = async (forUserId?: string) => {
       const storage = await this.getStorage(forUserId);
@@ -324,8 +304,7 @@ export class MegaStorageService {
       }>;
       const candidates = all.filter((f) => {
         if (f.directory || !f.nodeId) return false;
-        if (typeof f.size === "number" && f.size !== expected.size)
-          return false;
+        if (typeof f.size === "number" && f.size !== expected.size) return false;
         return true;
       });
       for (const c of candidates) {
@@ -344,8 +323,7 @@ export class MegaStorageService {
       return null;
     };
     const fromUser = await tryFind(userId);
-    if (fromUser)
-      return { nodeId: fromUser.nodeId, name: fromUser.name ?? undefined };
+    if (fromUser) return { nodeId: fromUser.nodeId, name: fromUser.name ?? undefined };
     const fromDefault = await tryFind(undefined);
     if (fromDefault)
       return {
@@ -360,7 +338,7 @@ export class MegaStorageService {
    */
   async findFileBySizeAndExtAnywhere(
     expected: { size: number; ext?: string },
-    userId?: string
+    userId?: string,
   ): Promise<{ nodeId: string; name?: string } | null> {
     const tryFind = async (forUserId?: string) => {
       const storage = await this.getStorage(forUserId);
@@ -372,21 +350,17 @@ export class MegaStorageService {
       }>;
       const match = all.find((f) => {
         if (f.directory || !f.nodeId) return false;
-        if (typeof f.size === "number" && f.size !== expected.size)
-          return false;
+        if (typeof f.size === "number" && f.size !== expected.size) return false;
         if (expected.ext && typeof f.name === "string") {
           const fe = f.name.split(".").pop()?.toLowerCase();
           if (fe && fe !== expected.ext.toLowerCase()) return false;
         }
         return true;
       });
-      return match?.nodeId
-        ? { nodeId: match.nodeId, name: match.name ?? undefined }
-        : null;
+      return match?.nodeId ? { nodeId: match.nodeId, name: match.name ?? undefined } : null;
     };
     const fromUser = await tryFind(userId);
-    if (fromUser)
-      return { nodeId: fromUser.nodeId, name: fromUser.name ?? undefined };
+    if (fromUser) return { nodeId: fromUser.nodeId, name: fromUser.name ?? undefined };
     const fromDefault = await tryFind(undefined);
     if (fromDefault)
       return {
@@ -402,7 +376,7 @@ export class MegaStorageService {
    */
   async findFileBySizeAndExtUnderAppRoot(
     expected: { size: number; ext?: string },
-    userId?: string
+    userId?: string,
   ): Promise<{ nodeId: string; name?: string } | null> {
     return this.findFileBySizeAndExtAnywhere(expected, userId);
   }
@@ -438,18 +412,13 @@ export class MegaStorageService {
     const file = await this.findNodeById(fileId, userId);
     if (!file) {
       console.warn(
-        `[mega] getBase64FileUrl: fichier non trouvé (id=${fileId}, userId=${
-          userId ?? "default"
-        })`
+        `[mega] getBase64FileUrl: fichier non trouvé (id=${fileId}, userId=${userId ?? "default"})`,
       );
       throw new Error("Fichier non trouvé");
     }
 
     // Déterminer le type MIME en fonction de l'extension du fichier
-    const ext = (file as unknown as { name?: string }).name
-      ?.split(".")
-      .pop()
-      ?.toLowerCase();
+    const ext = (file as unknown as { name?: string }).name?.split(".").pop()?.toLowerCase();
     const mimeType = this.getMimeType(ext || "");
 
     // Télécharger et convertir le fichier en base64
@@ -467,11 +436,8 @@ export class MegaStorageService {
   /**
    * Génère une data URL base64 pour un fichier identifié par son nom sous appRoot
    */
-  async getBase64FileUrlByNameUnderAppRoot(
-    name: string,
-    userId?: string
-  ): Promise<string | null> {
-  const found = await this.findFileByNameAnywhere(name, userId);
+  async getBase64FileUrlByNameUnderAppRoot(name: string, userId?: string): Promise<string | null> {
+    const found = await this.findFileByNameAnywhere(name, userId);
     if (!found) return null;
     try {
       return await this.getBase64FileUrl(found.nodeId, userId);
@@ -480,10 +446,7 @@ export class MegaStorageService {
     }
   }
 
-  async getBase64FileUrlByNameAnywhere(
-    name: string,
-    userId?: string
-  ): Promise<string | null> {
+  async getBase64FileUrlByNameAnywhere(name: string, userId?: string): Promise<string | null> {
     const found = await this.findFileByNameAnywhere(name, userId);
     if (!found) return null;
     try {
@@ -495,7 +458,7 @@ export class MegaStorageService {
 
   async getBase64FileUrlByHashAnywhere(
     expected: { size: number; hash: string; ext?: string },
-    userId?: string
+    userId?: string,
   ): Promise<string | null> {
     const found = await this.findFileByHashAnywhere(expected, userId);
     if (!found) return null;
@@ -508,7 +471,7 @@ export class MegaStorageService {
 
   async getBase64FileUrlBySizeAndExtAnywhere(
     expected: { size: number; ext?: string },
-    userId?: string
+    userId?: string,
   ): Promise<string | null> {
     const found = await this.findFileBySizeAndExtAnywhere(expected, userId);
     if (!found) return null;
@@ -524,7 +487,7 @@ export class MegaStorageService {
    */
   async getBase64FileUrlBySizeAndExtUnderAppRoot(
     expected: { size: number; ext?: string },
-    userId?: string
+    userId?: string,
   ): Promise<string | null> {
     const found = await this.findFileBySizeAndExtUnderAppRoot(expected, userId);
     if (!found) return null;
@@ -573,7 +536,7 @@ export class MegaStorageService {
     mimeType: string,
     buffer: Buffer,
     folderId?: string,
-    userId?: string
+    userId?: string,
   ): Promise<string> {
     const storage = await this.getStorage(userId);
     let folder = storage.root;
@@ -585,17 +548,14 @@ export class MegaStorageService {
       interface UploadCapable {
         upload: (
           opts: { name: string; size: number },
-          buf: Buffer
+          buf: Buffer,
         ) => {
-          on: (
-            evt: "complete" | "error",
-            cb: (...args: unknown[]) => void
-          ) => void;
+          on: (evt: "complete" | "error", cb: (...args: unknown[]) => void) => void;
         };
       }
       const uploadStream = (folder as unknown as UploadCapable).upload(
         { name, size: buffer.length },
-        buffer
+        buffer,
       );
       uploadStream.on("complete", (...args: unknown[]) => {
         const f = args[0] as { nodeId: string };
@@ -611,11 +571,7 @@ export class MegaStorageService {
    * @param userId - ID de l'utilisateur
    * @param folderId - ID du dossier où chercher (optionnel, si non fourni cherche dans tout le compte)
    */
-  async deleteFile(
-    fileId: string,
-    userId: string,
-    folderId?: string
-  ): Promise<void> {
+  async deleteFile(fileId: string, userId: string, folderId?: string): Promise<void> {
     const storage = await this.getStorage(userId);
 
     let searchFiles: Array<{
@@ -631,20 +587,16 @@ export class MegaStorageService {
         throw new Error(`Dossier avec ID ${folderId} non trouvé`);
       }
       searchFiles = Object.values(folder.children || {}).filter(
-        (child) => child.nodeId !== undefined
+        (child) => child.nodeId !== undefined,
       ) as Array<{
         nodeId: string;
         name?: string;
         delete?: () => Promise<void>;
       }>;
-      console.log(
-        `📁 Recherche dans le dossier spécifique: ${searchFiles.length} fichiers`
-      );
+      console.log(`📁 Recherche dans le dossier spécifique: ${searchFiles.length} fichiers`);
     } else {
       // Chercher dans tout le storage
-      searchFiles = Object.values(storage.files).filter(
-        (f) => f.nodeId !== undefined
-      ) as Array<{
+      searchFiles = Object.values(storage.files).filter((f) => f.nodeId !== undefined) as Array<{
         nodeId: string;
         name?: string;
         delete?: () => Promise<void>;
@@ -710,7 +662,7 @@ export class MegaStorageService {
     name: string,
     mimeType: string,
     buffer: Buffer,
-    userId?: string
+    userId?: string,
   ): Promise<string> {
     const storage = await this.getStorage(userId);
     const oldFile = storage.find((f) => f.nodeId === fileId);
@@ -734,7 +686,7 @@ export class MegaStorageService {
   async findFileInFolderByName(
     folderId: string,
     name: string,
-    userId?: string
+    userId?: string,
   ): Promise<{ nodeId: string; name?: string } | null> {
     const storage = await this.getStorage(userId);
     const folder = storage.find((f) => f.nodeId === folderId);
@@ -745,11 +697,9 @@ export class MegaStorageService {
       directory?: boolean;
     }>;
     const match = children.find(
-      (c) => !c.directory && typeof c.name === "string" && c.name === name
+      (c) => !c.directory && typeof c.name === "string" && c.name === name,
     );
-    return match && match.nodeId
-      ? { nodeId: match.nodeId, name: match.name }
-      : null;
+    return match && match.nodeId ? { nodeId: match.nodeId, name: match.name } : null;
   }
 
   /**
@@ -759,7 +709,7 @@ export class MegaStorageService {
   async deleteFilesInFolderByName(
     folderId: string,
     name: string,
-    userId?: string
+    userId?: string,
   ): Promise<number> {
     const storage = await this.getStorage(userId);
     const folder = storage.find((f) => f.nodeId === folderId);
@@ -771,11 +721,7 @@ export class MegaStorageService {
       delete?: () => Promise<void>;
     }>;
     const matches = children.filter(
-      (c) =>
-        !c.directory &&
-        typeof c.name === "string" &&
-        c.name === name &&
-        c.nodeId
+      (c) => !c.directory && typeof c.name === "string" && c.name === name && c.nodeId,
     );
     let deleted = 0;
     for (const m of matches) {
@@ -785,15 +731,12 @@ export class MegaStorageService {
           deleted++;
         }
       } catch (e) {
-        console.warn(
-          `⚠️ Échec de suppression pour ${m.name} (${m.nodeId}):`,
-          e
-        );
+        console.warn(`⚠️ Échec de suppression pour ${m.name} (${m.nodeId}):`, e);
       }
     }
     if (deleted > 0) {
       console.log(
-        `🧹 Suppression de ${deleted} doublon(s) pour "${name}" dans le dossier ${folderId}`
+        `🧹 Suppression de ${deleted} doublon(s) pour "${name}" dans le dossier ${folderId}`,
       );
     }
     return deleted;
@@ -803,10 +746,7 @@ export class MegaStorageService {
    * Supprime tous les fichiers portant un nom donné directement sous la racine
    * Retourne le nombre supprimé
    */
-  async deleteFilesByNameAtRoot(
-    name: string,
-    userId?: string
-  ): Promise<number> {
+  async deleteFilesByNameAtRoot(name: string, userId?: string): Promise<number> {
     const storage = await this.getStorage(userId);
     const children = Object.values(storage.root.children || {}) as Array<{
       nodeId?: string;
@@ -815,11 +755,7 @@ export class MegaStorageService {
       delete?: () => Promise<void>;
     }>;
     const matches = children.filter(
-      (c) =>
-        !c.directory &&
-        typeof c.name === "string" &&
-        c.name === name &&
-        c.nodeId
+      (c) => !c.directory && typeof c.name === "string" && c.name === name && c.nodeId,
     );
     let deleted = 0;
     for (const m of matches) {
@@ -829,16 +765,11 @@ export class MegaStorageService {
           deleted++;
         }
       } catch (e) {
-        console.warn(
-          `⚠️ Échec de suppression à la racine pour ${m.name} (${m.nodeId}):`,
-          e
-        );
+        console.warn(`⚠️ Échec de suppression à la racine pour ${m.name} (${m.nodeId}):`, e);
       }
     }
     if (deleted > 0) {
-      console.log(
-        `🧹 Suppression de ${deleted} doublon(s) pour "${name}" à la racine`
-      );
+      console.log(`🧹 Suppression de ${deleted} doublon(s) pour "${name}" à la racine`);
     }
     return deleted;
   }
@@ -851,7 +782,7 @@ export class MegaStorageService {
    */
   async getAllFilesWithContent(
     folderId?: string,
-    userId?: string
+    userId?: string,
   ): Promise<
     {
       fileId: string;
@@ -874,8 +805,7 @@ export class MegaStorageService {
       targetFolder = storage.root;
     }
 
-    const targetFolderId = (targetFolder as unknown as { nodeId?: string })
-      .nodeId;
+    const targetFolderId = (targetFolder as unknown as { nodeId?: string }).nodeId;
     const files = Object.values(storage.files).filter((file) => {
       const p = file.parent as { nodeId?: string } | undefined;
       const parentMatches =
@@ -887,7 +817,7 @@ export class MegaStorageService {
     console.log(
       `📁 Scanning ${folderId ? "dossier spécifique" : "dossier racine"}: ${
         files.length
-      } fichiers trouvés`
+      } fichiers trouvés`,
     );
 
     const filesWithContent: {
@@ -901,11 +831,7 @@ export class MegaStorageService {
 
     for (const file of files) {
       if (!file.nodeId || !file.name) {
-        console.log(
-          `   ⚠️ Fichier ignoré (ID ou nom manquant): ${
-            file.nodeId || "unknown"
-          }`
-        );
+        console.log(`   ⚠️ Fichier ignoré (ID ou nom manquant): ${file.nodeId || "unknown"}`);
         continue;
       }
 
@@ -933,19 +859,19 @@ export class MegaStorageService {
         });
 
         console.log(
-          `   ✅ ${file.name} téléchargé (${buffer.length} bytes, type: ${extension}, MIME: ${mimeType})`
+          `   ✅ ${file.name} téléchargé (${buffer.length} bytes, type: ${extension}, MIME: ${mimeType})`,
         );
       } catch (error) {
         console.error(
           `   ❌ Erreur lors du téléchargement du fichier ${file.name} (${file.nodeId}):`,
-          error
+          error,
         );
         // Continuer avec les autres fichiers même si un échoue
       }
     }
 
     console.log(
-      `📋 Récupération terminée: ${filesWithContent.length}/${files.length} fichiers traités avec succès`
+      `📋 Récupération terminée: ${filesWithContent.length}/${files.length} fichiers traités avec succès`,
     );
     return filesWithContent;
   }

@@ -1,6 +1,7 @@
 // Utilitaires de middleware centralisés pour les fonctions Netlify
+import type { Context } from "@netlify/functions";
 import jwt from "jsonwebtoken";
-import type { Context } from '@netlify/functions';
+
 import { LogService } from "../../files.core/src/services/logService";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
@@ -29,8 +30,7 @@ export interface MiddlewareResponse {
 export const getCorsHeaders = () => ({
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, X-Requested-With",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
   "Access-Control-Max-Age": "86400",
 });
@@ -106,7 +106,7 @@ export const optionalAuth = (request: Request): MiddlewareResponse => {
 export const createErrorResponse = (
   message: string,
   status: number = 400,
-  details?: string
+  details?: string,
 ): Response => {
   const body = details ? { error: message, details } : { error: message };
 
@@ -122,7 +122,7 @@ export const createErrorResponse = (
 export const createSuccessResponse = (
   data: unknown,
   status: number = 200,
-  additionalHeaders?: Record<string, string>
+  additionalHeaders?: Record<string, string>,
 ): Response => {
   return new Response(JSON.stringify(data), {
     status,
@@ -138,13 +138,10 @@ export const createSuccessResponse = (
  */
 export const validateRequiredFields = (
   data: Record<string, unknown>,
-  requiredFields: string[]
+  requiredFields: string[],
 ): string | null => {
   for (const field of requiredFields) {
-    if (
-      !data[field] ||
-      (typeof data[field] === "string" && !data[field].trim())
-    ) {
+    if (!data[field] || (typeof data[field] === "string" && !data[field].trim())) {
       return `Le champ '${field}' est requis`;
     }
   }
@@ -154,13 +151,8 @@ export const validateRequiredFields = (
 /**
  * Extraction de l'ID de ressource depuis l'URL
  */
-export const extractResourceId = (
-  url: URL,
-  resourceName: string = ""
-): string | null => {
-  const pathSegments = url.pathname
-    .split("/")
-    .filter((segment) => segment !== "");
+export const extractResourceId = (url: URL, resourceName: string = ""): string | null => {
+  const pathSegments = url.pathname.split("/").filter((segment) => segment !== "");
   const lastSegment = pathSegments[pathSegments.length - 1];
 
   if (lastSegment === resourceName) {
@@ -174,7 +166,7 @@ export const extractResourceId = (
  * Parsing sécurisé du JSON
  */
 export const safeJsonParse = async (
-  request: Request
+  request: Request,
 ): Promise<{ success: boolean; data?: unknown; error?: string }> => {
   try {
     const data = await request.json();
@@ -211,7 +203,7 @@ export const logRequest = async (
   request: Request,
   context: MiddlewareContext,
   response: Response,
-  action: string = "API_REQUEST"
+  action: string = "API_REQUEST",
 ): Promise<void> => {
   try {
     const duration = Date.now() - context.startTime;
@@ -240,7 +232,9 @@ export const logRequest = async (
 /**
  * Wrapper pour gérer les erreurs de manière centralisée
  */
-export const handleErrors = <F extends (request: Request, context: Context) => Promise<Response>>(fn: F) => {
+export const handleErrors = <F extends (request: Request, context: Context) => Promise<Response>>(
+  fn: F,
+) => {
   return async (request: Request, context: Context): Promise<Response> => {
     try {
       return await fn(request, context);
@@ -249,7 +243,7 @@ export const handleErrors = <F extends (request: Request, context: Context) => P
       return createErrorResponse(
         "Erreur interne du serveur",
         500,
-        error instanceof Error ? error.message : "Erreur inconnue"
+        error instanceof Error ? error.message : "Erreur inconnue",
       );
     }
   };
@@ -260,7 +254,7 @@ export const handleErrors = <F extends (request: Request, context: Context) => P
  */
 export const validateHttpMethod = (
   request: Request,
-  allowedMethods: string[]
+  allowedMethods: string[],
 ): MiddlewareResponse => {
   if (!allowedMethods.includes(request.method)) {
     return {
@@ -320,9 +314,7 @@ export interface ParsedFormData {
   files: ParsedFile[];
 }
 
-export const parseFormData = async (
-  request: Request
-): Promise<ParsedFormData> => {
+export const parseFormData = async (request: Request): Promise<ParsedFormData> => {
   const formData = await request.formData();
   const data: Record<string, string> = {};
   const files: ParsedFile[] = [];
@@ -369,12 +361,9 @@ if (process.env.REDIS_URL) {
 export const rateLimit = (
   request: Request,
   maxRequests: number = parseInt(process.env.RATE_LIMIT_MAX || "100"),
-  windowMs: number = parseInt(
-    process.env.RATE_LIMIT_WINDOW_MS || (15 * 60 * 1000).toString()
-  )
+  windowMs: number = parseInt(process.env.RATE_LIMIT_WINDOW_MS || (15 * 60 * 1000).toString()),
 ): MiddlewareResponse => {
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
   const key = `rl:${ip}`;
 
   if (redisClient) {

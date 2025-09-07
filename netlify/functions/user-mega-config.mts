@@ -1,13 +1,14 @@
 import { Context } from "@netlify/functions";
 import { Storage } from "megajs";
+
+import { encryptionService } from "../files.core/src/services/encryptionService";
 import { userMegaConfigService } from "../files.core/src/services/userMegaConfigService";
 import {
-  verifyToken,
-  handleCorsOptions,
   createErrorResponse,
   createSuccessResponse,
+  handleCorsOptions,
+  verifyToken,
 } from "./shared/middleware.mts";
-import { encryptionService } from "../files.core/src/services/encryptionService";
 
 // --- helpers decryption (XOR) ---
 function fromBase64(b64: string): string {
@@ -18,9 +19,7 @@ function fromBase64(b64: string): string {
 function decrypt(encryptedText: string, key: string): string {
   let decrypted = "";
   for (let i = 0; i < encryptedText.length; i++) {
-    decrypted += String.fromCharCode(
-      encryptedText.charCodeAt(i) ^ key.charCodeAt(i % key.length)
-    );
+    decrypted += String.fromCharCode(encryptedText.charCodeAt(i) ^ key.charCodeAt(i % key.length));
   }
   return decrypted;
 }
@@ -55,10 +54,7 @@ function tryDecryptCredentials(body: any): {
 /**
  * Netlify Function pour gérer les configurations MEGA des utilisateurs
  */
-export default async function handler(
-  request: Request,
-  context: Context
-): Promise<Response> {
+export default async function handler(request: Request, context: Context): Promise<Response> {
   const { url, method } = request;
   const urlPath = new URL(url);
   const segments = urlPath.pathname.split("/").filter(Boolean);
@@ -80,13 +76,10 @@ export default async function handler(
     }
     userId = user.userId;
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: "Token d'authentification invalide" }),
-      {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ error: "Token d'authentification invalide" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -115,7 +108,7 @@ export default async function handler(
     return createErrorResponse(
       "Erreur interne du serveur",
       500,
-      error instanceof Error ? error.message : "Erreur inconnue"
+      error instanceof Error ? error.message : "Erreur inconnue",
     );
   }
 }
@@ -147,10 +140,7 @@ async function getUserMegaConfig(userId: string): Promise<Response> {
 /**
  * Crée ou met à jour la configuration MEGA de l'utilisateur
  */
-async function upsertUserMegaConfig(
-  request: Request,
-  userId: string
-): Promise<Response> {
+async function upsertUserMegaConfig(request: Request, userId: string): Promise<Response> {
   const body = await request.json();
   const { emailEnc, passwordEnc, key } = body;
 
@@ -187,7 +177,11 @@ async function testUserMegaCredentials(request: Request): Promise<Response> {
     return createErrorResponse("Email, mot de passe ou clé MEGA requis", 400);
   }
 
-  const { email: decryptedEmail, password: decryptedPassword } = encryptionService.decryptWithKey(emailEnc, passwordEnc, key);
+  const { email: decryptedEmail, password: decryptedPassword } = encryptionService.decryptWithKey(
+    emailEnc,
+    passwordEnc,
+    key,
+  );
 
   try {
     // Essayer de se connecter à MEGA
@@ -199,7 +193,7 @@ async function testUserMegaCredentials(request: Request): Promise<Response> {
   } catch (e) {
     return createErrorResponse(
       "Échec de connexion à MEGA. Vérifiez votre email et votre mot de passe, puis réessayez.",
-      400
+      400,
     );
   }
 }

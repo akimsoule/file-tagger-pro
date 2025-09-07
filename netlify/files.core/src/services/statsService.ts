@@ -1,5 +1,5 @@
-import prisma from './database';
-import { LogService } from './logService';
+import prisma from "./database";
+import { LogService } from "./logService";
 
 export interface TagStat {
   name: string;
@@ -64,10 +64,10 @@ export class StatsService {
       prisma.user.count(),
       prisma.document.findMany({
         select: { tags: true, size: true, createdAt: true },
-        where: { tags: { not: '' } }, // Seulement les documents avec tags
+        where: { tags: { not: "" } }, // Seulement les documents avec tags
       }),
       prisma.document.groupBy({
-        by: ['type'],
+        by: ["type"],
         _count: { type: true },
         _sum: { size: true },
       }),
@@ -79,23 +79,27 @@ export class StatsService {
         },
       }),
       prisma.document.count({ where: { isFavorite: true } }),
-      prisma.document.count({ where: { tags: { not: '' } } }),
+      prisma.document.count({ where: { tags: { not: "" } } }),
     ]);
 
     // Analyser les tags et calculer les statistiques
     const tagStats = new Map<string, { count: number; totalSize: number; lastDate?: Date }>();
-    
-    allDocuments.forEach(doc => {
+
+    allDocuments.forEach((doc) => {
       if (doc.tags) {
-        const tags = doc.tags.split(',').map(t => t.trim()).filter(Boolean);
-        tags.forEach(tag => {
+        const tags = doc.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean);
+        tags.forEach((tag) => {
           const existing = tagStats.get(tag) || { count: 0, totalSize: 0 };
           tagStats.set(tag, {
             count: existing.count + 1,
             totalSize: existing.totalSize + doc.size,
-            lastDate: !existing.lastDate || doc.createdAt > existing.lastDate 
-              ? doc.createdAt 
-              : existing.lastDate,
+            lastDate:
+              !existing.lastDate || doc.createdAt > existing.lastDate
+                ? doc.createdAt
+                : existing.lastDate,
           });
         });
       }
@@ -109,7 +113,7 @@ export class StatsService {
       lastDocumentDate: stats.lastDate,
     }));
 
-    const typeStats = typesData.map(type => ({
+    const typeStats = typesData.map((type) => ({
       type: type.type,
       count: type._count.type || 0,
       totalSize: type._sum.size || 0,
@@ -137,14 +141,10 @@ export class StatsService {
     });
 
     if (!user) {
-      throw new Error('Utilisateur non trouvé');
+      throw new Error("Utilisateur non trouvé");
     }
 
-    const [
-      documents,
-      favoriteCount,
-      lastActivity,
-    ] = await Promise.all([
+    const [documents, favoriteCount, lastActivity] = await Promise.all([
       prisma.document.findMany({
         where: { ownerId: userId },
         select: { tags: true, type: true, size: true },
@@ -154,29 +154,36 @@ export class StatsService {
       }),
       prisma.document.findFirst({
         where: { ownerId: userId },
-        orderBy: { modifiedAt: 'desc' },
+        orderBy: { modifiedAt: "desc" },
         select: { modifiedAt: true },
       }),
     ]);
 
     // Extraire tous les tags uniques utilisés par l'utilisateur
     const allTags = new Set<string>();
-    documents.forEach(doc => {
+    documents.forEach((doc) => {
       if (doc.tags) {
-        const tags = doc.tags.split(',').map(t => t.trim()).filter(Boolean);
-        tags.forEach(tag => allTags.add(tag));
+        const tags = doc.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean);
+        tags.forEach((tag) => allTags.add(tag));
       }
     });
     const tagsUsed = Array.from(allTags);
 
-    const typeCounts = documents.reduce((acc, doc) => {
-      acc[doc.type] = (acc[doc.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const typeCounts = documents.reduce(
+      (acc, doc) => {
+        acc[doc.type] = (acc[doc.type] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
-    const mostUsedType = Object.entries(typeCounts).reduce((a, b) => 
-      typeCounts[a[0]] > typeCounts[b[0]] ? a : b
-    )?.[0] || '';
+    const mostUsedType =
+      Object.entries(typeCounts).reduce((a, b) =>
+        typeCounts[a[0]] > typeCounts[b[0]] ? a : b,
+      )?.[0] || "";
 
     return {
       userId,
@@ -196,7 +203,7 @@ export class StatsService {
    */
   async getTimeRangeStats(days: number = 30): Promise<TimeRangeStats> {
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    
+
     const documents = await prisma.document.findMany({
       where: {
         createdAt: { gte: startDate },
@@ -205,7 +212,7 @@ export class StatsService {
         createdAt: true,
         size: true,
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
 
     // Statistiques journalières
@@ -213,11 +220,11 @@ export class StatsService {
     const weeklyStats = new Map<string, { count: number; size: number }>();
     const monthlyStats = new Map<string, { count: number; size: number }>();
 
-    documents.forEach(doc => {
+    documents.forEach((doc) => {
       const date = doc.createdAt;
-      const dayKey = date.toISOString().split('T')[0];
+      const dayKey = date.toISOString().split("T")[0];
       const weekKey = `${date.getFullYear()}-W${Math.ceil(date.getDate() / 7)}`;
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 
       // Jour
       if (!dailyStats.has(dayKey)) {
@@ -281,31 +288,39 @@ export class StatsService {
       },
     });
 
-    const userStats = users.map(user => {
+    const userStats = users.map((user) => {
       const docs = user.documents;
-      
+
       // Extraire tous les tags uniques utilisés par l'utilisateur
       const allTags = new Set<string>();
-      docs.forEach(doc => {
+      docs.forEach((doc) => {
         if (doc.tags) {
-          const tags = doc.tags.split(',').map(t => t.trim()).filter(Boolean);
-          tags.forEach(tag => allTags.add(tag));
+          const tags = doc.tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
+          tags.forEach((tag) => allTags.add(tag));
         }
       });
       const tagsUsed = Array.from(allTags);
 
-      const typeCounts = docs.reduce((acc, doc) => {
-        acc[doc.type] = (acc[doc.type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+      const typeCounts = docs.reduce(
+        (acc, doc) => {
+          acc[doc.type] = (acc[doc.type] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
 
-      const mostUsedType = Object.entries(typeCounts).reduce((a, b) => 
-        typeCounts[a[0]] > typeCounts[b[0]] ? a : b
-      )?.[0] || '';
+      const mostUsedType =
+        Object.entries(typeCounts).reduce((a, b) =>
+          typeCounts[a[0]] > typeCounts[b[0]] ? a : b,
+        )?.[0] || "";
 
-      const lastActivity = docs.length > 0 
-        ? new Date(Math.max(...docs.map(doc => doc.modifiedAt.getTime())))
-        : undefined;
+      const lastActivity =
+        docs.length > 0
+          ? new Date(Math.max(...docs.map((doc) => doc.modifiedAt.getTime())))
+          : undefined;
 
       return {
         userId: user.id,
@@ -313,16 +328,14 @@ export class StatsService {
         userEmail: user.email,
         documentCount: docs.length,
         totalSize: docs.reduce((sum, doc) => sum + doc.size, 0),
-        favoriteCount: docs.filter(doc => doc.isFavorite).length,
+        favoriteCount: docs.filter((doc) => doc.isFavorite).length,
         tagsUsed,
         mostUsedType,
         lastActivity,
       };
     });
 
-    return userStats
-      .sort((a, b) => b.documentCount - a.documentCount)
-      .slice(0, limit);
+    return userStats.sort((a, b) => b.documentCount - a.documentCount).slice(0, limit);
   }
 
   /**
@@ -330,9 +343,7 @@ export class StatsService {
    */
   async getPopularTags(limit: number = 10): Promise<TagStat[]> {
     const stats = await this.getSystemStats();
-    return stats.tagsStats
-      .sort((a, b) => b.count - a.count)
-      .slice(0, limit);
+    return stats.tagsStats.sort((a, b) => b.count - a.count).slice(0, limit);
   }
 
   /**
@@ -340,7 +351,7 @@ export class StatsService {
    */
   async getStorageStatsByType() {
     const typeStats = await prisma.document.groupBy({
-      by: ['type'],
+      by: ["type"],
       _count: { type: true },
       _sum: { size: true },
       _avg: { size: true },
@@ -349,7 +360,7 @@ export class StatsService {
     });
 
     return typeStats
-      .map(stat => ({
+      .map((stat) => ({
         type: stat.type,
         count: stat._count.type,
         totalSize: stat._sum.size || 0,
@@ -364,13 +375,7 @@ export class StatsService {
    * Génère un rapport complet pour l'administration
    */
   async generateAdminReport(userId: string) {
-    const [
-      systemStats,
-      timeRangeStats,
-      topUsers,
-      storageStats,
-      recentLogs,
-    ] = await Promise.all([
+    const [systemStats, timeRangeStats, topUsers, storageStats, recentLogs] = await Promise.all([
       this.getSystemStats(),
       this.getTimeRangeStats(30),
       this.getTopUsers(5),
@@ -379,11 +384,11 @@ export class StatsService {
     ]);
 
     await this.logService.log({
-      action: 'SYSTEM_BACKUP', // Utilisation comme action de rapport
-      entity: 'SYSTEM',
-      entityId: 'admin-report',
+      action: "SYSTEM_BACKUP", // Utilisation comme action de rapport
+      entity: "SYSTEM",
+      entityId: "admin-report",
       userId,
-      details: 'Génération du rapport administrateur',
+      details: "Génération du rapport administrateur",
     });
 
     return {
@@ -402,7 +407,7 @@ export class StatsService {
    */
   async getLargestDocuments(limit: number = 10) {
     return prisma.document.findMany({
-      orderBy: { size: 'desc' },
+      orderBy: { size: "desc" },
       take: limit,
       include: {
         owner: {
@@ -421,7 +426,7 @@ export class StatsService {
    */
   async getRecentDocuments(limit: number = 10) {
     return prisma.document.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: limit,
       include: {
         owner: {

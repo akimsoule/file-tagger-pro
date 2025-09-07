@@ -1,11 +1,12 @@
-import { useMemo, useCallback } from 'react';
-import { useFileContext } from '@/hooks/useFileContext';
-import { useQuery } from '@/hooks/useQuery';
-import { FileTreeNode } from '@/logic/local/FileTreeNode';
-import type { Document, Folder } from '@/contexts/file';
-import { useSelectedTagNames } from '@/hooks/useSelectedTagNames';
-import { sortFolders } from '@/lib/sort';
-import { resolveFolderSize } from '@/lib/size';
+import { useCallback, useMemo } from "react";
+
+import type { Document, Folder } from "@/contexts/file";
+import { useFileContext } from "@/hooks/useFileContext";
+import { useQuery } from "@/hooks/useQuery";
+import { useSelectedTagNames } from "@/hooks/useSelectedTagNames";
+import { resolveFolderSize } from "@/lib/size";
+import { sortFolders } from "@/lib/sort";
+import { FileTreeNode } from "@/logic/local/FileTreeNode";
 
 interface FilteredNodesResult {
   folders: FileTreeNode[];
@@ -41,27 +42,30 @@ export function useFilteredNodes(currentNode: FileTreeNode | null): FilteredNode
         : (target.children as FileTreeNode[])
       : [];
 
-  const documentNodes = baseNodes.filter(n => n.type === 'file') as FileTreeNode[];
-  const folderNodes = baseNodes.filter(n => n.type === 'folder') as FileTreeNode[];
+    const documentNodes = baseNodes.filter((n) => n.type === "file") as FileTreeNode[];
+    const folderNodes = baseNodes.filter((n) => n.type === "folder") as FileTreeNode[];
 
     // Filtrage documents via contexte
-    const docData = documentNodes.map(n => n.getData() as Document);
+    const docData = documentNodes.map((n) => n.getData() as Document);
     const filteredDocData = getFilteredContent(docData);
     const sortedDocs = getSortedContent(filteredDocData);
     const filteredDocumentNodes = sortedDocs
-      .map(doc => documentNodes.find(n => n.id === doc.id))
+      .map((doc) => documentNodes.find((n) => n.id === doc.id))
       .filter((n): n is FileTreeNode => !!n);
 
     // Filtrage dossiers
-  // Si le filtre favoris est actif, on masque totalement les dossiers
-  let filteredFolderNodes = filters.showFavorites ? [] as FileTreeNode[] : folderNodes;
-  if (!filters.showFavorites && (selectedTagNames.length > 0 || searchQuery)) {
+    // Si le filtre favoris est actif, on masque totalement les dossiers
+    let filteredFolderNodes = filters.showFavorites ? ([] as FileTreeNode[]) : folderNodes;
+    if (!filters.showFavorites && (selectedTagNames.length > 0 || searchQuery)) {
       const q = searchQuery.toLowerCase();
-      filteredFolderNodes = folderNodes.filter(node => {
+      filteredFolderNodes = folderNodes.filter((node) => {
         const data = node.getData() as Folder;
         if (selectedTagNames.length > 0) {
-          const folderTags = (data.tags || '').split(',').map(t => t.trim()).filter(Boolean);
-            if (!selectedTagNames.every(tag => folderTags.includes(tag))) return false;
+          const folderTags = (data.tags || "")
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
+          if (!selectedTagNames.every((tag) => folderTags.includes(tag))) return false;
         }
         if (searchQuery) {
           const nameMatch = data.name.toLowerCase().includes(q);
@@ -73,16 +77,31 @@ export function useFilteredNodes(currentNode: FileTreeNode | null): FilteredNode
     }
 
     // Tri des dossiers (même logique que documents, mais adapté aux champs Folder)
-  if (!filters.showFavorites && filteredFolderNodes.length > 1) {
-      const folderData = filteredFolderNodes.map(f => f.getData() as Folder);
-      const sortedFolderData = sortFolders(folderData, sortBy, folder => resolveFolderSize(folder, filteredFolderNodes));
-      filteredFolderNodes = sortedFolderData.map(f => filteredFolderNodes.find(n => n.id === f.id)!)
+    if (!filters.showFavorites && filteredFolderNodes.length > 1) {
+      const folderData = filteredFolderNodes.map((f) => f.getData() as Folder);
+      const sortedFolderData = sortFolders(folderData, sortBy, (folder) =>
+        resolveFolderSize(folder, filteredFolderNodes),
+      );
+      filteredFolderNodes = sortedFolderData.map(
+        (f) => filteredFolderNodes.find((n) => n.id === f.id)!,
+      );
     }
 
     return {
       folders: filteredFolderNodes,
       documents: filteredDocumentNodes,
-      hasActiveFilter
+      hasActiveFilter,
     };
-  }, [currentNode, ctxCurrent, hasActiveFilter, getFilteredContent, getSortedContent, selectedTagNames, searchQuery, sortBy, collectDescendants, filters.showFavorites]);
+  }, [
+    currentNode,
+    ctxCurrent,
+    hasActiveFilter,
+    getFilteredContent,
+    getSortedContent,
+    selectedTagNames,
+    searchQuery,
+    sortBy,
+    collectDescendants,
+    filters.showFavorites,
+  ]);
 }

@@ -1,16 +1,17 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { uploadDocument as apiUploadDocument } from "@/lib/api/api-documents";
 import { useFileContext } from "@/hooks/useFileContext";
+import { uploadDocument as apiUploadDocument } from "@/lib/api/api-documents";
 
 interface UploadDocumentModalProps {
   open: boolean;
@@ -18,19 +19,13 @@ interface UploadDocumentModalProps {
   onUploaded?: (id: string) => void;
 }
 
-export function UploadDocumentModal({
-  open,
-  onClose,
-  onUploaded,
-}: UploadDocumentModalProps) {
+export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumentModalProps) {
   const { currentNode, createDocument } = useFileContext() as any; // eslint-disable-line @typescript-eslint/no-explicit-any
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   // On capture le dossier cible à l'ouverture du modal pour éviter les déplacements ultérieurs
-  const [capturedFolderId, setCapturedFolderId] = useState<string | undefined>(
-    undefined
-  );
+  const [capturedFolderId, setCapturedFolderId] = useState<string | undefined>(undefined);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -41,10 +36,7 @@ export function UploadDocumentModal({
       setCapturedFolderId(undefined);
     } else {
       // A l'ouverture, mémoriser le dossier courant (sauf racine)
-      const id =
-        currentNode?.id && currentNode.id !== "root"
-          ? currentNode.id
-          : undefined;
+      const id = currentNode?.id && currentNode.id !== "root" ? currentNode.id : undefined;
       setCapturedFolderId(id);
     }
   }, [open, currentNode?.id]);
@@ -54,7 +46,7 @@ export function UploadDocumentModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (disabled || !file) return;
-  try {
+    try {
       const targetFolderId = capturedFolderId;
       setUploading(true);
       const res = await apiUploadDocument(file, {
@@ -100,9 +92,7 @@ export function UploadDocumentModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
             <DialogTitle>Uploader un fichier</DialogTitle>
-            <DialogDescription>
-              Sélectionnez un fichier à ajouter à votre espace.
-            </DialogDescription>
+            <DialogDescription>Sélectionnez un fichier à ajouter à votre espace.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <label className="text-sm font-medium">Fichier</label>
@@ -124,9 +114,7 @@ export function UploadDocumentModal({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Description (optionnel)
-            </label>
+            <label className="text-sm font-medium">Description (optionnel)</label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}

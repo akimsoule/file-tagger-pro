@@ -1,11 +1,12 @@
-import prisma from "./database";
-import { LogService } from "./logService";
-import * as megaStorage from "./megaStorage";
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
-import { MegaStorageService } from "./megaStorage";
-import crypto from "crypto";
+
+import prisma from "./database";
 import { EmbeddingGenerator } from "./embeddingGenerator";
+import { LogService } from "./logService";
+import * as megaStorage from "./megaStorage";
+import { MegaStorageService } from "./megaStorage";
 
 export interface CreateDocumentData {
   name: string;
@@ -128,8 +129,7 @@ export class DocumentService {
       if (mimeType.startsWith("text/")) return "document";
       if (mimeType.includes("pdf")) return "document";
       if (mimeType.includes("word")) return "document";
-      if (mimeType.includes("excel") || mimeType.includes("spreadsheet"))
-        return "spreadsheet";
+      if (mimeType.includes("excel") || mimeType.includes("spreadsheet")) return "spreadsheet";
       if (mimeType.includes("powerpoint") || mimeType.includes("presentation"))
         return "presentation";
     }
@@ -158,9 +158,7 @@ export class DocumentService {
     };
 
     const typeTag = typeTagMapping[type] || "autres";
-    const tags = existingTags
-      ? existingTags.split(",").map((t) => t.trim())
-      : [];
+    const tags = existingTags ? existingTags.split(",").map((t) => t.trim()) : [];
 
     if (!tags.includes(typeTag)) {
       tags.push(typeTag);
@@ -181,9 +179,7 @@ export class DocumentService {
         where: { email: data.ownerEmail },
       });
       if (!user) {
-        throw new Error(
-          `Aucun utilisateur trouvé avec l'email: ${data.ownerEmail}`
-        );
+        throw new Error(`Aucun utilisateur trouvé avec l'email: ${data.ownerEmail}`);
       }
       ownerId = user.id;
     }
@@ -195,16 +191,14 @@ export class DocumentService {
     if (data.filePath) {
       const resolvedPath = path.resolve(data.filePath);
       const name = path.basename(resolvedPath);
-      const mimeType = this.megaStorageService.getMimeType(
-        name.split(".").pop() || ""
-      );
+      const mimeType = this.megaStorageService.getMimeType(name.split(".").pop() || "");
       fileBuffer = fs.readFileSync(resolvedPath);
       fileId = await this.megaStorageService.uploadFile(
         name,
         mimeType,
         fileBuffer,
         data.testFolderId,
-        ownerId
+        ownerId,
       );
       fileSize = fileBuffer.length;
     } else if (data.file) {
@@ -214,15 +208,13 @@ export class DocumentService {
         data.file.mimeType,
         fileBuffer,
         data.testFolderId,
-        ownerId
+        ownerId,
       );
       fileSize = fileBuffer.length;
     }
 
     if (!fileBuffer) {
-      throw new Error(
-        "Aucun contenu de fichier fourni pour créer le document."
-      );
+      throw new Error("Aucun contenu de fichier fourni pour créer le document.");
     }
 
     // Calculer le hash du fichier
@@ -257,9 +249,7 @@ export class DocumentService {
 
     // Indexation d'un embedding basé métadonnées (asynchrone best-effort)
     // On ne bloque pas le flux utilisateur; l'échec n'empêche pas la création du doc
-    void new EmbeddingGenerator()
-      .generateForDocument(document.id)
-      .catch(() => undefined);
+    void new EmbeddingGenerator().generateForDocument(document.id).catch(() => undefined);
 
     await this.logService.log({
       action: "DOCUMENT_CREATE",
@@ -340,7 +330,7 @@ export class DocumentService {
       tags?: string[];
       tag?: string; // Tag unique pour compatibilité
       search?: string;
-    }
+    },
   ) {
     const where: Record<string, unknown> = {};
 
@@ -487,8 +477,7 @@ export class DocumentService {
 
     if (updateData.tags !== undefined) {
       // ownerId dans l'entité mise à jour (champ non sélectionné explicitement dans include mais présent sur document)
-      const ownerIdForTags: string =
-        (document as any).ownerId || document.owner?.id; // eslint-disable-line @typescript-eslint/no-explicit-any
+      const ownerIdForTags: string = (document as any).ownerId || document.owner?.id; // eslint-disable-line @typescript-eslint/no-explicit-any
       await this.syncDocumentTags(id, updateData.tags || "", ownerIdForTags);
     }
 
@@ -498,9 +487,7 @@ export class DocumentService {
       entityId: id,
       userId,
       documentId: id,
-      details: `Document mis à jour: ${document.name} (${Object.keys(data).join(
-        ", "
-      )})`,
+      details: `Document mis à jour: ${document.name} (${Object.keys(data).join(", ")})`,
     });
 
     // Réindexation embedding (asynchrone, best-effort)
@@ -510,9 +497,7 @@ export class DocumentService {
       updateData.description !== undefined ||
       updateData.tags !== undefined
     ) {
-      void new EmbeddingGenerator()
-        .generateForDocument(id)
-        .catch(() => undefined);
+      void new EmbeddingGenerator().generateForDocument(id).catch(() => undefined);
     }
 
     return document;
@@ -521,12 +506,7 @@ export class DocumentService {
   /**
    * Met à jour uniquement le fileId d'un document et journalise l'opération
    */
-  async updateDocumentFileId(
-    id: string,
-    newFileId: string,
-    userId: string,
-    reason?: string
-  ) {
+  async updateDocumentFileId(id: string, newFileId: string, userId: string, reason?: string) {
     const updated = await prisma.document.update({
       where: { id },
       data: { fileId: newFileId, modifiedAt: new Date() },
@@ -550,18 +530,14 @@ export class DocumentService {
   /**
    * Synchronise la table de jonction DocumentTag avec la chaîne CSV
    */
-  private async syncDocumentTags(
-    documentId: string,
-    csv: string,
-    ownerId: string
-  ) {
+  private async syncDocumentTags(documentId: string, csv: string, ownerId: string) {
     const tagNames = Array.from(
       new Set(
         csv
           .split(",")
           .map((t) => t.trim())
-          .filter(Boolean)
-      )
+          .filter(Boolean),
+      ),
     );
     if (tagNames.length === 0) {
       // Supprimer tous les liens existants si aucun tag
@@ -573,7 +549,7 @@ export class DocumentService {
       include: { tag: true },
     });
     const existingTagMap = new Map<string, (typeof existingLinks)[number]>(
-      existingLinks.map((l) => [l.tag.name, l])
+      existingLinks.map((l) => [l.tag.name, l]),
     );
 
     // Créer les tags manquants et liens
@@ -661,20 +637,16 @@ export class DocumentService {
     // Suppression du fichier sur MEGA
     if (document.fileId) {
       try {
-        await this.megaStorageService.deleteFile(
-          document.fileId,
-          document.ownerId,
-          folderId
-        );
+        await this.megaStorageService.deleteFile(document.fileId, document.ownerId, folderId);
         console.log(`🗑️ Fichier MEGA supprimé: ${document.fileId}`);
       } catch (error) {
         console.warn(
           `⚠️ Impossible de supprimer le fichier MEGA (${document.fileId}): ${
             error instanceof Error ? error.message : error
-          }`
+          }`,
         );
         console.warn(
-          `💡 Le document sera supprimé de la base de données même si le fichier MEGA est inaccessible.`
+          `💡 Le document sera supprimé de la base de données même si le fichier MEGA est inaccessible.`,
         );
       }
     }
@@ -702,7 +674,7 @@ export class DocumentService {
 
     const fileBuffer = await this.megaStorageService.downloadFile(
       document.fileId,
-      document.ownerId
+      document.ownerId,
     );
 
     await this.logService.log({
@@ -734,10 +706,7 @@ export class DocumentService {
       throw new Error("Aucun fichier associé à ce document");
     }
 
-    const url = await this.megaStorageService.getFileUrl(
-      document.fileId,
-      document.ownerId
-    );
+    const url = await this.megaStorageService.getFileUrl(document.fileId, document.ownerId);
 
     await this.logService.log({
       action: "DOCUMENT_DOWNLOAD",
@@ -785,7 +754,7 @@ export class DocumentService {
       console.debug(`🔄 Sync MEGA start${folderId ? " (scope dossier)" : ""}`);
     const megaFiles = await this.megaStorageService.getAllFilesWithContent(
       defaultOwnerId,
-      folderId
+      folderId,
     );
     if (process.env.NODE_ENV !== "production")
       console.debug(`🔍 MEGA fichiers: ${megaFiles.length}`);
@@ -831,14 +800,9 @@ export class DocumentService {
     }> = [];
 
     for (const megaFile of megaFiles) {
-      const hash = crypto
-        .createHash("sha256")
-        .update(megaFile.buffer)
-        .digest("hex");
+      const hash = crypto.createHash("sha256").update(megaFile.buffer).digest("hex");
       if (process.env.NODE_ENV !== "production")
-        console.debug(
-          `   • Fichier ${megaFile.name} (${hash.substring(0, 12)}...)`
-        );
+        console.debug(`   • Fichier ${megaFile.name} (${hash.substring(0, 12)}...)`);
 
       // Chercher si un document avec ce hash existe déjà
       const existingDocument = allDocuments.find((doc) => doc.hash === hash);
@@ -848,10 +812,7 @@ export class DocumentService {
           console.debug(`   ↺ Update ${existingDocument.name}`);
 
         // Mise à jour du document existant avec détection de type
-        const detectedType = this.getDocumentTypeFromFile(
-          megaFile.name,
-          megaFile.mimeType
-        );
+        const detectedType = this.getDocumentTypeFromFile(megaFile.name, megaFile.mimeType);
 
         const updatedDocument = await prisma.document.update({
           where: { id: existingDocument.id },
@@ -875,14 +836,10 @@ export class DocumentService {
 
         updatedDocuments.push(updatedDocument);
       } else {
-        if (process.env.NODE_ENV !== "production")
-          console.debug(`   ✨ Nouveau ${megaFile.name}`);
+        if (process.env.NODE_ENV !== "production") console.debug(`   ✨ Nouveau ${megaFile.name}`);
 
         // Création d'un nouveau document avec détection de type appropriée
-        const detectedType = this.getDocumentTypeFromFile(
-          megaFile.name,
-          megaFile.mimeType
-        );
+        const detectedType = this.getDocumentTypeFromFile(megaFile.name, megaFile.mimeType);
 
         const document = await prisma.document.create({
           data: {
@@ -910,9 +867,7 @@ export class DocumentService {
     }
 
     if (process.env.NODE_ENV !== "production")
-      console.debug(
-        `🎉 Sync ok +${newDocuments.length} / ~${updatedDocuments.length}`
-      );
+      console.debug(`🎉 Sync ok +${newDocuments.length} / ~${updatedDocuments.length}`);
     return {
       syncedCount: newDocuments.length,
       updatedCount: updatedDocuments.length,

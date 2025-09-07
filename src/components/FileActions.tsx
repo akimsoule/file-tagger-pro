@@ -1,8 +1,14 @@
-import { Button } from "@/components/ui/button";
-import { Heart, MoreHorizontal, FolderOutput, Tags, Trash2 } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { FolderOutput, Heart, MoreHorizontal, Tags, Trash2 } from "lucide-react";
 import React from "react";
+
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 interface FileActionsProps {
   isFavorite: boolean;
@@ -26,13 +32,16 @@ export const FileActions: React.FC<FileActionsProps> = ({
         variant="ghost"
         size="sm"
         className="h-8 w-8 p-0"
-        onClick={(e) => { stop(e); onToggleFavorite(); }}
+        onClick={(e) => {
+          stop(e);
+          onToggleFavorite();
+        }}
         aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
       >
         <Heart
           className={cn(
             "h-4 w-4 transition-colors",
-            isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"
+            isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground",
           )}
         />
       </Button>
@@ -43,11 +52,21 @@ export const FileActions: React.FC<FileActionsProps> = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={(e) => { stop(e); onOpenMove(); }}>
+          <DropdownMenuItem
+            onClick={(e) => {
+              stop(e);
+              onOpenMove();
+            }}
+          >
             <FolderOutput className="h-4 w-4 mr-2" />
             Déplacer
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={(e) => { stop(e); onOpenTagEditor(); }}>
+          <DropdownMenuItem
+            onClick={(e) => {
+              stop(e);
+              onOpenTagEditor();
+            }}
+          >
             <Tags className="h-4 w-4 mr-2" />
             Modifier les tags
           </DropdownMenuItem>

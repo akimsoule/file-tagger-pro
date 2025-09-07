@@ -1,7 +1,7 @@
-import type { Document } from '../file/def';
+import type { Document } from "../file/def";
 
-export type ViewMode = 'grid' | 'list';
-export type SortBy = 'name' | 'date' | 'type' | 'size';
+export type ViewMode = "grid" | "list";
+export type SortBy = "name" | "date" | "type" | "size";
 
 export interface QueryFilters {
   showFavorites: boolean;
@@ -19,7 +19,7 @@ export interface QueryContextType {
   getFilteredContent: (content: Document[]) => Document[];
   getSortedContent: (content: Document[]) => Document[];
   getFilteredAndSortedFavorites: (documents: Document[]) => Document[];
-  
+
   setSearchQuery: (query: string) => void;
   setSortBy: (sort: SortBy) => void;
   setViewMode: (mode: ViewMode) => void;

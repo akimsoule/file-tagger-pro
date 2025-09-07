@@ -1,16 +1,13 @@
-import { FileTreeNode } from "../local/FileTreeNode";
 import type { Document, Folder, Tag } from "@/contexts/file";
-import { updateDocument, deleteDocument } from "@/lib/api/api-documents";
-import {
-  updateFolder,
-  deleteFolder,
-  moveDocument,
-} from "@/lib/api/api-folders";
-import type { FolderDTO } from "@/lib/api/api-folders";
 import type { DocumentDTO } from "@/lib/api/api-documents";
-import { nodeCache } from "./cache";
-import { getFullTree } from "@/lib/api/api-tree";
+import { deleteDocument, updateDocument } from "@/lib/api/api-documents";
+import type { FolderDTO } from "@/lib/api/api-folders";
+import { deleteFolder, moveDocument, updateFolder } from "@/lib/api/api-folders";
 import type { TreeFolderDTO } from "@/lib/api/api-tree";
+import { getFullTree } from "@/lib/api/api-tree";
+
+import { FileTreeNode } from "../local/FileTreeNode";
+import { nodeCache } from "./cache";
 
 // Stratégie simple:
 // - On garde EXACTEMENT les signatures synchrones de FileTreeNode (contrat inchangé)
@@ -22,10 +19,7 @@ import type { TreeFolderDTO } from "@/lib/api/api-tree";
 type RemoteOp = () => Promise<unknown>;
 
 export class FileTreeNodeApi extends FileTreeNode {
-  private rollbackListeners: ((info: {
-    nodeId: string;
-    reason: unknown;
-  }) => void)[] = [];
+  private rollbackListeners: ((info: { nodeId: string; reason: unknown }) => void)[] = [];
 
   public onRollback(cb: (info: { nodeId: string; reason: unknown }) => void) {
     this.rollbackListeners.push(cb);
@@ -33,11 +27,7 @@ export class FileTreeNodeApi extends FileTreeNode {
       this.rollbackListeners = this.rollbackListeners.filter((l) => l !== cb);
     };
   }
-  private optimistic<T>(
-    nodeId: string,
-    localMutate: () => T,
-    remote?: RemoteOp
-  ): T {
+  private optimistic<T>(nodeId: string, localMutate: () => T, remote?: RemoteOp): T {
     const root = this.getRoot() as FileTreeNode;
     const node = root.findChildById(nodeId) as FileTreeNode | undefined;
     if (node) nodeCache.take(node);
@@ -63,14 +53,12 @@ export class FileTreeNodeApi extends FileTreeNode {
     const snapshot = nodeCache.pop(nodeId);
     if (!node || !snapshot) return;
     node.updateData(snapshot.data as Partial<Document | Folder>);
-    node.tags = snapshot.tags.map((t) => ({ ...t } as Tag));
+    node.tags = snapshot.tags.map((t) => ({ ...t }) as Tag);
     if (snapshot.parentId !== node.parentId) {
       // Restaurer position si déplacé
       if (node.parent) node.parent.removeChild(node.id);
       if (snapshot.parentId) {
-        const oldParent = root.findChildById(snapshot.parentId) as
-          | FileTreeNode
-          | undefined;
+        const oldParent = root.findChildById(snapshot.parentId) as FileTreeNode | undefined;
         oldParent?.addChild(node);
       } else {
         // replacer sous la racine
@@ -81,17 +69,12 @@ export class FileTreeNodeApi extends FileTreeNode {
   }
 
   // === Mutations conservant les signatures ===
-  public override updateNodeFields(
-    nodeId: string,
-    updates: Partial<Document | Folder>
-  ): boolean {
+  public override updateNodeFields(nodeId: string, updates: Partial<Document | Folder>): boolean {
     return this.optimistic<boolean>(
       nodeId,
       () => super.updateNodeFields(nodeId, updates),
       () => {
-        const isFile =
-          (this.findChildById(nodeId) as FileTreeNode | undefined)?.type ===
-          "file";
+        const isFile = (this.findChildById(nodeId) as FileTreeNode | undefined)?.type === "file";
         if (isFile) {
           const docPayload: Partial<DocumentDTO> = {};
           const allowed: (keyof DocumentDTO)[] = [
@@ -125,7 +108,7 @@ export class FileTreeNodeApi extends FileTreeNode {
           }
           return updateFolder(nodeId, folderPayload as Partial<FolderDTO>);
         }
-      }
+      },
     );
   }
 
@@ -135,16 +118,12 @@ export class FileTreeNodeApi extends FileTreeNode {
       () => super.toggleFavorite(nodeId, favorite),
       () => {
         return updateDocument(nodeId, { isFavorite: favorite });
-      }
+      },
     );
   }
 
-  public override relocateNode(
-    nodeId: string,
-    targetFolderId: string | null
-  ): boolean {
-    const isFile =
-      (this.findChildById(nodeId) as FileTreeNode | undefined)?.type === "file";
+  public override relocateNode(nodeId: string, targetFolderId: string | null): boolean {
+    const isFile = (this.findChildById(nodeId) as FileTreeNode | undefined)?.type === "file";
     return this.optimistic<boolean>(
       nodeId,
       () => super.relocateNode(nodeId, targetFolderId),
@@ -154,7 +133,7 @@ export class FileTreeNodeApi extends FileTreeNode {
           : updateFolder(nodeId, {
               parentId: targetFolderId || undefined,
             } as Partial<FolderDTO>);
-      }
+      },
     );
   }
 
@@ -169,10 +148,9 @@ export class FileTreeNodeApi extends FileTreeNode {
         const tags = raw.split(",").filter(Boolean);
         if (!tags.includes(tagName)) tags.push(tagName);
         const newCsv = tags.join(",");
-        if (node.type === "file")
-          await updateDocument(nodeId, { tags: newCsv });
+        if (node.type === "file") await updateDocument(nodeId, { tags: newCsv });
         else await updateFolder(nodeId, { tags: newCsv } as Partial<FolderDTO>);
-      }
+      },
     );
   }
 
@@ -189,10 +167,9 @@ export class FileTreeNodeApi extends FileTreeNode {
           .filter(Boolean)
           .filter((t) => t !== tagName);
         const newCsv = tags.join(",");
-        if (node.type === "file")
-          await updateDocument(nodeId, { tags: newCsv });
+        if (node.type === "file") await updateDocument(nodeId, { tags: newCsv });
         else await updateFolder(nodeId, { tags: newCsv } as Partial<FolderDTO>);
-      }
+      },
     );
   }
 
@@ -202,9 +179,7 @@ export class FileTreeNodeApi extends FileTreeNode {
       if (n.tags.some((t) => t.name === tagName)) impacted.push(n.id);
     }
     impacted.forEach((id) => {
-      const node = (this.getRoot() as FileTreeNode).findChildById(id) as
-        | FileTreeNode
-        | undefined;
+      const node = (this.getRoot() as FileTreeNode).findChildById(id) as FileTreeNode | undefined;
       if (node) nodeCache.take(node);
     });
     const count = super.deleteTagReferences(tagName);
@@ -228,13 +203,10 @@ export class FileTreeNodeApi extends FileTreeNode {
         // Succès: nettoyer les snapshots pris
         impacted.forEach((id) => nodeCache.pop(id));
       } catch (e) {
-        console.error(
-          "[FileTreeNodeApi] deleteTagReferences failed -> rollback",
-          e
-        );
+        console.error("[FileTreeNodeApi] deleteTagReferences failed -> rollback", e);
         impacted.forEach((id) => this.rollback(id));
         impacted.forEach((id) =>
-          this.rollbackListeners.forEach((l) => l({ nodeId: id, reason: e }))
+          this.rollbackListeners.forEach((l) => l({ nodeId: id, reason: e })),
         );
       }
     })();
@@ -265,9 +237,7 @@ export class FileTreeNodeApi extends FileTreeNode {
   }
 
   // === Chargement complet de l'arbre depuis l'API ===
-  public static async buildFromRemoteTree(
-    ownerId: string
-  ): Promise<FileTreeNodeApi | null> {
+  public static async buildFromRemoteTree(ownerId: string): Promise<FileTreeNodeApi | null> {
     // Réinitialiser le cache de snapshots sur rechargement complet
     nodeCache.clear();
     const res = await getFullTree();
@@ -301,7 +271,7 @@ export class FileTreeNodeApi extends FileTreeNode {
           filesCount: 0,
           foldersCount: 0,
         },
-        undefined
+        undefined,
       );
 
       interface StackItem {
@@ -389,7 +359,7 @@ export class FileTreeNodeApi extends FileTreeNode {
       syntheticRoot.type,
       syntheticRoot.getData() as Folder,
       syntheticRoot.stats,
-      syntheticRoot.parentId
+      syntheticRoot.parentId,
     );
     for (const child of syntheticRoot.children) apiRoot.addChild(child);
     apiRoot.updateStats();

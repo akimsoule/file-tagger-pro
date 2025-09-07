@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useLocation, useNavigate } from "react-router-dom";
+
 import CommandMenu from "@/components/CommandMenu";
-import { useUiCommands } from "@/contexts/ui/useUiCommands";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FolderPicker } from "@/components/FolderPicker";
+import type { Document } from "@/contexts/file";
+import { useUiCommands } from "@/contexts/ui/useUiCommands";
+import { useFavoriteNodes } from "@/hooks/useFavoriteNodes";
 import { useFileContext } from "@/hooks/useFileContext";
 import { useFilteredNodes } from "@/hooks/useFilteredNodes";
 import { useQuery } from "@/hooks/useQuery";
-import { useFavoriteNodes } from "@/hooks/useFavoriteNodes";
-import type { Document } from "@/contexts/file";
-import { FileTreeNode } from "@/logic/local/FileTreeNode";
 import { useTags } from "@/hooks/useTags";
+import { FileTreeNode } from "@/logic/local/FileTreeNode";
 
 export default function GlobalCommand() {
   const navigate = useNavigate();
@@ -22,11 +23,7 @@ export default function GlobalCommand() {
     uiRef.current = ui;
   }, [ui]);
 
-  const openWithRetry = (
-    getFn: () => (() => void) | undefined,
-    tries = 15,
-    delayMs = 40
-  ) => {
+  const openWithRetry = (getFn: () => (() => void) | undefined, tries = 15, delayMs = 40) => {
     const tryOpen = (remaining: number) => {
       const fn = getFn();
       if (fn) {
@@ -53,8 +50,7 @@ export default function GlobalCommand() {
     deleteNode,
   } = useFileContext();
 
-  const { documents: documentNodes, folders: folderNodes } =
-    useFilteredNodes(currentNode);
+  const { documents: documentNodes, folders: folderNodes } = useFilteredNodes(currentNode);
   const { favoriteNodes } = useFavoriteNodes();
   const { tags, selectedTags, toggleTagSelection, setSelectedTags } = useTags();
 
@@ -87,19 +83,12 @@ export default function GlobalCommand() {
       // / -> focus search
       if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === "/") {
         e.preventDefault();
-        const el = document.querySelector<HTMLInputElement>(
-          'input[placeholder="Rechercher..."]'
-        );
+        const el = document.querySelector<HTMLInputElement>('input[placeholder="Rechercher..."]');
         el?.focus();
         return;
       }
       // g -> grid, l -> list
-      if (
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        (e.key === "g" || e.key === "l")
-      ) {
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === "g" || e.key === "l")) {
         if (e.key === "g") setViewMode("grid");
         if (e.key === "l") setViewMode("list");
         return;
@@ -109,11 +98,7 @@ export default function GlobalCommand() {
         reloadTree?.();
         return;
       }
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.altKey &&
-        (e.code === "KeyT" || e.code === "KeyG")
-      ) {
+      if ((e.metaKey || e.ctrlKey) && e.altKey && (e.code === "KeyT" || e.code === "KeyG")) {
         e.preventDefault();
         setScrollToTags(true);
         setCmdOpen(true);
@@ -139,14 +124,7 @@ export default function GlobalCommand() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [
-    reloadTree,
-    setViewMode,
-    selectedNode,
-    currentNode,
-    setCurrentNode,
-    setSelectedNode,
-  ]);
+  }, [reloadTree, setViewMode, selectedNode, currentNode, setCurrentNode, setSelectedNode]);
 
   // (TagEditor supprimé)
 
@@ -156,9 +134,7 @@ export default function GlobalCommand() {
         id: n.id,
         type: "document" as const,
         name: (n.getData() as Document).name,
-        subtitle: new Date(
-          (n.getData() as Document).modifiedAt
-        ).toLocaleDateString(),
+        subtitle: new Date((n.getData() as Document).modifiedAt).toLocaleDateString(),
         onOpen: () => setSelectedNode(n),
       }));
     }
@@ -174,9 +150,7 @@ export default function GlobalCommand() {
         id: d.id,
         type: "document" as const,
         name: (d.getData() as Document).name,
-        subtitle: new Date(
-          (d.getData() as Document).modifiedAt
-        ).toLocaleDateString(),
+        subtitle: new Date((d.getData() as Document).modifiedAt).toLocaleDateString(),
         onOpen: () => setSelectedNode(d),
       })),
     ];
@@ -198,12 +172,10 @@ export default function GlobalCommand() {
       name: doc.name,
       isFavorite: doc.isFavorite,
       onOpen: () => setSelectedNode(selectedNode),
-      onToggleFavorite: () =>
-        updateNode(selectedNode.id, { ...doc, isFavorite: !doc.isFavorite }),
+      onToggleFavorite: () => updateNode(selectedNode.id, { ...doc, isFavorite: !doc.isFavorite }),
       onRename: () => {
         const name = window.prompt("Nouveau nom de fichier", doc.name);
-        if (name && name.trim())
-          updateNode(selectedNode.id, { ...doc, name: name.trim() });
+        if (name && name.trim()) updateNode(selectedNode.id, { ...doc, name: name.trim() });
       },
       onMove: () => setMoveOpen(true),
       onDelete: () => setConfirmOpen({ id: selectedNode.id, name: doc.name }),
@@ -230,14 +202,7 @@ export default function GlobalCommand() {
         addNodeTag(selectedNode, name.trim());
       },
     };
-  }, [
-    selectedNode,
-    setSelectedNode,
-    updateNode,
-    getAllTags,
-    addNodeTag,
-    removeNodeTag,
-  ]);
+  }, [selectedNode, setSelectedNode, updateNode, getAllTags, addNodeTag, removeNodeTag]);
 
   return (
     <>
@@ -259,9 +224,7 @@ export default function GlobalCommand() {
         onOpenChange={setCmdOpen}
         autoScrollToTags={scrollToTags}
         onFocusSearch={() => {
-          const el = document.querySelector<HTMLInputElement>(
-            'input[placeholder="Rechercher..."]'
-          );
+          const el = document.querySelector<HTMLInputElement>('input[placeholder="Rechercher..."]');
           el?.focus();
         }}
         onToggleGrid={() => setViewMode("grid")}
@@ -302,9 +265,7 @@ export default function GlobalCommand() {
         onOpenChange={(o) => !o && setConfirmOpen(null)}
         title="Supprimer l'élément ?"
         description={
-          confirmOpen
-            ? `Cette action est définitive. "${confirmOpen.name}" sera supprimé.`
-            : ""
+          confirmOpen ? `Cette action est définitive. "${confirmOpen.name}" sera supprimé.` : ""
         }
         confirmLabel="Supprimer"
         onConfirm={() => {

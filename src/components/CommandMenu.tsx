@@ -1,4 +1,21 @@
+import {
+  Check,
+  FileText,
+  Folder as FolderIcon,
+  FolderPlus,
+  Grid3X3,
+  Home,
+  List,
+  RefreshCcw,
+  Search,
+  Settings,
+  SortAsc,
+  Star,
+  Tag as TagIcon,
+  Upload,
+} from "lucide-react";
 import { useMemo } from "react";
+
 import {
   CommandDialog,
   CommandEmpty,
@@ -9,22 +26,6 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
-import {
-  Grid3X3,
-  List,
-  SortAsc,
-  FolderPlus,
-  Upload,
-  RefreshCcw,
-  Home,
-  Star,
-  Settings,
-  Search,
-  FileText,
-  Folder as FolderIcon,
-  Tag as TagIcon,
-  Check,
-} from "lucide-react";
 
 interface CommandMenuProps {
   open: boolean;
@@ -59,10 +60,10 @@ interface CommandMenuProps {
     onToggleFavorite?: () => void;
     onRename?: () => void;
     onMove?: () => void;
-  onDelete?: () => void;
-  tags?: Array<{ id: string; name: string; selected: boolean }>;
-  onToggleTag?: (name: string) => void;
-  onCreateTag?: () => void;
+    onDelete?: () => void;
+    tags?: Array<{ id: string; name: string; selected: boolean }>;
+    onToggleTag?: (name: string) => void;
+    onCreateTag?: () => void;
   } | null;
 }
 
@@ -93,8 +94,8 @@ export function CommandMenu({
   if (autoScrollToTags && tagsGroupRef.current) {
     // Le rendu est synchrone ici, scroll immédiat
     const el = tagsGroupRef.current;
-    if (el && typeof el.scrollIntoView === 'function') {
-      el.scrollIntoView({ block: 'start' });
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ block: "start" });
     }
   }
 
@@ -106,15 +107,11 @@ export function CommandMenu({
         { value: "size", label: "Trier par taille" },
         { value: "type", label: "Trier par type" },
       ] as Array<{ value: "name" | "date" | "size" | "type"; label: string }>,
-    []
+    [],
   );
 
   return (
-    <CommandDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Palette de commandes"
-    >
+    <CommandDialog open={open} onOpenChange={onOpenChange} title="Palette de commandes">
       <CommandInput placeholder="Tapez une commande ou recherchez…" />
       <CommandList>
         <CommandEmpty>Aucune commande</CommandEmpty>
@@ -138,9 +135,7 @@ export function CommandMenu({
                   <div className="flex flex-col">
                     <span>{item.name}</span>
                     {item.subtitle && (
-                      <span className="text-xs text-muted-foreground">
-                        {item.subtitle}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{item.subtitle}</span>
                     )}
                   </div>
                 </CommandItem>
@@ -214,17 +209,17 @@ export function CommandMenu({
           <>
             <div ref={(el) => (tagsGroupRef.current = el)}>
               <CommandGroup heading="Filtres: Tags">
-              {filterTags.map((t) => (
-                <CommandItem key={t.id} onSelect={() => onToggleFilterTag?.(t.id)}>
-                  <TagIcon className="mr-2 h-4 w-4" /> {t.name}
-                  {t.selected && <Check className="ml-auto h-4 w-4 opacity-70" />}
-                </CommandItem>
-              ))}
-              {!!onClearFilterTags && filterTags.some((t) => t.selected) && (
-                <CommandItem onSelect={() => onClearFilterTags?.()}>
-                  <TagIcon className="mr-2 h-4 w-4" /> Effacer les filtres de tags
-                </CommandItem>
-              )}
+                {filterTags.map((t) => (
+                  <CommandItem key={t.id} onSelect={() => onToggleFilterTag?.(t.id)}>
+                    <TagIcon className="mr-2 h-4 w-4" /> {t.name}
+                    {t.selected && <Check className="ml-auto h-4 w-4 opacity-70" />}
+                  </CommandItem>
+                ))}
+                {!!onClearFilterTags && filterTags.some((t) => t.selected) && (
+                  <CommandItem onSelect={() => onClearFilterTags?.()}>
+                    <TagIcon className="mr-2 h-4 w-4" /> Effacer les filtres de tags
+                  </CommandItem>
+                )}
               </CommandGroup>
             </div>
             <CommandSeparator />
@@ -304,9 +299,7 @@ export function CommandMenu({
                   }}
                 >
                   <Star className="mr-2 h-4 w-4" />{" "}
-                  {selectedContext.isFavorite
-                    ? "Retirer des favoris"
-                    : "Ajouter aux favoris"}
+                  {selectedContext.isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
                 </CommandItem>
               )}
               {selectedContext.onRename && (

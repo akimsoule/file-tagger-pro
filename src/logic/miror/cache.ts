@@ -1,8 +1,9 @@
 // Cache simple pour stocker les états précédents de nœuds avant mutation distante
 // Permet un rollback en cas d'échec d'un appel API
 
-import { FileTreeNode } from "../local/FileTreeNode";
 import type { Document, Folder } from "@/contexts/file";
+
+import { FileTreeNode } from "../local/FileTreeNode";
 
 export interface Snapshot {
   id: string;

@@ -1,4 +1,4 @@
-import prisma from './database';
+import prisma from "./database";
 
 export interface ActivityData {
   id: string;
@@ -22,55 +22,57 @@ export class ActivityService {
           userId: userId,
           action: {
             in: [
-              'DOCUMENT_CREATE',
-              'DOCUMENT_UPDATE', 
-              'DOCUMENT_UPLOAD',
-              'DOCUMENT_DOWNLOAD',
-              'DOCUMENT_FAVORITE',
-              'DOCUMENT_UNFAVORITE'
-            ]
-          }
+              "DOCUMENT_CREATE",
+              "DOCUMENT_UPDATE",
+              "DOCUMENT_UPLOAD",
+              "DOCUMENT_DOWNLOAD",
+              "DOCUMENT_FAVORITE",
+              "DOCUMENT_UNFAVORITE",
+            ],
+          },
         },
         include: {
           document: {
             select: {
               name: true,
               type: true,
-              size: true
-            }
-          }
+              size: true,
+            },
+          },
         },
         orderBy: {
-          createdAt: 'desc'
+          createdAt: "desc",
         },
-        take: limit
+        take: limit,
       });
 
       // Transformer les logs en activités
-      const activities: ActivityData[] = logs.map(log => ({
+      const activities: ActivityData[] = logs.map((log) => ({
         id: log.id,
         type: this.mapActionToActivityType(log.action),
-        document: log.document?.name || 'Document supprimé',
-        documentId: log.documentId || '',
-        userId: log.userId || '',
+        document: log.document?.name || "Document supprimé",
+        documentId: log.documentId || "",
+        userId: log.userId || "",
         date: log.createdAt.toISOString(),
         details: {
           action: log.action,
           entity: log.entity,
           ipAddress: log.ipAddress,
           userAgent: log.userAgent,
-          documentDetails: log.document ? {
-            type: log.document.type,
-            size: log.document.size
-          } : null,
-          additionalDetails: log.details
-        }
+          documentDetails: log.document
+            ? {
+                type: log.document.type,
+                size: log.document.size,
+              }
+            : null,
+          additionalDetails: log.details,
+        },
       }));
 
       return activities;
     } catch (error) {
-      console.error('Erreur lors de la récupération des activités récentes:', error);
-      throw new Error('Impossible de récupérer les activités récentes');
+      console.error("Erreur lors de la récupération des activités récentes:", error);
+      throw new Error("Impossible de récupérer les activités récentes");
     }
   }
 
@@ -84,65 +86,69 @@ export class ActivityService {
         where: {
           action: {
             in: [
-              'DOCUMENT_CREATE',
-              'DOCUMENT_UPDATE', 
-              'DOCUMENT_UPLOAD',
-              'DOCUMENT_DOWNLOAD',
-              'USER_CREATE',
-              'USER_LOGIN'
-            ]
-          }
+              "DOCUMENT_CREATE",
+              "DOCUMENT_UPDATE",
+              "DOCUMENT_UPLOAD",
+              "DOCUMENT_DOWNLOAD",
+              "USER_CREATE",
+              "USER_LOGIN",
+            ],
+          },
         },
         include: {
           document: {
             select: {
               name: true,
               type: true,
-              size: true
-            }
+              size: true,
+            },
           },
           user: {
             select: {
               name: true,
-              email: true
-            }
-          }
+              email: true,
+            },
+          },
         },
         orderBy: {
-          createdAt: 'desc'
+          createdAt: "desc",
         },
-        take: limit
+        take: limit,
       });
 
       // Transformer les logs en activités
-      const activities: ActivityData[] = logs.map(log => ({
+      const activities: ActivityData[] = logs.map((log) => ({
         id: log.id,
         type: this.mapActionToActivityType(log.action),
-        document: log.document?.name || log.user?.name || 'Activité système',
-        documentId: log.documentId || '',
-        userId: log.userId || '',
+        document: log.document?.name || log.user?.name || "Activité système",
+        documentId: log.documentId || "",
+        userId: log.userId || "",
         date: log.createdAt.toISOString(),
         details: {
           action: log.action,
           entity: log.entity,
           ipAddress: log.ipAddress,
           userAgent: log.userAgent,
-          user: log.user ? {
-            name: log.user.name,
-            email: log.user.email
-          } : null,
-          documentDetails: log.document ? {
-            type: log.document.type,
-            size: log.document.size
-          } : null,
-          additionalDetails: log.details
-        }
+          user: log.user
+            ? {
+                name: log.user.name,
+                email: log.user.email,
+              }
+            : null,
+          documentDetails: log.document
+            ? {
+                type: log.document.type,
+                size: log.document.size,
+              }
+            : null,
+          additionalDetails: log.details,
+        },
       }));
 
       return activities;
     } catch (error) {
-      console.error('Erreur lors de la récupération des activités globales:', error);
-      throw new Error('Impossible de récupérer les activités globales');
+      console.error("Erreur lors de la récupération des activités globales:", error);
+      throw new Error("Impossible de récupérer les activités globales");
     }
   }
 
@@ -151,18 +157,18 @@ export class ActivityService {
    */
   private mapActionToActivityType(action: string): string {
     const actionMap: Record<string, string> = {
-      'DOCUMENT_CREATE': 'create',
-      'DOCUMENT_UPDATE': 'edit',
-      'DOCUMENT_UPLOAD': 'upload',
-      'DOCUMENT_DOWNLOAD': 'download',
-      'DOCUMENT_FAVORITE': 'favorite',
-      'DOCUMENT_UNFAVORITE': 'unfavorite',
-      'USER_CREATE': 'signup',
-      'USER_LOGIN': 'login',
-      'USER_UPDATE': 'profile_update'
+      DOCUMENT_CREATE: "create",
+      DOCUMENT_UPDATE: "edit",
+      DOCUMENT_UPLOAD: "upload",
+      DOCUMENT_DOWNLOAD: "download",
+      DOCUMENT_FAVORITE: "favorite",
+      DOCUMENT_UNFAVORITE: "unfavorite",
+      USER_CREATE: "signup",
+      USER_LOGIN: "login",
+      USER_UPDATE: "profile_update",
     };
 
-    return actionMap[action] || 'activity';
+    return actionMap[action] || "activity";
   }
 
   /**
@@ -175,21 +181,21 @@ export class ActivityService {
           userId: userId,
           action: {
             in: [
-              'DOCUMENT_CREATE',
-              'DOCUMENT_UPDATE', 
-              'DOCUMENT_UPLOAD',
-              'DOCUMENT_DOWNLOAD',
-              'DOCUMENT_FAVORITE',
-              'DOCUMENT_UNFAVORITE'
-            ]
+              "DOCUMENT_CREATE",
+              "DOCUMENT_UPDATE",
+              "DOCUMENT_UPLOAD",
+              "DOCUMENT_DOWNLOAD",
+              "DOCUMENT_FAVORITE",
+              "DOCUMENT_UNFAVORITE",
+            ],
           },
           createdAt: {
-            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 derniers jours
-          }
-        }
+            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 derniers jours
+          },
+        },
       });
     } catch (error) {
-      console.error('Erreur lors du comptage des activités récentes:', error);
+      console.error("Erreur lors du comptage des activités récentes:", error);
       return 0;
     }
   }

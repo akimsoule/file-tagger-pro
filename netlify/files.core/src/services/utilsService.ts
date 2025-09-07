@@ -1,5 +1,6 @@
-import { LogService } from './logService';
-import crypto from 'crypto';
+import crypto from "crypto";
+
+import { LogService } from "./logService";
 
 export interface FileValidationResult {
   isValid: boolean;
@@ -26,7 +27,7 @@ export interface FileInfo {
 }
 
 export interface SystemHealth {
-  status: 'healthy' | 'warning' | 'critical';
+  status: "healthy" | "warning" | "critical";
   checks: {
     database: boolean;
     storage: boolean;
@@ -45,29 +46,29 @@ export class UtilsService {
 
   // Types MIME autorisés
   private readonly ALLOWED_MIME_TYPES = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'image/svg+xml',
-    'text/plain',
-    'text/csv',
-    'application/zip',
-    'application/x-rar-compressed',
-    'application/json',
-    'video/mp4',
-    'video/avi',
-    'video/quicktime',
-    'audio/mpeg',
-    'audio/wav',
-    'audio/ogg',
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/svg+xml",
+    "text/plain",
+    "text/csv",
+    "application/zip",
+    "application/x-rar-compressed",
+    "application/json",
+    "video/mp4",
+    "video/avi",
+    "video/quicktime",
+    "audio/mpeg",
+    "audio/wav",
+    "audio/ogg",
   ];
 
   // Taille maximale autorisée (100 MB)
@@ -83,19 +84,19 @@ export class UtilsService {
   validateFile(fileName: string, buffer: Buffer, mimeType: string): FileValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
-    
+
     // Validation du nom de fichier
     if (!fileName || fileName.trim().length === 0) {
-      errors.push('Nom de fichier invalide');
+      errors.push("Nom de fichier invalide");
     }
 
     if (fileName.length > 255) {
-      errors.push('Nom de fichier trop long (max 255 caractères)');
+      errors.push("Nom de fichier trop long (max 255 caractères)");
     }
 
     // Validation de la taille
     if (buffer.length === 0) {
-      errors.push('Fichier vide');
+      errors.push("Fichier vide");
     }
 
     if (buffer.length > this.MAX_FILE_SIZE) {
@@ -108,7 +109,7 @@ export class UtilsService {
     }
 
     // Calcul du hash
-    const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+    const hash = crypto.createHash("sha256").update(buffer).digest("hex");
 
     // Détection du type de fichier réel
     const detectedType = this.detectFileType(buffer);
@@ -139,7 +140,7 @@ export class UtilsService {
    */
   getFileInfo(fileName: string, buffer: Buffer, mimeType: string): FileInfo {
     const extension = this.getFileExtension(fileName);
-    const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+    const hash = crypto.createHash("sha256").update(buffer).digest("hex");
 
     return {
       name: fileName,
@@ -160,12 +161,12 @@ export class UtilsService {
    * Formate une taille de fichier en unités lisibles
    */
   formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    if (bytes === 0) return "0 B";
+
+    const units = ["B", "KB", "MB", "GB", "TB"];
     const k = 1024;
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${units[i]}`;
   }
 
@@ -174,10 +175,10 @@ export class UtilsService {
    */
   generateUniqueFileName(originalName: string): string {
     const extension = this.getFileExtension(originalName);
-    const nameWithoutExt = originalName.replace(/\.[^/.]+$/, '');
+    const nameWithoutExt = originalName.replace(/\.[^/.]+$/, "");
     const timestamp = Date.now();
-    const random = crypto.randomBytes(4).toString('hex');
-    
+    const random = crypto.randomBytes(4).toString("hex");
+
     return `${nameWithoutExt}_${timestamp}_${random}.${extension}`;
   }
 
@@ -186,9 +187,9 @@ export class UtilsService {
    */
   sanitizeFileName(fileName: string): string {
     return fileName
-      .replace(/[^a-zA-Z0-9.\-_]/g, '_') // Remplace les caractères non autorisés
-      .replace(/_{2,}/g, '_') // Remplace les underscores multiples
-      .replace(/^_+|_+$/g, '') // Supprime les underscores en début/fin
+      .replace(/[^a-zA-Z0-9.\-_]/g, "_") // Remplace les caractères non autorisés
+      .replace(/_{2,}/g, "_") // Remplace les underscores multiples
+      .replace(/^_+|_+$/g, "") // Supprime les underscores en début/fin
       .substring(0, 255); // Limite la longueur
   }
 
@@ -197,7 +198,7 @@ export class UtilsService {
    */
   private getFileExtension(fileName: string): string {
     const match = fileName.match(/\.([^.]+)$/);
-    return match ? match[1].toLowerCase() : '';
+    return match ? match[1].toLowerCase() : "";
   }
 
   /**
@@ -205,30 +206,30 @@ export class UtilsService {
    */
   private getMimeTypeFromExtension(extension: string): string | null {
     const mimeTypes: Record<string, string> = {
-      'pdf': 'application/pdf',
-      'doc': 'application/msword',
-      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'xls': 'application/vnd.ms-excel',
-      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'ppt': 'application/vnd.ms-powerpoint',
-      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'png': 'image/png',
-      'gif': 'image/gif',
-      'webp': 'image/webp',
-      'svg': 'image/svg+xml',
-      'txt': 'text/plain',
-      'csv': 'text/csv',
-      'zip': 'application/zip',
-      'rar': 'application/x-rar-compressed',
-      'json': 'application/json',
-      'mp4': 'video/mp4',
-      'avi': 'video/avi',
-      'mov': 'video/quicktime',
-      'mp3': 'audio/mpeg',
-      'wav': 'audio/wav',
-      'ogg': 'audio/ogg',
+      pdf: "application/pdf",
+      doc: "application/msword",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xls: "application/vnd.ms-excel",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ppt: "application/vnd.ms-powerpoint",
+      pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      gif: "image/gif",
+      webp: "image/webp",
+      svg: "image/svg+xml",
+      txt: "text/plain",
+      csv: "text/csv",
+      zip: "application/zip",
+      rar: "application/x-rar-compressed",
+      json: "application/json",
+      mp4: "video/mp4",
+      avi: "video/avi",
+      mov: "video/quicktime",
+      mp3: "audio/mpeg",
+      wav: "audio/wav",
+      ogg: "audio/ogg",
     };
 
     return mimeTypes[extension] || null;
@@ -239,14 +240,14 @@ export class UtilsService {
    */
   private detectFileType(buffer: Buffer): string {
     // Signatures de fichiers (magic numbers)
-    const signatures: Array<{ signature: number[], mimeType: string }> = [
-      { signature: [0x25, 0x50, 0x44, 0x46], mimeType: 'application/pdf' }, // PDF
-      { signature: [0xFF, 0xD8, 0xFF], mimeType: 'image/jpeg' }, // JPEG
-      { signature: [0x89, 0x50, 0x4E, 0x47], mimeType: 'image/png' }, // PNG
-      { signature: [0x47, 0x49, 0x46], mimeType: 'image/gif' }, // GIF
-      { signature: [0x50, 0x4B, 0x03, 0x04], mimeType: 'application/zip' }, // ZIP
-      { signature: [0x50, 0x4B, 0x05, 0x06], mimeType: 'application/zip' }, // ZIP
-      { signature: [0x52, 0x61, 0x72, 0x21], mimeType: 'application/x-rar-compressed' }, // RAR
+    const signatures: Array<{ signature: number[]; mimeType: string }> = [
+      { signature: [0x25, 0x50, 0x44, 0x46], mimeType: "application/pdf" }, // PDF
+      { signature: [0xff, 0xd8, 0xff], mimeType: "image/jpeg" }, // JPEG
+      { signature: [0x89, 0x50, 0x4e, 0x47], mimeType: "image/png" }, // PNG
+      { signature: [0x47, 0x49, 0x46], mimeType: "image/gif" }, // GIF
+      { signature: [0x50, 0x4b, 0x03, 0x04], mimeType: "application/zip" }, // ZIP
+      { signature: [0x50, 0x4b, 0x05, 0x06], mimeType: "application/zip" }, // ZIP
+      { signature: [0x52, 0x61, 0x72, 0x21], mimeType: "application/x-rar-compressed" }, // RAR
     ];
 
     for (const { signature, mimeType } of signatures) {
@@ -258,14 +259,14 @@ export class UtilsService {
       }
     }
 
-    return 'application/octet-stream';
+    return "application/octet-stream";
   }
 
   /**
    * Vérifie si le fichier est une image
    */
   private isImageFile(mimeType: string): boolean {
-    return mimeType.startsWith('image/');
+    return mimeType.startsWith("image/");
   }
 
   /**
@@ -273,15 +274,15 @@ export class UtilsService {
    */
   private isDocumentFile(mimeType: string): boolean {
     const documentTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-powerpoint',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'text/plain',
-      'text/csv',
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "text/plain",
+      "text/csv",
     ];
     return documentTypes.includes(mimeType);
   }
@@ -290,14 +291,14 @@ export class UtilsService {
    * Vérifie si le fichier est une vidéo
    */
   private isVideoFile(mimeType: string): boolean {
-    return mimeType.startsWith('video/');
+    return mimeType.startsWith("video/");
   }
 
   /**
    * Vérifie si le fichier est un audio
    */
   private isAudioFile(mimeType: string): boolean {
-    return mimeType.startsWith('audio/');
+    return mimeType.startsWith("audio/");
   }
 
   /**
@@ -305,10 +306,10 @@ export class UtilsService {
    */
   private isArchiveFile(mimeType: string): boolean {
     const archiveTypes = [
-      'application/zip',
-      'application/x-rar-compressed',
-      'application/x-tar',
-      'application/gzip',
+      "application/zip",
+      "application/x-rar-compressed",
+      "application/x-tar",
+      "application/gzip",
     ];
     return archiveTypes.includes(mimeType);
   }
@@ -319,22 +320,26 @@ export class UtilsService {
   generateTemporaryToken(data: Record<string, unknown>, expirationHours: number = 1): string {
     const payload = {
       data,
-      exp: Date.now() + (expirationHours * 60 * 60 * 1000),
+      exp: Date.now() + expirationHours * 60 * 60 * 1000,
     };
-    return Buffer.from(JSON.stringify(payload)).toString('base64');
+    return Buffer.from(JSON.stringify(payload)).toString("base64");
   }
 
   /**
    * Valide un token d'accès temporaire
    */
-  validateTemporaryToken(token: string): { valid: boolean; data?: Record<string, unknown>; expired?: boolean } {
+  validateTemporaryToken(token: string): {
+    valid: boolean;
+    data?: Record<string, unknown>;
+    expired?: boolean;
+  } {
     try {
-      const payload = JSON.parse(Buffer.from(token, 'base64').toString());
-      
+      const payload = JSON.parse(Buffer.from(token, "base64").toString());
+
       if (Date.now() > payload.exp) {
         return { valid: false, expired: true };
       }
-      
+
       return { valid: true, data: payload.data };
     } catch {
       return { valid: false };
@@ -346,7 +351,7 @@ export class UtilsService {
    */
   async checkSystemHealth(): Promise<SystemHealth> {
     const startTime = Date.now();
-    
+
     const checks = {
       database: true,
       storage: true,
@@ -378,9 +383,9 @@ export class UtilsService {
 
     const responseTime = Date.now() - startTime;
     const allChecksPass = Object.values(checks).every(Boolean);
-    
+
     return {
-      status: allChecksPass ? 'healthy' : 'warning',
+      status: allChecksPass ? "healthy" : "warning",
       checks,
       performance: {
         responseTime,
@@ -393,8 +398,8 @@ export class UtilsService {
    * Génère un identifiant court pour les documents
    */
   generateShortId(length: number = 8): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let result = "";
     for (let i = 0; i < length; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
@@ -406,12 +411,12 @@ export class UtilsService {
    */
   slugify(text: string): string {
     return text
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // Supprime les accents
       .toLowerCase()
-      .replace(/[^a-z0-9 -]/g, '') // Supprime les caractères spéciaux
-      .replace(/\s+/g, '-') // Remplace les espaces par des tirets
-      .replace(/-+/g, '-') // Supprime les tirets multiples
+      .replace(/[^a-z0-9 -]/g, "") // Supprime les caractères spéciaux
+      .replace(/\s+/g, "-") // Remplace les espaces par des tirets
+      .replace(/-+/g, "-") // Supprime les tirets multiples
       .trim();
   }
 
@@ -422,7 +427,9 @@ export class UtilsService {
     if (str1.length === 0) return str2.length;
     if (str2.length === 0) return str1.length;
 
-    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+    const matrix = Array(str2.length + 1)
+      .fill(null)
+      .map(() => Array(str1.length + 1).fill(null));
 
     for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
     for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
@@ -433,7 +440,7 @@ export class UtilsService {
         matrix[j][i] = Math.min(
           matrix[j][i - 1] + 1, // Deletion
           matrix[j - 1][i] + 1, // Insertion
-          matrix[j - 1][i - 1] + indicator // Substitution
+          matrix[j - 1][i - 1] + indicator, // Substitution
         );
       }
     }

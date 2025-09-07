@@ -1,8 +1,10 @@
-import React from 'react';
-import { ChevronRight, Home, FolderIcon } from 'lucide-react';
-import { Button } from './ui/button';
-import { useFileContext } from '@/hooks/useFileContext';
-import { FileTreeNode } from '@/logic/local/FileTreeNode';
+import { ChevronRight, FolderIcon, Home } from "lucide-react";
+import React from "react";
+
+import { useFileContext } from "@/hooks/useFileContext";
+import { FileTreeNode } from "@/logic/local/FileTreeNode";
+
+import { Button } from "./ui/button";
 
 export function Breadcrumb() {
   const { currentNode, setCurrentNode } = useFileContext();
@@ -19,15 +21,17 @@ export function Breadcrumb() {
     }
   }
   // On exclut explicitement le nœud racine interne (id 'root') pour ne pas l'afficher (le bouton Home suffit)
-  const fullPath: (FileTreeNode | { id: string; name: string })[] = fullPathRaw.filter(n => (n as FileTreeNode).id !== 'root');
+  const fullPath: (FileTreeNode | { id: string; name: string })[] = fullPathRaw.filter(
+    (n) => (n as FileTreeNode).id !== "root",
+  );
 
   const showFullPath = fullPath.length <= 2;
   const visiblePath = showFullPath
     ? fullPath
     : [
         ...(fullPath.length > 0 ? [fullPath[0]] : []),
-        ...(fullPath.length > 2 ? [{ id: 'ellipsis', name: '...' }] : []),
-        ...(fullPath.length > 1 ? [fullPath[fullPath.length - 1]] : [])
+        ...(fullPath.length > 2 ? [{ id: "ellipsis", name: "..." }] : []),
+        ...(fullPath.length > 1 ? [fullPath[fullPath.length - 1]] : []),
       ];
 
   const handleNavigate = (nodeId: string | null) => {
@@ -36,7 +40,7 @@ export function Breadcrumb() {
       return;
     }
     // On recherche dans fullPathRaw (inclut root) au lieu de path ancien
-    const target = fullPathRaw.find(n => n.id === nodeId) || null;
+    const target = fullPathRaw.find((n) => n.id === nodeId) || null;
     setCurrentNode(target);
   };
 
@@ -51,12 +55,12 @@ export function Breadcrumb() {
       >
         <Home className="h-4 w-4" />
       </Button>
-  {visiblePath.length > 0 && (
+      {visiblePath.length > 0 && (
         <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/50" />
       )}
       {visiblePath.map((folder, index) => (
         <React.Fragment key={folder.id}>
-          {folder.id === 'ellipsis' ? (
+          {folder.id === "ellipsis" ? (
             <span className="flex-shrink-0 px-1">{folder.name}</span>
           ) : (
             <Button

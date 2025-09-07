@@ -1,15 +1,16 @@
-import { Context } from '@netlify/functions';
-import { TagService } from '../files.core/src/services/tagService';
-import { LogService } from '../files.core/src/services/logService';
+import { Context } from "@netlify/functions";
+
+import { LogService } from "../files.core/src/services/logService";
+import { TagService } from "../files.core/src/services/tagService";
 import {
-  handleCorsOptions,
-  requireAuth,
   createErrorResponse,
   createSuccessResponse,
-  validateHttpMethod,
   extractResourceId,
-  handleErrors
-} from './shared/middleware.mts';
+  handleCorsOptions,
+  handleErrors,
+  requireAuth,
+  validateHttpMethod,
+} from "./shared/middleware.mts";
 
 // Initialisation des services
 const logService = new LogService();
@@ -17,12 +18,12 @@ const tagService = new TagService(logService);
 
 export default handleErrors(async (request: Request, context: Context) => {
   // Gestion CORS
-  if (request.method === 'OPTIONS') {
+  if (request.method === "OPTIONS") {
     return handleCorsOptions();
   }
 
   // Validation de la méthode HTTP
-  const methodValidation = validateHttpMethod(request, ['GET', 'DELETE']);
+  const methodValidation = validateHttpMethod(request, ["GET", "DELETE"]);
   if (!methodValidation.success) {
     return methodValidation.response!;
   }
@@ -35,26 +36,26 @@ export default handleErrors(async (request: Request, context: Context) => {
 
   const user = authResult.context!.user! as AuthUser;
   const url = new URL(request.url);
-  const tagName = extractResourceId(url, 'tags');
+  const tagName = extractResourceId(url, "tags");
 
   switch (request.method) {
-    case 'GET':
+    case "GET":
       if (tagName) {
         return await handleTagStats(tagName, user.userId);
       } else {
-        const searchQuery = url.searchParams.get('q') || url.searchParams.get('search');
+        const searchQuery = url.searchParams.get("q") || url.searchParams.get("search");
         return await handleListTags(searchQuery, user.userId);
       }
 
-    case 'DELETE':
+    case "DELETE":
       if (tagName) {
         return await handleDeleteTag(tagName, user);
       } else {
-        return createErrorResponse('Nom du tag requis pour la suppression', 400);
+        return createErrorResponse("Nom du tag requis pour la suppression", 400);
       }
 
     default:
-      return createErrorResponse('Méthode non autorisée', 405);
+      return createErrorResponse("Méthode non autorisée", 405);
   }
 });
 
@@ -63,48 +64,50 @@ export default handleErrors(async (request: Request, context: Context) => {
 async function handleListTags(searchQuery: string | null | undefined, userId: string) {
   try {
     let tags;
-    
+
     if (searchQuery && searchQuery.trim()) {
       tags = await tagService.searchTags(searchQuery.trim(), userId);
     } else {
       tags = await tagService.getAllTags(userId);
     }
-    
+
     return createSuccessResponse(tags);
   } catch (error) {
-    console.error('Erreur lors de la récupération des tags:', error);
-    return createErrorResponse('Erreur lors de la récupération des tags', 500);
+    console.error("Erreur lors de la récupération des tags:", error);
+    return createErrorResponse("Erreur lors de la récupération des tags", 500);
   }
 }
 
 async function handleTagStats(tagName: string, userId: string) {
   try {
-  const allTags = await tagService.getAllTags(userId);
-    const specificTag = allTags.find(t => t.name === tagName);
-    
+    const allTags = await tagService.getAllTags(userId);
+    const specificTag = allTags.find((t) => t.name === tagName);
+
     if (!specificTag) {
-      return createErrorResponse('Tag non trouvé', 404);
+      return createErrorResponse("Tag non trouvé", 404);
     }
-    
+
     return createSuccessResponse(specificTag);
   } catch (error) {
-    console.error('Erreur lors de la récupération des statistiques du tag:', error);
-    return createErrorResponse('Erreur lors de la récupération des statistiques du tag', 500);
+    console.error("Erreur lors de la récupération des statistiques du tag:", error);
+    return createErrorResponse("Erreur lors de la récupération des statistiques du tag", 500);
   }
 }
 
-interface AuthUser { userId: string }
+interface AuthUser {
+  userId: string;
+}
 
 async function handleDeleteTag(tagName: string, user: AuthUser) {
   try {
-  const updatedCount = await tagService.deleteTag(tagName, user.userId);
-    
+    const updatedCount = await tagService.deleteTag(tagName, user.userId);
+
     return createSuccessResponse({
       message: `Tag "${tagName}" supprimé avec succès`,
-      updatedDocuments: updatedCount
+      updatedDocuments: updatedCount,
     });
   } catch (error) {
-  console.error('[tags] Erreur suppression tag:', error);
-    return createErrorResponse('Erreur lors de la suppression du tag', 500);
+    console.error("[tags] Erreur suppression tag:", error);
+    return createErrorResponse("Erreur lors de la suppression du tag", 500);
   }
 }

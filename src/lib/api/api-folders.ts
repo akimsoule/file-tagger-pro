@@ -1,6 +1,5 @@
 import { api } from "./api";
 
-
 export interface FolderDTO {
   id: string;
   name: string;
@@ -29,20 +28,37 @@ export function getFolder(id: string) {
   return api<FolderDTO>(`/folders/${id}`, { auth: true });
 }
 
-export function createFolder(data: { name: string; description?: string; color?: string; parentId?: string; tags?: string }) {
-  return api<FolderDTO>(`/folders`, { method: 'POST', body: JSON.stringify(data), auth: true });
+export function createFolder(data: {
+  name: string;
+  description?: string;
+  color?: string;
+  parentId?: string;
+  tags?: string;
+}) {
+  return api<FolderDTO>(`/folders`, { method: "POST", body: JSON.stringify(data), auth: true });
 }
 
-export function updateFolder(id: string, data: Partial<Pick<FolderDTO,'name'|'description'|'color'|'parentId'|'tags'>>) {
-  return api<FolderDTO>(`/folders/${id}`, { method: 'PUT', body: JSON.stringify(data), auth: true });
+export function updateFolder(
+  id: string,
+  data: Partial<Pick<FolderDTO, "name" | "description" | "color" | "parentId" | "tags">>,
+) {
+  return api<FolderDTO>(`/folders/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+    auth: true,
+  });
 }
 
 export function deleteFolder(id: string) {
-  return api<{ message: string }>(`/folders/${id}`, { method: 'DELETE', auth: true });
+  return api<{ message: string }>(`/folders/${id}`, { method: "DELETE", auth: true });
 }
 
 export function moveDocument(documentId: string, folderId?: string) {
-  return api(`/folders/move-document`, { method: 'POST', body: JSON.stringify({ documentId, folderId }), auth: true });
+  return api(`/folders/move-document`, {
+    method: "POST",
+    body: JSON.stringify({ documentId, folderId }),
+    auth: true,
+  });
 }
 
 export function getFolderPath(id: string) {

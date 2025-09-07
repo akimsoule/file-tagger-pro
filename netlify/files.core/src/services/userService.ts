@@ -1,6 +1,7 @@
-import bcrypt from 'bcryptjs';
-import { LogService } from './logService';
-import prisma from './database';
+import bcrypt from "bcryptjs";
+
+import prisma from "./database";
+import { LogService } from "./logService";
 
 export interface CreateUserData {
   email: string;
@@ -15,7 +16,6 @@ export interface UpdateUserData {
 }
 
 export class UserService {
-
   private logService: LogService;
 
   constructor(logService: LogService) {
@@ -24,11 +24,11 @@ export class UserService {
 
   async createUser(data: CreateUserData) {
     const existingUser = await prisma.user.findUnique({
-      where: { email: data.email.toLowerCase() }
+      where: { email: data.email.toLowerCase() },
     });
 
     if (existingUser) {
-      throw new Error('Un utilisateur avec cet email existe déjà');
+      throw new Error("Un utilisateur avec cet email existe déjà");
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -45,34 +45,35 @@ export class UserService {
         name: true,
         createdAt: true,
         updatedAt: true,
-      }
+      },
     });
 
-    // Créer le dossier root logique pour cet utilisateur (non affiché dans la liste) 
-    await (prisma as any).folder.create({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    // Créer le dossier root logique pour cet utilisateur (non affiché dans la liste)
+    await (prisma as any).folder.create({
+      // eslint-disable-line @typescript-eslint/no-explicit-any
       data: {
-        name: 'root',
-        description: 'Dossier racine',
-        color: '#000000',
+        name: "root",
+        description: "Dossier racine",
+        color: "#000000",
         ownerId: user.id,
         isRoot: true,
-      }
+      },
     });
 
     await this.logService.log({
-      action: 'USER_CREATE',
-      entity: 'USER',
+      action: "USER_CREATE",
+      entity: "USER",
       entityId: user.id,
       userId: user.id,
       details: `Utilisateur créé: ${user.email}`,
     });
 
     await this.logService.log({
-      action: 'CREATE',
-      entity: 'FOLDER',
+      action: "CREATE",
+      entity: "FOLDER",
       entityId: user.id, // référence implicite root (pas idéal mais suffisant pour log)
       userId: user.id,
-      details: 'Dossier root initialisé'
+      details: "Dossier root initialisé",
     });
 
     return user;
@@ -94,9 +95,9 @@ export class UserService {
             type: true,
             size: true,
             createdAt: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
   }
 
@@ -110,7 +111,7 @@ export class UserService {
         passwordHash: true,
         createdAt: true,
         updatedAt: true,
-      }
+      },
     });
   }
 
@@ -125,15 +126,15 @@ export class UserService {
         createdAt: true,
         updatedAt: true,
         _count: {
-          select: { documents: true }
-        }
+          select: { documents: true },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
   }
 
   async updateUser(id: string, data: UpdateUserData) {
-  const updateData: Partial<{ name: string; email: string; passwordHash: string }> = {};
+    const updateData: Partial<{ name: string; email: string; passwordHash: string }> = {};
 
     if (data.name) updateData.name = data.name;
     if (data.email) updateData.email = data.email;
@@ -148,15 +149,15 @@ export class UserService {
         name: true,
         createdAt: true,
         updatedAt: true,
-      }
+      },
     });
 
     await this.logService.log({
-      action: 'USER_UPDATE',
-      entity: 'USER',
+      action: "USER_UPDATE",
+      entity: "USER",
       entityId: id,
       userId: id,
-      details: `Utilisateur mis à jour: ${Object.keys(updateData).join(', ')}`,
+      details: `Utilisateur mis à jour: ${Object.keys(updateData).join(", ")}`,
     });
 
     return user;
@@ -165,32 +166,32 @@ export class UserService {
   async deleteUser(id: string) {
     const user = await prisma.user.findUnique({
       where: { id },
-      include: { documents: true }
+      include: { documents: true },
     });
 
     if (!user) {
-      throw new Error('Utilisateur non trouvé');
+      throw new Error("Utilisateur non trouvé");
     }
 
     // Enregistrer le log AVANT la suppression pour éviter les violations de contrainte
     await this.logService.log({
-      action: 'USER_DELETE',
-      entity: 'USER',
+      action: "USER_DELETE",
+      entity: "USER",
       entityId: id,
       details: `Utilisateur supprimé: ${user.email} (${user.documents.length} documents supprimés)`,
     });
 
     // Suppression des documents associés
     await prisma.document.deleteMany({
-      where: { ownerId: id }
+      where: { ownerId: id },
     });
 
     // Suppression de l'utilisateur
     await prisma.user.delete({
-      where: { id }
+      where: { id },
     });
 
-    return { message: 'Utilisateur et ses documents supprimés avec succès' };
+    return { message: "Utilisateur et ses documents supprimés avec succès" };
   }
 
   async verifyPassword(email: string, password: string) {
@@ -201,8 +202,8 @@ export class UserService {
     if (!isValid) return null;
 
     await this.logService.log({
-      action: 'USER_LOGIN',
-      entity: 'USER',
+      action: "USER_LOGIN",
+      entity: "USER",
       entityId: user.id,
       userId: user.id,
       details: `Connexion réussie: ${user.email}`,

@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api } from "./api";
 
 export interface TagDTO {
   name: string;
@@ -17,5 +17,8 @@ export function getTag(name: string) {
 }
 
 export function deleteTag(name: string) {
-  return api<{ message: string; updatedDocuments: number }>(`/tags/${encodeURIComponent(name)}`, { method: 'DELETE', auth: true });
+  return api<{ message: string; updatedDocuments: number }>(`/tags/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+    auth: true,
+  });
 }

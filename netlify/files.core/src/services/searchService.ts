@@ -1,5 +1,5 @@
-import prisma from './database';
-import { LogService } from './logService';
+import prisma from "./database";
+import { LogService } from "./logService";
 
 export interface SearchFilters {
   query?: string;
@@ -13,8 +13,8 @@ export interface SearchFilters {
   sizeMin?: number;
   sizeMax?: number;
   isFavorite?: boolean;
-  sortBy?: 'name' | 'date' | 'size' | 'relevance';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "name" | "date" | "size" | "relevance";
+  sortOrder?: "asc" | "desc";
   limit?: number;
   offset?: number;
 }
@@ -46,7 +46,7 @@ export interface SearchResult {
 }
 
 export interface SearchSuggestion {
-  type: 'document' | 'tag' | 'user';
+  type: "document" | "tag" | "user";
   value: string;
   count: number;
 }
@@ -69,7 +69,7 @@ export class SearchService {
    */
   async searchDocuments(filters: SearchFilters, userId?: string): Promise<SearchResult> {
     const startTime = Date.now();
-    
+
     const {
       query,
       tags,
@@ -82,37 +82,37 @@ export class SearchService {
       sizeMin,
       sizeMax,
       isFavorite,
-      sortBy = 'relevance',
-      sortOrder = 'desc',
+      sortBy = "relevance",
+      sortOrder = "desc",
       limit = 20,
       offset = 0,
     } = filters;
 
-    const where: import('@prisma/client').Prisma.DocumentWhereInput = {};
+    const where: import("@prisma/client").Prisma.DocumentWhereInput = {};
 
     // Recherche textuelle dans le nom et la description
     if (query) {
       where.OR = [
-        { name: { contains: query, mode: 'insensitive' as const } },
-        { description: { contains: query, mode: 'insensitive' as const } },
-        { tags: { contains: query, mode: 'insensitive' as const } },
+        { name: { contains: query, mode: "insensitive" as const } },
+        { description: { contains: query, mode: "insensitive" as const } },
+        { tags: { contains: query, mode: "insensitive" as const } },
       ];
     }
 
     // Filtres spécifiques
     if (tag) {
-      where.tags = { contains: tag, mode: 'insensitive' as const };
+      where.tags = { contains: tag, mode: "insensitive" as const };
     } else if (tags && tags.length > 0) {
-      where.AND = tags.map(t => ({
-        tags: { contains: t, mode: 'insensitive' as const }
+      where.AND = tags.map((t) => ({
+        tags: { contains: t, mode: "insensitive" as const },
       }));
     } else {
       // PAR DÉFAUT : exclure les documents archivés si aucun tag spécifique n'est demandé
       where.NOT = {
-        tags: { contains: "archived" }
+        tags: { contains: "archived" },
       };
     }
-    
+
     if (type) where.type = type;
     if (ownerId) where.ownerId = ownerId;
     if (isFavorite !== undefined) where.isFavorite = isFavorite;
@@ -133,14 +133,16 @@ export class SearchService {
 
     // Filtre par email du propriétaire
     if (ownerEmail) {
-      where.owner = { email: { equals: ownerEmail, mode: 'insensitive' as const } };
+      where.owner = { email: { equals: ownerEmail, mode: "insensitive" as const } };
     }
 
     // Ordre de tri
-    let orderBy: import('@prisma/client').Prisma.DocumentOrderByWithRelationInput = { createdAt: 'desc' };
-    if (sortBy === 'name') orderBy = { name: sortOrder };
-    else if (sortBy === 'date') orderBy = { createdAt: sortOrder };
-    else if (sortBy === 'size') orderBy = { size: sortOrder };
+    let orderBy: import("@prisma/client").Prisma.DocumentOrderByWithRelationInput = {
+      createdAt: "desc",
+    };
+    if (sortBy === "name") orderBy = { name: sortOrder };
+    else if (sortBy === "date") orderBy = { createdAt: sortOrder };
+    else if (sortBy === "size") orderBy = { size: sortOrder };
     // Note: le tri par category a été supprimé car cette propriété n'existe plus
 
     // Exécution de la recherche
@@ -168,11 +170,11 @@ export class SearchService {
     // Log de la recherche
     if (userId) {
       await this.logService.log({
-        action: 'SEARCH_PERFORM',
-        entity: 'SYSTEM',
-        entityId: 'search',
+        action: "SEARCH_PERFORM",
+        entity: "SYSTEM",
+        entityId: "search",
         userId,
-        details: `Recherche: "${query || 'filtres avancés'}" - ${totalCount} résultats en ${searchTime}ms`,
+        details: `Recherche: "${query || "filtres avancés"}" - ${totalCount} résultats en ${searchTime}ms`,
       });
     }
 
@@ -193,7 +195,7 @@ export class SearchService {
       where: {
         name: {
           contains: query,
-          mode: 'insensitive' as const,
+          mode: "insensitive" as const,
         },
       },
       include: {
@@ -206,14 +208,14 @@ export class SearchService {
         },
       },
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     if (userId) {
       await this.logService.log({
-        action: 'SEARCH_PERFORM',
-        entity: 'SYSTEM',
-        entityId: 'quick-search',
+        action: "SEARCH_PERFORM",
+        entity: "SYSTEM",
+        entityId: "quick-search",
         userId,
         details: `Recherche rapide: "${query}" - ${documents.length} résultats`,
       });
@@ -228,27 +230,34 @@ export class SearchService {
   async findSimilarDocuments(documentId: string, limit: number = 5) {
     const document = await prisma.document.findUnique({
       where: { id: documentId },
-      select: { 
-        tags: true, 
+      select: {
+        tags: true,
         type: true,
         ownerId: true,
       },
     });
 
     if (!document) {
-      throw new Error('Document non trouvé');
+      throw new Error("Document non trouvé");
     }
 
-    const tags = document.tags ? document.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
-    
+    const tags = document.tags
+      ? document.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [];
+
     const similar = await prisma.document.findMany({
       where: {
         id: { not: documentId },
         OR: [
           { type: document.type },
-          ...(tags.length > 0 ? tags.map(tag => ({
-            tags: { contains: tag, mode: 'insensitive' as const }
-          })) : []),
+          ...(tags.length > 0
+            ? tags.map((tag) => ({
+                tags: { contains: tag, mode: "insensitive" as const },
+              }))
+            : []),
         ],
       },
       include: {
@@ -261,7 +270,7 @@ export class SearchService {
         },
       },
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     return similar;
@@ -280,16 +289,16 @@ export class SearchService {
       where: {
         name: {
           contains: query,
-          mode: 'insensitive' as const,
+          mode: "insensitive" as const,
         },
       },
       select: { name: true },
       take: 10,
     });
 
-    documents.forEach(doc => {
+    documents.forEach((doc) => {
       const words = doc.name.toLowerCase().split(/\s+/);
-      words.forEach(word => {
+      words.forEach((word) => {
         if (word.includes(query.toLowerCase()) && word.length > query.length) {
           suggestions.add(word);
         }
@@ -302,16 +311,16 @@ export class SearchService {
       where: {
         tags: {
           contains: query,
-          mode: 'insensitive' as const,
+          mode: "insensitive" as const,
         },
       },
       take: 20,
     });
 
-    allDocuments.forEach(doc => {
+    allDocuments.forEach((doc) => {
       if (doc.tags) {
-        const tags = doc.tags.split(',').map(t => t.trim());
-        tags.forEach(tag => {
+        const tags = doc.tags.split(",").map((t) => t.trim());
+        tags.forEach((tag) => {
           if (tag.toLowerCase().includes(query.toLowerCase()) && tag.length > query.length) {
             suggestions.add(tag);
           }
@@ -328,34 +337,34 @@ export class SearchService {
   async getSearchSuggestions(query: string, type?: string): Promise<SearchSuggestion[]> {
     const suggestions: SearchSuggestion[] = [];
 
-    if (!type || type === 'document') {
+    if (!type || type === "document") {
       const documents = await prisma.document.findMany({
         where: {
           name: {
             contains: query,
-            mode: 'insensitive' as const,
+            mode: "insensitive" as const,
           },
         },
         select: { name: true },
         take: 5,
       });
 
-      documents.forEach(doc => {
+      documents.forEach((doc) => {
         suggestions.push({
-          type: 'document',
+          type: "document",
           value: doc.name,
           count: 1,
         });
       });
     }
 
-    if (!type || type === 'tag') {
+    if (!type || type === "tag") {
       // Recherche de tags - on collecte tous les tags uniques qui contiennent la query
       const documents = await prisma.document.findMany({
         where: {
           tags: {
             contains: query,
-            mode: 'insensitive' as const,
+            mode: "insensitive" as const,
           },
         },
         select: { tags: true },
@@ -363,11 +372,14 @@ export class SearchService {
       });
 
       const tagCounts = new Map<string, number>();
-      
-      documents.forEach(doc => {
+
+      documents.forEach((doc) => {
         if (doc.tags) {
-          const docTags = doc.tags.split(',').map(t => t.trim()).filter(Boolean);
-          docTags.forEach(tag => {
+          const docTags = doc.tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
+          docTags.forEach((tag) => {
             if (tag.toLowerCase().includes(query.toLowerCase())) {
               tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
             }
@@ -377,11 +389,11 @@ export class SearchService {
 
       // Convertir en suggestions et trier par fréquence
       Array.from(tagCounts.entries())
-        .sort(([,a], [,b]) => b - a)
+        .sort(([, a], [, b]) => b - a)
         .slice(0, 5)
         .forEach(([tag, count]) => {
           suggestions.push({
-            type: 'tag',
+            type: "tag",
             value: tag,
             count,
           });
@@ -394,15 +406,22 @@ export class SearchService {
   /**
    * Recherche avancée avec scoring de pertinence
    */
-  async searchWithRelevanceScoring(query: string, filters?: Partial<SearchFilters>, userId?: string) {
-    const allDocuments = await this.searchDocuments({
-      query,
-      ...filters,
-      limit: 100, // Récupérer plus de résultats pour le scoring
-    }, userId);
+  async searchWithRelevanceScoring(
+    query: string,
+    filters?: Partial<SearchFilters>,
+    userId?: string,
+  ) {
+    const allDocuments = await this.searchDocuments(
+      {
+        query,
+        ...filters,
+        limit: 100, // Récupérer plus de résultats pour le scoring
+      },
+      userId,
+    );
 
     // Calcul du score de pertinence
-    const scoredDocuments = allDocuments.documents.map(doc => {
+    const scoredDocuments = allDocuments.documents.map((doc) => {
       let score = 0;
       const queryLower = query.toLowerCase();
 
@@ -421,8 +440,8 @@ export class SearchService {
 
       // Score basé sur les tags
       if (doc.tags) {
-        const tags = doc.tags.split(',').map(t => t.trim().toLowerCase());
-        tags.forEach(tag => {
+        const tags = doc.tags.split(",").map((t) => t.trim().toLowerCase());
+        tags.forEach((tag) => {
           if (tag.includes(queryLower)) {
             score += 3;
             if (tag === queryLower) {
@@ -438,7 +457,8 @@ export class SearchService {
       }
 
       // Bonus pour les documents récents
-      const daysSinceCreation = (Date.now() - new Date(doc.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+      const daysSinceCreation =
+        (Date.now() - new Date(doc.createdAt).getTime()) / (1000 * 60 * 60 * 24);
       if (daysSinceCreation < 30) {
         score += 1;
       }
@@ -461,15 +481,15 @@ export class SearchService {
   async saveSearch(userId: string, name: string, filters: SearchFilters) {
     // Pour l'instant, on log juste la recherche sauvegardée
     await this.logService.log({
-      action: 'SEARCH_PERFORM',
-      entity: 'SYSTEM',
-      entityId: 'saved-search',
+      action: "SEARCH_PERFORM",
+      entity: "SYSTEM",
+      entityId: "saved-search",
       userId,
       details: `Recherche sauvegardée: "${name}" avec filtres: ${JSON.stringify(filters)}`,
     });
 
     return {
-      message: 'Recherche sauvegardée avec succès',
+      message: "Recherche sauvegardée avec succès",
       name,
       filters,
     };
@@ -481,9 +501,12 @@ export class SearchService {
   async fullTextSearch(query: string, userId?: string) {
     // Pour l'instant, recherche dans les métadonnées seulement
     // Dans une implémentation future, on pourrait indexer le contenu des fichiers
-    return this.searchDocuments({
-      query,
-      sortBy: 'relevance',
-    }, userId);
+    return this.searchDocuments(
+      {
+        query,
+        sortBy: "relevance",
+      },
+      userId,
+    );
   }
 }

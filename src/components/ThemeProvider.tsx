@@ -1,6 +1,7 @@
-import { ThemeProvider as NextThemeProvider, useTheme } from 'next-themes';
-import { useSettings } from '@/hooks/useSettings';
-import { useEffect } from 'react';
+import { ThemeProvider as NextThemeProvider, useTheme } from "next-themes";
+import { useEffect } from "react";
+
+import { useSettings } from "@/hooks/useSettings";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { settings } = useSettings();

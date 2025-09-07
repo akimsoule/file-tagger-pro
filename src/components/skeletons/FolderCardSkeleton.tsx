@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 export const FolderCardSkeleton: React.FC = () => (
   <div className="rounded-lg border border-border bg-card p-4 animate-pulse flex flex-col gap-3 h-32">

@@ -1,19 +1,20 @@
 import { Context } from "@netlify/functions";
+
 import { DocumentService } from "../files.core/src/services/documentService";
-import { SearchService } from "../files.core/src/services/searchService";
-import { MegaStorageService } from "../files.core/src/services/megaStorage";
 import { LogService } from "../files.core/src/services/logService";
+import { MegaStorageService } from "../files.core/src/services/megaStorage";
+import { SearchService } from "../files.core/src/services/searchService";
 import {
-  handleCorsOptions,
-  requireAuth,
   createErrorResponse,
   createSuccessResponse,
-  validateHttpMethod,
   extractResourceId,
-  parseFormData,
-  validatePagination,
-  sanitizeString,
+  handleCorsOptions,
   handleErrors,
+  parseFormData,
+  requireAuth,
+  sanitizeString,
+  validateHttpMethod,
+  validatePagination,
 } from "./shared/middleware.mts";
 
 // Initialisation des services
@@ -105,111 +106,91 @@ function getDocumentTypeFromFile(fileName: string, mimeType?: string): string {
     if (mimeType.startsWith("text/")) return "document";
     if (mimeType.includes("pdf")) return "document";
     if (mimeType.includes("word")) return "document";
-    if (mimeType.includes("excel") || mimeType.includes("spreadsheet"))
-      return "spreadsheet";
-    if (mimeType.includes("powerpoint") || mimeType.includes("presentation"))
-      return "presentation";
+    if (mimeType.includes("excel") || mimeType.includes("spreadsheet")) return "spreadsheet";
+    if (mimeType.includes("powerpoint") || mimeType.includes("presentation")) return "presentation";
   }
 
   // Par défaut
   return "document";
 }
 
-const documentsHandler = handleErrors(
-  async (request: Request, context: Context) => {
-    // Gestion CORS
-    if (request.method === "OPTIONS") {
-      return handleCorsOptions();
-    }
+const documentsHandler = handleErrors(async (request: Request, context: Context) => {
+  // Gestion CORS
+  if (request.method === "OPTIONS") {
+    return handleCorsOptions();
+  }
 
-    // Validation de la méthode HTTP
-    const methodValidation = validateHttpMethod(request, [
-      "GET",
-      "POST",
-      "PUT",
-      "DELETE",
-    ]);
-    if (!methodValidation.success) {
-      return methodValidation.response!;
-    }
+  // Validation de la méthode HTTP
+  const methodValidation = validateHttpMethod(request, ["GET", "POST", "PUT", "DELETE"]);
+  if (!methodValidation.success) {
+    return methodValidation.response!;
+  }
 
-    const url = new URL(request.url);
-    const pathSegments = url.pathname
-      .split("/")
-      .filter((segment) => segment !== "");
-    const documentId = extractResourceId(url, "documents");
+  const url = new URL(request.url);
+  const pathSegments = url.pathname.split("/").filter((segment) => segment !== "");
+  const documentId = extractResourceId(url, "documents");
 
-    // Vérifier si c'est une action spéciale (ex: synchronisation)
-    const action = pathSegments[pathSegments.length - 1];
+  // Vérifier si c'est une action spéciale (ex: synchronisation)
+  const action = pathSegments[pathSegments.length - 1];
 
-    // Pour GET, l'authentification est optionnelle (pour les documents publics)
-    // Pour les autres méthodes, elle est requise
-    if (request.method === "GET") {
-      // GET avec authentification optionnelle
-      const authResult = requireAuth(request);
-      const user = authResult.success ? authResult.context!.user! : null;
+  // Pour GET, l'authentification est optionnelle (pour les documents publics)
+  // Pour les autres méthodes, elle est requise
+  if (request.method === "GET") {
+    // GET avec authentification optionnelle
+    const authResult = requireAuth(request);
+    const user = authResult.success ? authResult.context!.user! : null;
 
-      if (documentId) {
-        // Supporte /documents/:id/similar
-        const pathSegments = url.pathname.split("/").filter(Boolean);
-        const last = pathSegments[pathSegments.length - 1];
-        if (last === "similar") {
-          const maybeDocId = pathSegments[pathSegments.length - 2];
-          if (!maybeDocId) {
-            return createErrorResponse(
-              "ID de document manquant pour la requête 'similar'",
-              400
-            );
-          }
-          return await handleGetSimilarDocuments(maybeDocId, url, user);
+    if (documentId) {
+      // Supporte /documents/:id/similar
+      const pathSegments = url.pathname.split("/").filter(Boolean);
+      const last = pathSegments[pathSegments.length - 1];
+      if (last === "similar") {
+        const maybeDocId = pathSegments[pathSegments.length - 2];
+        if (!maybeDocId) {
+          return createErrorResponse("ID de document manquant pour la requête 'similar'", 400);
         }
-        return await handleGetDocument(documentId, user);
-      } else {
-        return await handleGetDocuments(url, user);
+        return await handleGetSimilarDocuments(maybeDocId, url, user);
       }
+      return await handleGetDocument(documentId, user);
     } else {
-      // Autres méthodes - authentification requise
-      const authResult = requireAuth(request);
-      if (!authResult.success) {
-        return authResult.response!;
-      }
+      return await handleGetDocuments(url, user);
+    }
+  } else {
+    // Autres méthodes - authentification requise
+    const authResult = requireAuth(request);
+    if (!authResult.success) {
+      return authResult.response!;
+    }
 
-      const user = authResult.context!.user!;
+    const user = authResult.context!.user!;
 
-      switch (request.method) {
-        case "POST":
-          // Vérifier si c'est une action de synchronisation
-          if (action === "sync-mega") {
-            return await handleSyncMegaFiles(request, user);
-          }
-          return await handleCreateDocument(request, user);
+    switch (request.method) {
+      case "POST":
+        // Vérifier si c'est une action de synchronisation
+        if (action === "sync-mega") {
+          return await handleSyncMegaFiles(request, user);
+        }
+        return await handleCreateDocument(request, user);
 
-        case "PUT":
-          if (documentId) {
-            return await handleUpdateDocument(documentId, request, user);
-          } else {
-            return createErrorResponse(
-              "ID du document requis pour la mise à jour",
-              400
-            );
-          }
+      case "PUT":
+        if (documentId) {
+          return await handleUpdateDocument(documentId, request, user);
+        } else {
+          return createErrorResponse("ID du document requis pour la mise à jour", 400);
+        }
 
-        case "DELETE":
-          if (documentId) {
-            return await handleDeleteDocument(documentId, user);
-          } else {
-            return createErrorResponse(
-              "ID du document requis pour la suppression",
-              400
-            );
-          }
+      case "DELETE":
+        if (documentId) {
+          return await handleDeleteDocument(documentId, user);
+        } else {
+          return createErrorResponse("ID du document requis pour la suppression", 400);
+        }
 
-        default:
-          return createErrorResponse("Méthode non autorisée", 405);
-      }
+      default:
+        return createErrorResponse("Méthode non autorisée", 405);
     }
   }
-);
+});
 
 // Fonctions helper
 
@@ -226,18 +207,11 @@ async function handleGetDocument(documentId: string, _user: AuthUser | null) {
     return createSuccessResponse(document);
   } catch (error) {
     console.error("Erreur lors de la récupération du document:", error);
-    return createErrorResponse(
-      "Erreur lors de la récupération du document",
-      500
-    );
+    return createErrorResponse("Erreur lors de la récupération du document", 500);
   }
 }
 
-async function handleGetSimilarDocuments(
-  documentId: string,
-  url: URL,
-  _user: AuthUser | null
-) {
+async function handleGetSimilarDocuments(documentId: string, url: URL, _user: AuthUser | null) {
   try {
     const limitParam = url.searchParams.get("limit");
     const limit = Math.max(1, Math.min(50, Number(limitParam) || 5));
@@ -248,14 +222,8 @@ async function handleGetSimilarDocuments(
       results: similar,
     });
   } catch (error) {
-    console.error(
-      "Erreur lors de la récupération des documents similaires:",
-      error
-    );
-    return createErrorResponse(
-      "Erreur lors de la récupération des documents similaires",
-      500
-    );
+    console.error("Erreur lors de la récupération des documents similaires:", error);
+    return createErrorResponse("Erreur lors de la récupération des documents similaires", 500);
   }
 }
 
@@ -278,7 +246,7 @@ async function handleGetDocuments(url: URL, _user: AuthUser | null) {
     const documents = await documentService.getAllDocuments(
       pagination.skip,
       pagination.limit,
-      filters
+      filters,
     );
 
     // Calculer le total des documents (pour la pagination)
@@ -295,10 +263,7 @@ async function handleGetDocuments(url: URL, _user: AuthUser | null) {
     return createSuccessResponse(response);
   } catch (error) {
     console.error("Erreur lors de la récupération des documents:", error);
-    return createErrorResponse(
-      "Erreur lors de la récupération des documents",
-      500
-    );
+    return createErrorResponse("Erreur lors de la récupération des documents", 500);
   }
 }
 
@@ -356,11 +321,7 @@ async function handleCreateDocument(request: Request, user: AuthUser) {
   }
 }
 
-async function handleUpdateDocument(
-  documentId: string,
-  request: Request,
-  user: AuthUser
-) {
+async function handleUpdateDocument(documentId: string, request: Request, user: AuthUser) {
   try {
     const body = await request.json();
 
@@ -373,28 +334,21 @@ async function handleUpdateDocument(
       // Compatibilité: convertir category en tag
       const currentTags = body.tags || "";
       const categoryAsTag = sanitizeString(body.category);
-      updateData.tags = currentTags
-        ? `${currentTags},${categoryAsTag}`
-        : categoryAsTag;
+      updateData.tags = currentTags ? `${currentTags},${categoryAsTag}` : categoryAsTag;
     }
-    if (body.description)
-      updateData.description = sanitizeString(body.description);
+    if (body.description) updateData.description = sanitizeString(body.description);
     if (body.tags) updateData.tags = body.tags;
-    if (typeof body.isFavorite === "boolean")
-      updateData.isFavorite = body.isFavorite;
+    if (typeof body.isFavorite === "boolean") updateData.isFavorite = body.isFavorite;
 
     const updatedDocument = await documentService.updateDocument(
       documentId,
       updateData,
-      user.userId
+      user.userId,
     );
     return createSuccessResponse(updatedDocument);
   } catch (error) {
     console.error("Erreur lors de la mise à jour du document:", error);
-    return createErrorResponse(
-      "Erreur lors de la mise à jour du document",
-      500
-    );
+    return createErrorResponse("Erreur lors de la mise à jour du document", 500);
   }
 }
 
@@ -404,10 +358,7 @@ async function handleDeleteDocument(documentId: string, user: AuthUser) {
     return createSuccessResponse({ message: "Document supprimé avec succès" });
   } catch (error) {
     console.error("Erreur lors de la suppression du document:", error);
-    return createErrorResponse(
-      "Erreur lors de la suppression du document",
-      500
-    );
+    return createErrorResponse("Erreur lors de la suppression du document", 500);
   }
 }
 
@@ -416,10 +367,7 @@ async function handleSyncMegaFiles(request: Request, user: AuthUser) {
     const body = await request.json().catch(() => ({}));
     const folderId = body.folderId || undefined; // Optionnel: ID du dossier MEGA à synchroniser
 
-    const result = await documentService.synchronizeMegaFiles(
-      user.userId,
-      folderId
-    );
+    const result = await documentService.synchronizeMegaFiles(user.userId, folderId);
 
     return createSuccessResponse({
       message: "Synchronisation MEGA terminée avec succès",
@@ -441,10 +389,8 @@ async function handleSyncMegaFiles(request: Request, user: AuthUser) {
   } catch (error) {
     console.error("Erreur lors de la synchronisation MEGA:", error);
     return createErrorResponse(
-      error instanceof Error
-        ? error.message
-        : "Erreur lors de la synchronisation MEGA",
-      500
+      error instanceof Error ? error.message : "Erreur lors de la synchronisation MEGA",
+      500,
     );
   }
 }

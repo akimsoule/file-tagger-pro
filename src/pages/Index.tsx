@@ -1,45 +1,40 @@
+import {
+  ChevronLeft,
+  FileText,
+  Folder as FolderIcon,
+  Plus,
+  RefreshCcw,
+  Settings as SettingsIcon,
+  Upload,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { FileManagerSidebar } from "@/components/FileManagerSidebar";
-import { SearchBar } from "@/components/SearchBar";
+
+import { Breadcrumb } from "@/components/Breadcrumb";
+import { CreateFolderModal } from "@/components/CreateFolderModal";
 import { FileCard } from "@/components/FileCard";
 import { FileDetailsModal } from "@/components/FileDetailsModal";
-import { Breadcrumb } from "@/components/Breadcrumb";
+import { FileManagerSidebar } from "@/components/FileManagerSidebar";
+import { FolderCard } from "@/components/FolderCard";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { SearchBar } from "@/components/SearchBar";
+import { SettingsModal } from "@/components/settings";
+import { FolderCardSkeleton } from "@/components/skeletons/FolderCardSkeleton";
+import { StatsBar } from "@/components/StatsBar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { UploadDocumentModal } from "@/components/UploadDocumentModal";
+import type { Document, Folder } from "@/contexts/file";
+import { useUiCommands } from "@/contexts/ui/useUiCommands";
 import { useFileContext } from "@/hooks/useFileContext";
 import { useFilteredNodes } from "@/hooks/useFilteredNodes";
 import { useQuery } from "@/hooks/useQuery";
 import { useTags } from "@/hooks/useTags";
-import {
-  Folder as FolderIcon,
-  FileText,
-  ChevronLeft,
-  Plus,
-  Upload,
-  RefreshCcw,
-  Settings as SettingsIcon,
-} from "lucide-react";
-import { CreateFolderModal } from "@/components/CreateFolderModal";
-import { UploadDocumentModal } from "@/components/UploadDocumentModal";
-import { StatsBar } from "@/components/StatsBar";
-import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { FolderCardSkeleton } from "@/components/skeletons/FolderCardSkeleton";
 import { useTotalSize } from "@/hooks/useTotalSize";
-import { FolderCard } from "@/components/FolderCard";
 import { FileTreeNode } from "@/logic/local/FileTreeNode";
-import type { Document, Folder } from "@/contexts/file";
-import { useUiCommands } from "@/contexts/ui/useUiCommands";
-import { SettingsModal } from "@/components/SettingsModal";
+
 // Command palette is now global
 
 const Index = () => {
-  const {
-    searchQuery,
-    setSearchQuery,
-    viewMode,
-    setViewMode,
-    sortBy,
-    setSortBy,
-  } = useQuery();
+  const { searchQuery, setSearchQuery, viewMode, setViewMode, sortBy, setSortBy } = useQuery();
 
   const {
     currentNode,
@@ -61,8 +56,7 @@ const Index = () => {
     }
   }, [setSearchQuery, setSortBy, selectedTags, toggleTag]);
 
-  const { documents: documentNodes, folders: folderNodes } =
-    useFilteredNodes(currentNode);
+  const { documents: documentNodes, folders: folderNodes } = useFilteredNodes(currentNode);
   const content = { documents: documentNodes, folders: folderNodes };
 
   const navigateUp = useCallback(() => {
@@ -125,9 +119,7 @@ const Index = () => {
                       aria-label="Recharger"
                       disabled={loadingTree}
                     >
-                      <RefreshCcw
-                        className={`h-4 w-4 ${loadingTree ? "opacity-50" : ""}`}
-                      />
+                      <RefreshCcw className={`h-4 w-4 ${loadingTree ? "opacity-50" : ""}`} />
                     </button>
                   </h1>
                   <p className="hidden sm:block text-muted-foreground text-sm">
@@ -148,10 +140,7 @@ const Index = () => {
               </div>
             </header>
             {/* Modal simple Paramètres */}
-            <SettingsModal
-              open={settingsOpen}
-              onClose={() => setSettingsOpen(false)}
-            />
+            <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
             <div className="flex flex-1 flex-col min-h-0 p-3 gap-2 sm:gap-4 md:gap-6">
               <Breadcrumb />
@@ -185,35 +174,30 @@ const Index = () => {
                           : "space-y-2"
                       }
                     >
-                      {Array.from({ length: viewMode === "grid" ? 8 : 5 }).map(
-                        (_, i) =>
-                          viewMode === "grid" ? (
-                            <FolderCardSkeleton key={i} />
-                          ) : (
-                            <div
-                              key={i}
-                              className="rounded-md border border-border p-4 animate-pulse h-16 flex flex-col gap-2"
-                            >
-                              <div className="h-4 w-1/3 bg-muted rounded" />
-                              <div className="h-3 w-1/2 bg-muted rounded" />
-                            </div>
-                          )
+                      {Array.from({ length: viewMode === "grid" ? 8 : 5 }).map((_, i) =>
+                        viewMode === "grid" ? (
+                          <FolderCardSkeleton key={i} />
+                        ) : (
+                          <div
+                            key={i}
+                            className="rounded-md border border-border p-4 animate-pulse h-16 flex flex-col gap-2"
+                          >
+                            <div className="h-4 w-1/3 bg-muted rounded" />
+                            <div className="h-3 w-1/2 bg-muted rounded" />
+                          </div>
+                        ),
                       )}
                     </div>
-                  ) : content.folders.length === 0 &&
-                    content.documents.length === 0 ? (
+                  ) : content.folders.length === 0 && content.documents.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center gap-6">
                       <div className="p-5 rounded-full bg-muted/60 mb-2">
                         <FileText className="h-10 w-10 text-muted-foreground" />
                       </div>
                       <div className="space-y-2 max-w-sm">
-                        <h3 className="text-xl font-semibold text-foreground">
-                          Dossier vide
-                        </h3>
+                        <h3 className="text-xl font-semibold text-foreground">Dossier vide</h3>
                         <p className="text-muted-foreground text-sm leading-relaxed">
-                          Vous n'avez encore ajouté aucun élément ici. Créez un
-                          dossier pour organiser vos fichiers ou uploadez
-                          directement votre premier document.
+                          Vous n'avez encore ajouté aucun élément ici. Créez un dossier pour
+                          organiser vos fichiers ou uploadez directement votre premier document.
                         </p>
                       </div>
                       <div className="flex flex-col sm:flex-row gap-3">
@@ -231,8 +215,7 @@ const Index = () => {
                         </button>
                       </div>
                       <p className="text-xs text-muted-foreground max-w-xs">
-                        Astuce: vous pouvez aussi glisser-déposer un fichier ici
-                        (à implémenter).
+                        Astuce: vous pouvez aussi glisser-déposer un fichier ici (à implémenter).
                       </p>
                     </div>
                   ) : (
@@ -274,9 +257,7 @@ const Index = () => {
           </main>
 
           <FileDetailsModal
-            document={
-              selectedNode ? (selectedNode.getData() as Document) : null
-            }
+            document={selectedNode ? (selectedNode.getData() as Document) : null}
             isOpen={!!selectedNode}
             onClose={() => setSelectedNode(null)}
             onToggleFavorite={() => {
@@ -298,10 +279,7 @@ const Index = () => {
           onClose={() => setCreateFolderOpen(false)}
           parentId={currentNode?.id}
         />
-        <UploadDocumentModal
-          open={uploadOpen}
-          onClose={() => setUploadOpen(false)}
-        />
+        <UploadDocumentModal open={uploadOpen} onClose={() => setUploadOpen(false)} />
       </SidebarProvider>
     </>
   );

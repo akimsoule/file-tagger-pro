@@ -24,14 +24,11 @@ export async function getUserMegaConfig() {
 export async function saveUserMegaConfig(email: string, password: string) {
   // Chiffrement XOR léger côté frontend (obfuscation transport)
   const { emailEnc, passwordEnc, key } = xorEncryptPayload(email, password);
-  return api<{ message: string; config: UserMegaConfigInfo }>(
-    `/user-mega-config`,
-    {
-      method: "POST",
-      auth: true,
-      body: JSON.stringify({ emailEnc, passwordEnc, key, enc: "xor" }),
-    }
-  );
+  return api<{ message: string; config: UserMegaConfigInfo }>(`/user-mega-config`, {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify({ emailEnc, passwordEnc, key, enc: "xor" }),
+  });
 }
 
 export async function testUserMegaCredentials(email: string, password: string) {
@@ -54,17 +51,14 @@ export async function deleteUserMegaConfig() {
 function encrypt(text: string, key: string): string {
   let encrypted = "";
   for (let i = 0; i < text.length; i++) {
-    encrypted += String.fromCharCode(
-      text.charCodeAt(i) ^ key.charCodeAt(i % key.length)
-    );
+    encrypted += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
   }
   return encrypted;
 }
 
 function randomKey(len = 24): string {
   // Génère une clé pseudo-aléatoire ASCII sûre pour le transport JSON
-  const alphabet =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
+  const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
   let out = "";
   const cryptoObj = typeof crypto !== "undefined" ? crypto : undefined;
   if (cryptoObj && "getRandomValues" in cryptoObj) {

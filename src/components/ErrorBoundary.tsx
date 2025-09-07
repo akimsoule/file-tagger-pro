@@ -11,10 +11,7 @@ type ErrorBoundaryState = {
   error: Error | null;
 };
 
-export class ErrorBoundary extends React.Component<
-  ErrorBoundaryProps,
-  ErrorBoundaryState
-> {
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -38,8 +35,8 @@ export class ErrorBoundary extends React.Component<
         <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 shadow-sm">
           <h1 className="text-xl font-semibold mb-2">Un problème est survenu</h1>
           <p className="text-sm text-muted-foreground mb-4">
-            Une erreur s'est produite lors de l'affichage de l'application. Vous pouvez
-            réessayer ou recharger la page.
+            Une erreur s'est produite lors de l'affichage de l'application. Vous pouvez réessayer ou
+            recharger la page.
           </p>
           {isDev && (
             <pre className="text-xs overflow-auto max-h-48 bg-muted p-3 rounded mb-4 whitespace-pre-wrap">

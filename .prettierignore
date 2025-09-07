@@ -1,0 +1,10 @@
+node_modules
+.netlify
+build
+dist
+coverage
+bun.lockb
+prisma/migrations
+
+# Large assets
+public/**/*.svg

@@ -1,14 +1,15 @@
 import { Context } from "@netlify/functions";
-import { EmbeddingService } from "../files.core/src/services/embeddingService";
+
 import { EmbeddingGenerator } from "../files.core/src/services/embeddingGenerator";
+import { EmbeddingService } from "../files.core/src/services/embeddingService";
 import {
-  handleCorsOptions,
-  requireAuth,
   createErrorResponse,
   createSuccessResponse,
-  validateHttpMethod,
-  safeJsonParse,
+  handleCorsOptions,
   handleErrors,
+  requireAuth,
+  safeJsonParse,
+  validateHttpMethod,
 } from "./shared/middleware.mts";
 
 const embeddingService = new EmbeddingService();
@@ -50,9 +51,9 @@ export default handleErrors(async (request: Request, _context: Context) => {
     }
     if (action === "reindex") {
       const parsed = await safeJsonParse(request);
-      let documentId = (
-        parsed.success ? (parsed.data as any)?.documentId : undefined
-      ) as string | undefined; // eslint-disable-line @typescript-eslint/no-explicit-any
+      let documentId = (parsed.success ? (parsed.data as any)?.documentId : undefined) as
+        | string
+        | undefined;
       if (!documentId) {
         const url = new URL(request.url);
         documentId = url.searchParams.get("documentId") || undefined;
@@ -69,13 +70,8 @@ export default handleErrors(async (request: Request, _context: Context) => {
         vector: number[];
         limit?: number;
       };
-      if (!Array.isArray(vector))
-        return createErrorResponse("vector requis", 400);
-      const results = await embeddingService.findSimilarByVector(
-        vector,
-        limit || 5,
-        user.userId
-      );
+      if (!Array.isArray(vector)) return createErrorResponse("vector requis", 400);
+      const results = await embeddingService.findSimilarByVector(vector, limit || 5, user.userId);
       return createSuccessResponse({ results });
     }
     return createErrorResponse("Action non trouvée", 404);
@@ -85,16 +81,9 @@ export default handleErrors(async (request: Request, _context: Context) => {
     if (action === "similar") {
       // /semantic/similar?documentId=...&limit=5
       const documentId = url.searchParams.get("documentId");
-      const limit = Math.max(
-        1,
-        Math.min(50, Number(url.searchParams.get("limit")) || 5)
-      );
+      const limit = Math.max(1, Math.min(50, Number(url.searchParams.get("limit")) || 5));
       if (!documentId) return createErrorResponse("documentId requis", 400);
-      const results = await embeddingService.findSimilarByDocument(
-        documentId,
-        limit,
-        user.userId
-      );
+      const results = await embeddingService.findSimilarByDocument(documentId, limit, user.userId);
       return createSuccessResponse({ documentId, limit, results });
     }
     return createErrorResponse("Action non trouvée", 404);

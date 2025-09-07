@@ -1,7 +1,8 @@
-import prisma from './database';
-import { LogService } from './logService';
-import { MegaStorageService } from './megaStorage';
-import crypto from 'crypto';
+import crypto from "crypto";
+
+import prisma from "./database";
+import { LogService } from "./logService";
+import { MegaStorageService } from "./megaStorage";
 
 export interface BackupData {
   version: string;
@@ -102,11 +103,8 @@ export class BackupService {
   async createBackup(options: BackupOptions = {}, userId: string): Promise<BackupResult> {
     const startTime = Date.now();
     const backupId = crypto.randomUUID();
-    
-    const {
-      includeLogs = true,
-      maxLogAge = 90,
-    } = options;
+
+    const { includeLogs = true, maxLogAge = 90 } = options;
 
     try {
       // Collecte des données
@@ -133,7 +131,7 @@ export class BackupService {
         },
       });
 
-      let logs: BackupData['logs'] = [];
+      let logs: BackupData["logs"] = [];
       if (includeLogs) {
         const logCutoffDate = new Date(Date.now() - maxLogAge * 24 * 60 * 60 * 1000);
         const rawLogs = await prisma.log.findMany({
@@ -149,8 +147,8 @@ export class BackupService {
             },
           },
         });
-        
-        logs = rawLogs.map(log => ({
+
+        logs = rawLogs.map((log) => ({
           ...log,
           details: log.details || undefined,
           ipAddress: log.ipAddress || undefined,
@@ -164,10 +162,10 @@ export class BackupService {
 
       // Création de l'objet de sauvegarde
       const backupData: BackupData = {
-        version: '1.0.0',
+        version: "1.0.0",
         createdAt: new Date(),
-        users: users.map(user => ({ ...user, passwordHash: '[ENCRYPTED]' })), // Masquer les mots de passe
-        documents: documents.map(doc => ({
+        users: users.map((user) => ({ ...user, passwordHash: "[ENCRYPTED]" })), // Masquer les mots de passe
+        documents: documents.map((doc) => ({
           ...doc,
           description: doc.description || undefined,
         })),
@@ -182,24 +180,24 @@ export class BackupService {
 
       // Sérialisation et compression
       const jsonData = JSON.stringify(backupData, null, 2);
-      const buffer = Buffer.from(jsonData, 'utf8');
+      const buffer = Buffer.from(jsonData, "utf8");
 
       // Sauvegarde sur MEGA
-      const fileName = `backup-${backupId}-${new Date().toISOString().split('T')[0]}.json`;
+      const fileName = `backup-${backupId}-${new Date().toISOString().split("T")[0]}.json`;
       const megaFileId = await this.megaStorageService.uploadFile(
         fileName,
-        'application/json',
+        "application/json",
         buffer,
         undefined,
-        userId
+        userId,
       );
 
       const duration = Date.now() - startTime;
 
       // Log de l'opération
       await this.logService.log({
-        action: 'SYSTEM_BACKUP',
-        entity: 'SYSTEM',
+        action: "SYSTEM_BACKUP",
+        entity: "SYSTEM",
         entityId: backupId,
         userId,
         details: `Sauvegarde créée: ${fileName} (${buffer.length} bytes, ${duration}ms)`,
@@ -213,17 +211,18 @@ export class BackupService {
         duration,
         metadata: backupData.metadata,
       };
-
     } catch (error) {
       await this.logService.log({
-        action: 'SYSTEM_BACKUP',
-        entity: 'SYSTEM',
+        action: "SYSTEM_BACKUP",
+        entity: "SYSTEM",
         entityId: backupId,
         userId,
         details: `Erreur lors de la sauvegarde: ${error instanceof Error ? error.message : error}`,
       });
 
-      throw new Error(`Erreur lors de la création de la sauvegarde: ${error instanceof Error ? error.message : error}`);
+      throw new Error(
+        `Erreur lors de la création de la sauvegarde: ${error instanceof Error ? error.message : error}`,
+      );
     }
   }
 
@@ -233,19 +232,20 @@ export class BackupService {
   async restoreBackup(
     megaFileId: string,
     options: RestoreOptions = {},
-    userId: string
-  ): Promise<{ success: boolean; restored: { users: number; documents: number; logs: number }; duration: number }> {
+    userId: string,
+  ): Promise<{
+    success: boolean;
+    restored: { users: number; documents: number; logs: number };
+    duration: number;
+  }> {
     const startTime = Date.now();
-    
-    const {
-      replaceExisting = false,
-      includeLogs = false,
-    } = options;
+
+    const { replaceExisting = false, includeLogs = false } = options;
 
     try {
       // Téléchargement de la sauvegarde
       const backupBuffer = await this.megaStorageService.downloadFile(megaFileId, userId);
-      const backupData: BackupData = JSON.parse(backupBuffer.toString('utf8'));
+      const backupData: BackupData = JSON.parse(backupBuffer.toString("utf8"));
 
       const restored = {
         users: 0,
@@ -254,8 +254,8 @@ export class BackupService {
       };
 
       // Validation de la version
-      if (!backupData.version || backupData.version !== '1.0.0') {
-        throw new Error('Version de sauvegarde non supportée');
+      if (!backupData.version || backupData.version !== "1.0.0") {
+        throw new Error("Version de sauvegarde non supportée");
       }
 
       // Restauration des utilisateurs
@@ -275,7 +275,7 @@ export class BackupService {
               id: userData.id,
               email: userData.email,
               name: userData.name,
-              passwordHash: crypto.randomBytes(32).toString('hex'), // Mot de passe temporaire
+              passwordHash: crypto.randomBytes(32).toString("hex"), // Mot de passe temporaire
               createdAt: userData.createdAt,
               updatedAt: userData.updatedAt,
             },
@@ -354,8 +354,8 @@ export class BackupService {
 
       // Log de l'opération
       await this.logService.log({
-        action: 'SYSTEM_RESTORE',
-        entity: 'SYSTEM',
+        action: "SYSTEM_RESTORE",
+        entity: "SYSTEM",
         entityId: megaFileId,
         userId,
         details: `Restauration effectuée: ${restored.users} utilisateurs, ${restored.documents} documents, ${restored.logs} logs (${duration}ms)`,
@@ -366,35 +366,38 @@ export class BackupService {
         restored,
         duration,
       };
-
     } catch (error) {
       await this.logService.log({
-        action: 'SYSTEM_RESTORE',
-        entity: 'SYSTEM',
+        action: "SYSTEM_RESTORE",
+        entity: "SYSTEM",
         entityId: megaFileId,
         userId,
         details: `Erreur lors de la restauration: ${error instanceof Error ? error.message : error}`,
       });
 
-      throw new Error(`Erreur lors de la restauration: ${error instanceof Error ? error.message : error}`);
+      throw new Error(
+        `Erreur lors de la restauration: ${error instanceof Error ? error.message : error}`,
+      );
     }
   }
 
   /**
    * Liste les sauvegardes disponibles sur MEGA
    */
-  async listBackups(userId: string): Promise<Array<{
-    fileId: string;
-    name: string;
-    size: number;
-    date: Date;
-  }>> {
+  async listBackups(userId: string): Promise<
+    Array<{
+      fileId: string;
+      name: string;
+      size: number;
+      date: Date;
+    }>
+  > {
     try {
       const files = await this.megaStorageService.getAllFilesWithContent(userId);
-      
+
       return files
-        .filter(file => file.name.startsWith('backup-') && file.name.endsWith('.json'))
-        .map(file => ({
+        .filter((file) => file.name.startsWith("backup-") && file.name.endsWith(".json"))
+        .map((file) => ({
           fileId: file.fileId,
           name: file.name,
           size: file.buffer.length,
@@ -402,7 +405,9 @@ export class BackupService {
         }))
         .sort((a, b) => b.date.getTime() - a.date.getTime());
     } catch (error) {
-      throw new Error(`Erreur lors de la récupération des sauvegardes: ${error instanceof Error ? error.message : error}`);
+      throw new Error(
+        `Erreur lors de la récupération des sauvegardes: ${error instanceof Error ? error.message : error}`,
+      );
     }
   }
 
@@ -414,21 +419,26 @@ export class BackupService {
       await this.megaStorageService.deleteFile(megaFileId, userId);
 
       await this.logService.log({
-        action: 'SYSTEM_BACKUP',
-        entity: 'SYSTEM',
+        action: "SYSTEM_BACKUP",
+        entity: "SYSTEM",
         entityId: megaFileId,
         userId,
         details: `Sauvegarde supprimée: ${megaFileId}`,
       });
     } catch (error) {
-      throw new Error(`Erreur lors de la suppression de la sauvegarde: ${error instanceof Error ? error.message : error}`);
+      throw new Error(
+        `Erreur lors de la suppression de la sauvegarde: ${error instanceof Error ? error.message : error}`,
+      );
     }
   }
 
   /**
    * Valide l'intégrité d'une sauvegarde
    */
-  async validateBackup(megaFileId: string, userId: string): Promise<{
+  async validateBackup(
+    megaFileId: string,
+    userId: string,
+  ): Promise<{
     valid: boolean;
     errors: string[];
     metadata?: {
@@ -442,23 +452,23 @@ export class BackupService {
 
     try {
       const backupBuffer = await this.megaStorageService.downloadFile(megaFileId, userId);
-      const backupData: BackupData = JSON.parse(backupBuffer.toString('utf8'));
+      const backupData: BackupData = JSON.parse(backupBuffer.toString("utf8"));
 
       // Validation de la structure
       if (!backupData.version) {
-        errors.push('Version manquante');
+        errors.push("Version manquante");
       }
 
       if (!backupData.metadata) {
-        errors.push('Métadonnées manquantes');
+        errors.push("Métadonnées manquantes");
       }
 
       if (!Array.isArray(backupData.users)) {
-        errors.push('Liste des utilisateurs invalide');
+        errors.push("Liste des utilisateurs invalide");
       }
 
       if (!Array.isArray(backupData.documents)) {
-        errors.push('Liste des documents invalide');
+        errors.push("Liste des documents invalide");
       }
 
       // Validation des données
@@ -483,7 +493,6 @@ export class BackupService {
         errors,
         metadata: backupData.metadata,
       };
-
     } catch (error) {
       errors.push(`Erreur de parsing: ${error instanceof Error ? error.message : error}`);
       return {
@@ -508,9 +517,12 @@ export class BackupService {
    * Crée une sauvegarde automatique programmée
    */
   async createScheduledBackup(userId: string): Promise<BackupResult> {
-    return this.createBackup({
-      includeLogs: true,
-      maxLogAge: 30,
-    }, userId);
+    return this.createBackup(
+      {
+        includeLogs: true,
+        maxLogAge: 30,
+      },
+      userId,
+    );
   }
 }

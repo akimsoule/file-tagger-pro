@@ -208,7 +208,7 @@ export class FolderService {
       folderCount: folder._count?.children || 0,
       totalSize: (folder.documents || []).reduce(
         (sum: number, doc: { size: number }) => sum + (doc.size || 0),
-        0
+        0,
       ),
       isRoot: folder.isRoot,
     }));
@@ -217,10 +217,7 @@ export class FolderService {
   /**
    * Récupère les sous-dossiers d'un dossier
    */
-  async getSubfolders(
-    parentId: string,
-    userId: string
-  ): Promise<FolderWithCounts[]> {
+  async getSubfolders(parentId: string, userId: string): Promise<FolderWithCounts[]> {
     const folders = await prisma.folder.findMany({
       where: {
         parentId,
@@ -295,9 +292,7 @@ export class FolderService {
 
         // Vérifier qu'on ne crée pas une boucle (le parent ne peut pas être un descendant)
         if (await this.isDescendant(id, data.parentId)) {
-          throw new Error(
-            "Impossible de déplacer un dossier dans un de ses sous-dossiers"
-          );
+          throw new Error("Impossible de déplacer un dossier dans un de ses sous-dossiers");
         }
       }
 
@@ -313,9 +308,7 @@ export class FolderService {
         });
 
         if (existingFolder) {
-          throw new Error(
-            "Un dossier avec ce nom existe déjà dans ce répertoire"
-          );
+          throw new Error("Un dossier avec ce nom existe déjà dans ce répertoire");
         }
       }
     }
@@ -415,11 +408,7 @@ export class FolderService {
   /**
    * Déplace un document vers un dossier
    */
-  async moveDocumentToFolder(
-    documentId: string,
-    folderId: string | null,
-    userId: string
-  ) {
+  async moveDocumentToFolder(documentId: string, folderId: string | null, userId: string) {
     const document = await prisma.document.findFirst({
       where: {
         id: documentId,
@@ -493,10 +482,7 @@ export class FolderService {
   /**
    * Vérifie si un dossier est un descendant d'un autre
    */
-  private async isDescendant(
-    ancestorId: string,
-    descendantId: string
-  ): Promise<boolean> {
+  private async isDescendant(ancestorId: string, descendantId: string): Promise<boolean> {
     if (ancestorId === descendantId) {
       return true;
     }
@@ -522,8 +508,8 @@ export class FolderService {
         csv
           .split(",")
           .map((t) => t.trim())
-          .filter(Boolean)
-      )
+          .filter(Boolean),
+      ),
     );
     if (tagNames.length === 0) {
       await prisma.folderTag.deleteMany({ where: { folderId } });
@@ -534,7 +520,7 @@ export class FolderService {
       include: { tag: true },
     });
     const existingMap = new Map<string, (typeof existingLinks)[number]>(
-      existingLinks.map((l) => [l.tag.name, l])
+      existingLinks.map((l) => [l.tag.name, l]),
     );
     for (const name of tagNames) {
       if (!existingMap.has(name)) {

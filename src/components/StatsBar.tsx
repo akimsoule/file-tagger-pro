@@ -1,5 +1,6 @@
-import React from 'react';
-import { formatFileSize } from '@/lib/format';
+import React from "react";
+
+import { formatFileSize } from "@/lib/format";
 
 interface StatsBarProps {
   folders: number;
@@ -9,9 +10,17 @@ interface StatsBarProps {
   loading?: boolean;
 }
 
-export const StatsBar: React.FC<StatsBarProps> = ({ folders, documents, sizeBytes, className, loading }) => {
+export const StatsBar: React.FC<StatsBarProps> = ({
+  folders,
+  documents,
+  sizeBytes,
+  className,
+  loading,
+}) => {
   return (
-    <div className={`mb-6 flex flex-wrap items-center gap-2 text-sm text-muted-foreground ${className || ''}`}>
+    <div
+      className={`mb-6 flex flex-wrap items-center gap-2 text-sm text-muted-foreground ${className || ""}`}
+    >
       {loading ? (
         <>
           <span className="h-4 w-20 bg-muted rounded animate-pulse" />
