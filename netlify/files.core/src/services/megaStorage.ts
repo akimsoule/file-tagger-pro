@@ -14,8 +14,6 @@ type NodeLike = {
  */
 export class MegaStorageService {
   private storageCache = new Map<string, Storage>();
-  private defaultEmail = process.env.MEGA_EMAIL;
-  private defaultPassword = process.env.MEGA_PASSWORD;
   private appRootName = process.env.MEGA_APP_ROOT_NAME || "app.file-tagger-pro";
   private requireUserConfig =
     (process.env.MEGA_REQUIRE_USER_CONFIG || "false").toLowerCase() ===
@@ -99,8 +97,8 @@ export class MegaStorageService {
    */
   private async getStorage(userId?: string): Promise<Storage> {
     let storageKey = "default";
-    let email = this.defaultEmail;
-    let password = this.defaultPassword;
+    let email : string | undefined;
+    let password : string | undefined;
     let origin: "user" | "default" = "default";
 
     // Si un userId est fourni, tenter d'utiliser sa configuration

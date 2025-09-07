@@ -1,69 +1,38 @@
-import * as crypto from 'crypto';
-
 /**
- * Service de chiffrement pour les données sensibles (credentials MEGA)
+ * Service d'obfuscation XOR + Base64 pour credentials MEGA.
+ * Attention: il s'agit d'une obfuscation légère, pas d'un chiffrement fort.
  */
-export class EncryptionService {
-  private readonly algorithm = 'aes-256-gcm';
-  private readonly secretKey: string;
-
-  constructor() {
-    this.secretKey = process.env.ENCRYPTION_SECRET_KEY || this.generateDefaultKey();
-    if (!process.env.ENCRYPTION_SECRET_KEY) {
-      console.warn('⚠️ ENCRYPTION_SECRET_KEY non définie. Utilisation d\'une clé par défaut (non recommandé en production)');
-    }
-  }
-
-  private generateDefaultKey(): string {
-    // Génère une clé par défaut basée sur d'autres variables d'environnement
-    const base = process.env.JWT_SECRET || 'default-secret';
-    return crypto.createHash('sha256').update(base + 'mega-encryption').digest('hex');
-  }
-
-  /**
-   * Chiffre une chaîne de caractères
-   */
-  encrypt(text: string): string {
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(this.algorithm, Buffer.from(this.secretKey, 'hex').subarray(0, 32), iv);
-    
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    
-    const authTag = cipher.getAuthTag();
-    
-    // Retourne IV + AuthTag + Données chiffrées
-    return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
-  }
-
-  /**
-   * Déchiffre une chaîne de caractères
-   */
-  decrypt(encryptedData: string): string {
-    const parts = encryptedData.split(':');
-    if (parts.length !== 3) {
-      throw new Error('Format de données chiffrées invalide');
-    }
-
-    const iv = Buffer.from(parts[0], 'hex');
-    const authTag = Buffer.from(parts[1], 'hex');
-    const encrypted = parts[2];
-
-    const decipher = crypto.createDecipheriv(this.algorithm, Buffer.from(this.secretKey, 'hex').subarray(0, 32), iv);
-    decipher.setAuthTag(authTag);
-
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-
-    return decrypted;
-  }
-
-  /**
-   * Vérifie si une donnée est chiffrée (format attendu)
-   */
-  isEncrypted(data: string): boolean {
-    return data.includes(':') && data.split(':').length === 3;
-  }
+export interface XorEncryptedCreds {
+  email: string; // Base64(XOR(email, key))
+  password: string; // Base64(XOR(password, key))
+  key: string; // clé en clair stockée en DB (champ encKey)
 }
 
-export const encryptionService = new EncryptionService();
+function fromBase64(b64: string): string {
+  return Buffer.from(b64, 'base64').toString('binary');
+}
+
+function toBase64(bin: string): string {
+  return Buffer.from(bin, 'binary').toString('base64');
+}
+
+function xor(text: string, key: string): string {
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    out += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  return out;
+}
+
+export const encryptionService = {
+  encryptWithKey(email: string, password: string, key: string): XorEncryptedCreds {
+    const emailEnc = toBase64(xor(email, key));
+    const passwordEnc = toBase64(xor(password, key));
+    return { email: emailEnc, password: passwordEnc, key };
+  },
+  decryptWithKey(emailB64: string, passwordB64: string, key: string): { email: string; password: string } {
+    const email = xor(fromBase64(emailB64), key);
+    const password = xor(fromBase64(passwordB64), key);
+    return { email, password };
+  },
+};

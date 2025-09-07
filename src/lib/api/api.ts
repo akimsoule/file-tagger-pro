@@ -1,21 +1,15 @@
 // Client API minimal pour communiquer avec les fonctions Netlify
 // BASE_URL s'adapte: en dev via netlify dev -> /.netlify/functions, sinon /api (redirect)
 
-const BASE_INTERNAL = "/.netlify/functions";
+// const BASE_INTERNAL = "/.netlify/functions";
 const BASE_REDIRECT = "/api";
 
 let chosenBase: string | null = null;
 function resolveBase(): string {
   if (chosenBase) return chosenBase;
   if (typeof window === "undefined") return BASE_REDIRECT;
-  const isDev =
-    typeof import.meta !== "undefined" && (import.meta as any).env?.DEV; // eslint-disable-line @typescript-eslint/no-explicit-any
   // Heuristique: quand on lance seulement `vite` (npm run dev) il n'y a pas de proxy /api => on utilise /.netlify/functions
-  if (isDev && !window.location.pathname.startsWith("/.netlify/functions")) {
-    chosenBase = BASE_INTERNAL;
-  } else {
-    chosenBase = BASE_REDIRECT;
-  }
+  chosenBase = BASE_REDIRECT;
   return chosenBase;
 }
 
@@ -86,7 +80,7 @@ export async function api<T = unknown>(
     if (!options._retried) {
       try {
         // Mutualiser les refresh concurrents
-  const refreshPromise = new Promise<void>((resolve) => {
+        const refreshPromise = new Promise<void>((resolve) => {
           pendingQueue.push(resolve);
         });
         if (!isRefreshing) {
@@ -122,7 +116,7 @@ export async function api<T = unknown>(
     if (res.status === 404 && !options._retried) {
       const previousBase = chosenBase;
       if (previousBase === BASE_REDIRECT) {
-        chosenBase = BASE_INTERNAL;
+        chosenBase = BASE_REDIRECT;
         try {
           return api<T>(path, { ...options, _retried: true });
         } catch {

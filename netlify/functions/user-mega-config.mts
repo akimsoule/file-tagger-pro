@@ -1,17 +1,70 @@
-import { Context } from '@netlify/functions';
-import { userMegaConfigService } from '../files.core/src/services/userMegaConfigService';
-import { verifyToken, handleCorsOptions, createErrorResponse, createSuccessResponse } from './shared/middleware.mts';
+import { Context } from "@netlify/functions";
+import { Storage } from "megajs";
+import { userMegaConfigService } from "../files.core/src/services/userMegaConfigService";
+import {
+  verifyToken,
+  handleCorsOptions,
+  createErrorResponse,
+  createSuccessResponse,
+} from "./shared/middleware.mts";
+import { encryptionService } from "../files.core/src/services/encryptionService";
+
+// --- helpers decryption (XOR) ---
+function fromBase64(b64: string): string {
+  if (typeof atob !== "undefined") return atob(b64);
+  return Buffer.from(b64, "base64").toString("binary");
+}
+
+function decrypt(encryptedText: string, key: string): string {
+  let decrypted = "";
+  for (let i = 0; i < encryptedText.length; i++) {
+    decrypted += String.fromCharCode(
+      encryptedText.charCodeAt(i) ^ key.charCodeAt(i % key.length)
+    );
+  }
+  return decrypted;
+}
+
+function tryDecryptCredentials(body: any): {
+  email?: string;
+  password?: string;
+  key?: string;
+} {
+  // Compat: acceptez email/password en clair ou emailEnc/passwordEnc avec key
+  const email: string | undefined = body?.email;
+  const password: string | undefined = body?.password;
+  const emailEnc: string | undefined = body?.emailEnc;
+  const passwordEnc: string | undefined = body?.passwordEnc;
+  const key: string | undefined = body?.key;
+  const enc: string | undefined = body?.enc;
+
+  if (email && password) return { email, password };
+  if (enc === "xor" && emailEnc && passwordEnc && key) {
+    try {
+      const emailPlain = decrypt(fromBase64(emailEnc), key);
+      const passwordPlain = decrypt(fromBase64(passwordEnc), key);
+      return { email: emailPlain, password: passwordPlain, key };
+    } catch (e) {
+      // fallback silencieux: retournera undefined et sera géré par validations
+      console.warn("Decrypt XOR failed:", e);
+    }
+  }
+  return {};
+}
 
 /**
  * Netlify Function pour gérer les configurations MEGA des utilisateurs
  */
-export default async function handler(request: Request, context: Context): Promise<Response> {
+export default async function handler(
+  request: Request,
+  context: Context
+): Promise<Response> {
   const { url, method } = request;
   const urlPath = new URL(url);
-  const segments = urlPath.pathname.split('/').filter(Boolean);
+  const segments = urlPath.pathname.split("/").filter(Boolean);
 
   // CORS preflight
-  if (method === 'OPTIONS') {
+  if (method === "OPTIONS") {
     return handleCorsOptions();
   }
   // Authentification requise pour toutes les routes
@@ -19,43 +72,51 @@ export default async function handler(request: Request, context: Context): Promi
   try {
     const user = verifyToken(request);
     if (!user) {
-      throw new Error('Token invalide');
+      throw new Error("Token invalide");
     }
     userId = user.userId;
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Token d\'authentification invalide' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify({ error: "Token d'authentification invalide" }),
+      {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 
   try {
     switch (method) {
-      case 'GET':
+      case "GET":
         // GET /user-mega-config - Récupérer la configuration MEGA de l'utilisateur
         return await getUserMegaConfig(userId);
 
-      case 'POST':
+      case "POST":
+        // POST /user-mega-config/test - Tester une connexion MEGA sans sauvegarder
+        console.log("Segments:", segments);
+        if (
+          segments.length >= 2 &&
+          segments[1] === "user-mega-config" &&
+          segments[2] === "test"
+        ) {
+          return await testUserMegaCredentials(request);
+        }
         // POST /user-mega-config - Créer/mettre à jour la configuration MEGA
         return await upsertUserMegaConfig(request, userId);
 
-      case 'PUT':
-        // PUT /user-mega-config/toggle - Activer/désactiver la configuration
-        return await toggleUserMegaConfig(request, userId);
-
-      case 'DELETE':
+      case "DELETE":
         // DELETE /user-mega-config - Supprimer la configuration MEGA
         return await deleteUserMegaConfig(userId);
 
       default:
-        return createErrorResponse('Méthode non autorisée', 405);
+        return createErrorResponse("Méthode non autorisée", 405);
     }
   } catch (error) {
-    console.error('Erreur dans user-mega-config API:', error);
+    console.error("Erreur dans user-mega-config API:", error);
     return createErrorResponse(
-      'Erreur interne du serveur',
+      "Erreur interne du serveur",
       500,
-      error instanceof Error ? error.message : 'Erreur inconnue'
+      error instanceof Error ? error.message : "Erreur inconnue"
     );
   }
 }
@@ -65,9 +126,12 @@ export default async function handler(request: Request, context: Context): Promi
  */
 async function getUserMegaConfig(userId: string): Promise<Response> {
   const config = await userMegaConfigService.getUserMegaConfig(userId);
-  
+
   if (!config) {
-    return createSuccessResponse({ hasConfig: false, message: 'Aucune configuration MEGA trouvée' });
+    return createSuccessResponse({
+      hasConfig: false,
+      message: "Aucune configuration MEGA trouvée",
+    });
   }
 
   return createSuccessResponse({
@@ -75,74 +139,71 @@ async function getUserMegaConfig(userId: string): Promise<Response> {
     config: {
       id: config.id,
       email: config.email,
-      isActive: config.isActive,
       createdAt: config.createdAt,
       updatedAt: config.updatedAt,
-    }
+    },
   });
 }
 
 /**
  * Crée ou met à jour la configuration MEGA de l'utilisateur
  */
-async function upsertUserMegaConfig(request: Request, userId: string): Promise<Response> {
+async function upsertUserMegaConfig(
+  request: Request,
+  userId: string
+): Promise<Response> {
   const body = await request.json();
-  const { email, password } = body;
+  const { email, password, key } = body;
 
-  if (!email || !password) {
-    return createErrorResponse('Email et mot de passe MEGA requis', 400);
-  }
-
-  // Validation basique de l'email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return createErrorResponse("Format d'email invalide", 400);
+  if (!email || !password || !key) {
+    return createErrorResponse("Email, mot de passe ou clé MEGA requis", 400);
   }
 
   const config = await userMegaConfigService.upsertUserMegaConfig(userId, {
     email,
     password,
-    isActive: true
+    key,
+    isActive: true,
   });
 
   return createSuccessResponse({
-    message: 'Configuration MEGA mise à jour avec succès',
+    message: "Configuration MEGA mise à jour avec succès",
     config: {
       id: config.id,
       email: config.email,
-      isActive: config.isActive,
       createdAt: config.createdAt,
       updatedAt: config.updatedAt,
-    }
+    },
   });
 }
 
 /**
- * Active/désactive la configuration MEGA de l'utilisateur
+ * Teste une connexion MEGA sans sauvegarder les identifiants
+ * POST /user-mega-config/test { email, password }
  */
-async function toggleUserMegaConfig(request: Request, userId: string): Promise<Response> {
+async function testUserMegaCredentials(request: Request): Promise<Response> {
   const body = await request.json();
-  const { isActive } = body;
+  const { email, password, key } = body;
 
-  if (typeof isActive !== 'boolean') {
-    return createErrorResponse('isActive doit être un booléen', 400);
+  if (!email || !password || !key) {
+    return createErrorResponse("Email, mot de passe ou clé MEGA requis", 400);
   }
 
-  const config = await userMegaConfigService.toggleUserMegaConfig(userId, isActive);
+  const { email: decryptedEmail, password: decryptedPassword } = encryptionService.decryptWithKey(email, password, key);
 
-  if (!config) {
-    return createErrorResponse('Configuration MEGA non trouvée', 404);
+  try {
+    // Essayer de se connecter à MEGA
+    await new Storage({ email: decryptedEmail, password: decryptedPassword }).ready;
+    return createSuccessResponse({
+      ok: true,
+      message: "Connexion MEGA réussie",
+    });
+  } catch (e) {
+    return createErrorResponse(
+      "Échec de connexion à MEGA. Vérifiez votre email et votre mot de passe, puis réessayez.",
+      400
+    );
   }
-
-  return createSuccessResponse({
-    message: `Configuration MEGA ${isActive ? 'activée' : 'désactivée'} avec succès`,
-    config: {
-      id: config.id,
-      email: config.email,
-      isActive: config.isActive,
-      updatedAt: config.updatedAt,
-    }
-  });
 }
 
 /**
@@ -152,6 +213,6 @@ async function deleteUserMegaConfig(userId: string): Promise<Response> {
   await userMegaConfigService.deleteUserMegaConfig(userId);
 
   return createSuccessResponse({
-    message: 'Configuration MEGA supprimée avec succès'
+    message: "Configuration MEGA supprimée avec succès",
   });
 }

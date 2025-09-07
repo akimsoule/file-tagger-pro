@@ -29,7 +29,7 @@ model UserMegaConfig {
   userId    String   @unique
   email     String   // Email MEGA de l'utilisateur (chiffré)
   password  String   // Mot de passe MEGA de l'utilisateur (chiffré)
-  isActive  Boolean  @default(true) // Indique si la configuration est active
+  encKey    String?  // Clé XOR utilisée pour chiffrer/déchiffrer (Base64 appliqué sur les données, pas sur la clé)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

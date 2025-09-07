@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { Settings as SettingsIcon, X } from "lucide-react";
+import { Settings as SettingsIcon, X, Loader2 } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import {
   Card,
@@ -20,12 +20,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+//
 import { useEffect, useState } from "react";
 import {
   deleteUserMegaConfig,
   getUserMegaConfig,
   saveUserMegaConfig,
   toggleUserMegaConfig,
+  testUserMegaCredentials,
   type UserMegaConfigInfo,
 } from "@/lib/api/api-mega-config";
 import { useToast } from "@/hooks/useToast";
@@ -49,6 +51,8 @@ export function SettingsModal({
   const [megaConfig, setMegaConfig] = useState<UserMegaConfigInfo | null>(null);
   const [megaEmail, setMegaEmail] = useState("");
   const [megaPassword, setMegaPassword] = useState("");
+  const [testLoading, setTestLoading] = useState(false);
+  //
 
   useEffect(() => {
     if (!open) return;
@@ -275,10 +279,69 @@ export function SettingsModal({
                     Supprimer
                   </Button>
                   <Button
+                    variant="outline"
                     disabled={megaLoading || !megaEmail || !megaPassword}
                     onClick={async () => {
                       try {
                         setMegaLoading(true);
+                        setTestLoading(true);
+                        const test = await testUserMegaCredentials(
+                          megaEmail.trim(),
+                          megaPassword
+                        );
+                        if (!test?.ok) {
+                          throw new Error(
+                            test?.message || "Connexion MEGA impossible"
+                          );
+                        }
+                        toast({
+                          title: "MEGA",
+                          description: "Connexion validée",
+                        });
+                      } catch (e) {
+                        toast({
+                          title: "Erreur",
+                          description:
+                            e instanceof Error
+                              ? e.message
+                              : "Test de connexion MEGA échoué",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setMegaLoading(false);
+                        setTestLoading(false);
+                      }
+                    }}
+                  >
+                    {testLoading ? (
+                      <span className="inline-flex items-center">
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Test en cours…
+                      </span>
+                    ) : (
+                      "Tester"
+                    )}
+                  </Button>
+                  <Button
+                    disabled={megaLoading || !megaEmail || !megaPassword}
+                    onClick={async () => {
+                      try {
+                        setMegaLoading(true);
+                        // 1) Tester la connexion MEGA
+                        const test = await testUserMegaCredentials(
+                          megaEmail.trim(),
+                          megaPassword
+                        );
+                        if (!test?.ok) {
+                          throw new Error(
+                            test?.message || "Connexion MEGA impossible"
+                          );
+                        }
+                        toast({
+                          title: "MEGA",
+                          description: "Connexion validée, sauvegarde en cours…",
+                        });
+                        // 2) Sauvegarder si test OK
                         const res = await saveUserMegaConfig(
                           megaEmail.trim(),
                           megaPassword
@@ -419,6 +482,7 @@ export function SettingsModal({
           </div>
         </div>
       </DialogContent>
+  {/* Toasts utilisés pour le retour du test MEGA */}
     </Dialog>
   );
 }

@@ -108,7 +108,7 @@ En production, appliquez les migrations avant ou pendant le premier déploiement
 
 ### Sécurité
 - Changez immédiatement le `JWT_SECRET` de développement.
-- Ne commitez jamais les credentials MEGA en clair; ils sont chiffrés via `EncryptionService`.
+- Ne commitez jamais les credentials MEGA en clair. Les identifiants sont transmis côté client avec une obfuscation XOR et gérés côté serveur sans `EncryptionService`.
 - Activez les logs dans Netlify pour monitorer les fonctions.
 
 ## Déploiement
